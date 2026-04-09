@@ -1,0 +1,68 @@
+Tolong perbaiki lagi fitur print laporan.
+
+Masalah sekarang:
+- hasil print tidak lagi kepotong kanan, tetapi bagian atas terlalu mepet / seperti kepotong atas
+- masih ada teks/banner development preview ikut tercetak di paling atas
+- area header laporan terlalu dekat dengan tepi halaman
+
+Yang harus diperbaiki:
+
+1. Tambahkan margin atas khusus untuk print
+- atur @page dengan margin yang aman, misalnya:
+  margin: 15mm 12mm 15mm 12mm;
+- jangan gunakan margin-top nol pada body atau container print
+- beri jarak atas yang cukup untuk header laporan
+
+2. Buat wrapper print khusus
+- seluruh konten laporan print harus dibungkus dalam container khusus, misalnya .print-report
+- container ini punya:
+  - padding-top yang cukup
+  - width: 100%
+  - box-sizing: border-box
+- jangan biarkan konten dimulai langsung dari tepi atas halaman
+
+3. Sembunyikan semua elemen non-laporan saat print
+- sidebar
+- navbar
+- tombol
+- filter form
+- modal
+- toast/notifikasi
+- banner development preview atau elemen luar yang bukan isi laporan
+- jika perlu, render hanya area laporan saat window.print()
+
+4. Gunakan layout print-only
+- jangan print seluruh halaman aplikasi
+- buat komponen khusus print report
+- saat print, tampilkan hanya:
+  - nama usaha
+  - judul laporan
+  - tanggal cetak
+  - filter aktif
+  - ringkasan pelanggan jika filter 1 pelanggan
+  - tabel laporan
+  - total keseluruhan
+
+5. Pastikan header laporan tidak kepotong
+- beri jarak antara tepi halaman dan judul
+- jangan gunakan position fixed di header print jika itu menyebabkan tumpang tindih
+- hindari transform, scale, overflow hidden, atau negative margin pada parent print
+
+6. CSS print yang aman
+- gunakan:
+  - @media print
+  - @page
+- set:
+  - html, body { margin: 0; padding: 0; }
+  - lalu beri jarak di container print, bukan memaksa body mepet atas
+- hindari tinggi tetap yang bisa memotong isi
+- hindari overflow: hidden pada parent
+
+7. Cek kompatibilitas browser print to PDF
+- pastikan aman saat print dari Chrome
+- header laporan harus terlihat utuh dari baris pertama
+
+8. Setelah diperbaiki
+- jelaskan file mana yang diubah
+- jelaskan kenapa banner atas masih ikut tercetak sebelumnya
+- jelaskan kenapa header terlalu mepet atas sebelumnya
