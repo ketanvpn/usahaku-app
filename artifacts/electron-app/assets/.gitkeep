@@ -1,0 +1,6 @@
+Folder ini untuk menyimpan ikon aplikasi:
+- icon.ico  — ikon Windows (256x256, multi-size ICO)
+- icon.png  — ikon sumber (512x512 PNG, untuk konversi ke ICO)
+- icon.icns — ikon macOS (opsional, jika target macOS)
+
+Gunakan tools seperti https://cloudconvert.com/png-to-ico untuk konversi.

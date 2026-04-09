@@ -1,0 +1,124 @@
+Lanjut ke Phase 5. Jangan buat ulang project dari nol. Fokus sekarang adalah membungkus aplikasi yang sudah ada menjadi aplikasi desktop Windows menggunakan Electron.
+
+KONTEKS
+Project sudah berhasil dimigrasikan ke SQLite dan sekarang berjalan lokal/offline.
+Fitur utama sudah lolos:
+- login super admin dan owner
+- CRUD usaha, owner, pelanggan, hutang, pembayaran
+- status lunas otomatis
+- export CSV
+- print laporan
+- backup JSON / restore
+- ganti password
+- isolasi data antar usaha
+- database lokal SQLite
+- DATABASE_PATH sudah tersedia
+
+TUJUAN PHASE 5
+Saya ingin project ini bisa dijalankan sebagai aplikasi desktop Windows, bukan hanya lewat browser localhost manual.
+
+TARGET
+- gunakan Electron
+- jalankan backend lokal dari dalam Electron
+- tampilkan frontend dalam window Electron
+- database SQLite tetap lokal
+- jangan merusak fitur yang sudah ada
+- utamakan implementasi sederhana, stabil, dan realistis
+
+PRINSIP PENTING
+- jangan over-engineering
+- jangan ganti stack utama
+- jangan ubah logika bisnis
+- jangan merusak print/export/backup
+- fokus pada packaging desktop yang bekerja
+
+YANG HARUS DIBUAT
+
+1. SETUP ELECTRON
+- tambahkan Electron ke workspace/project dengan struktur yang rapi
+- buat file main process Electron
+- buat BrowserWindow utama
+- load frontend app ke window Electron
+- jalankan backend lokal secara otomatis saat app Electron dibuka
+- pastikan urutan startup aman: backend siap dulu, lalu frontend dibuka
+
+2. MODE DEVELOPMENT
+- buat mode development yang mudah:
+  - frontend tetap bisa run dev
+  - backend tetap bisa run dev
+  - Electron bisa dijalankan untuk testing desktop
+- buat script package.json yang jelas untuk dev Electron
+
+3. MODE PRODUCTION / BUILD
+- buat alur build yang jelas:
+  - build frontend
+  - build backend
+  - jalankan Electron terhadap build hasil production
+- siapkan packaging Windows installer / exe menggunakan electron-builder atau solusi yang paling stabil dan umum
+
+4. DATABASE PATH UNTUK DESKTOP
+- saat dijalankan dalam Electron, simpan database SQLite di lokasi yang cocok untuk aplikasi desktop Windows
+- gunakan path yang aman, misalnya folder userData / AppData
+- manfaatkan DATABASE_PATH yang sudah ada
+- jika perlu, copy / initialize database pertama kali secara otomatis
+- jangan simpan database di lokasi temp
+
+5. BACKUP & RESTORE DI MODE DESKTOP
+- pastikan backup/restore tetap bekerja saat aplikasi dijalankan dalam Electron
+- jika ada path file yang perlu disesuaikan, perbaiki
+- jangan rusak UX yang sudah ada
+
+6. PRINT, EXPORT, DAN FILE DOWNLOAD
+- cek agar print laporan tetap bekerja di dalam Electron
+- cek export CSV tetap bisa diunduh/simpan
+- cek backup JSON tetap bisa dibuat dan dipilih user
+- jika perlu, sesuaikan perilaku file download di Electron agar nyaman
+
+7. KEAMANAN DASAR ELECTRON
+- aktifkan konfigurasi Electron yang aman:
+  - contextIsolation
+  - nodeIntegration false pada renderer jika memungkinkan
+  - preload script jika diperlukan
+- jangan expose API berlebihan
+
+8. HANDLE CLOSE / ERROR
+- jika backend gagal start, tampilkan pesan error yang jelas
+- jangan hanya blank screen
+- tangani kondisi port bentrok jika memungkinkan
+- pastikan aplikasi close dengan bersih
+
+9. ICON DAN IDENTITAS DASAR
+- siapkan struktur agar nanti mudah diberi icon aplikasi
+- kalau belum ada icon final, pakai placeholder
+- nama aplikasi desktop gunakan nama yang rapi
+
+10. README DESKTOP
+- perbarui README dengan:
+  - cara run dev Electron
+  - cara build desktop
+  - lokasi database saat mode desktop
+  - lokasi backup
+  - catatan Windows packaging
+
+11. OUTPUT YANG SAYA MAU
+Setelah selesai, tampilkan:
+- file apa saja yang ditambah/diubah
+- script npm/pnpm baru
+- cara menjalankan mode desktop development
+- cara build aplikasi Windows
+- lokasi database pada mode desktop
+- checklist pengujian Electron
+- catatan apa yang masih perlu untuk build installer final
+
+12. PRIORITAS
+Fokus utama:
+- aplikasi bisa dibuka sebagai desktop app
+- backend start otomatis
+- frontend tampil normal
+- SQLite tetap lokal
+- fitur lama tetap jalan
+- siap dibuild menjadi exe/installer Windows
+
+Jangan membuat ulang aplikasi.
+Jangan mengubah fitur bisnis.
+Fokus pada pembungkusan Electron yang sederhana dan stabil.

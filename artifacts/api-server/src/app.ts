@@ -3,6 +3,8 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import cookieParser from "cookie-parser";
 import session from "express-session";
+import path from "path";
+import fs from "fs";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -52,5 +54,26 @@ app.use(
 );
 
 app.use("/api", router);
+
+if (process.env.SERVE_STATIC === "true") {
+  const staticPath =
+    process.env.STATIC_PATH ||
+    path.join(path.dirname(new URL(import.meta.url).pathname), "../../hutang-app/dist/public");
+
+  if (fs.existsSync(staticPath)) {
+    app.use(express.static(staticPath));
+
+    app.use((_req, res) => {
+      res.sendFile(path.join(staticPath, "index.html"));
+    });
+
+    logger.info({ staticPath }, "Serving static frontend files");
+  } else {
+    logger.warn(
+      { staticPath },
+      "SERVE_STATIC=true but static path not found — frontend not served"
+    );
+  }
+}
 
 export default app;

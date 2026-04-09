@@ -1,0 +1,24 @@
+{
+  "name": "@workspace/electron-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Buku Hutang — Aplikasi Desktop Windows",
+  "author": "Buku Hutang",
+  "main": "build/main.js",
+  "scripts": {
+    "build:main": "tsc -p tsconfig.json",
+    "electron": "NODE_ENV=development electron .",
+    "electron:prod": "NODE_ENV=production electron .",
+    "build:desktop": "pnpm run build:backend && pnpm run build:frontend && pnpm run build:main",
+    "build:backend": "pnpm --filter @workspace/api-server run build",
+    "build:frontend": "pnpm --filter @workspace/hutang-app run build:electron",
+    "pack": "pnpm run build:desktop && electron-builder --dir",
+    "dist:win": "pnpm run build:desktop && electron-builder --win"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "typescript": "^5.0.0"
+  }
+}

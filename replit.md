@@ -11,7 +11,7 @@ pnpm workspace monorepo using TypeScript. Aplikasi Manajemen Hutang (Debt Manage
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
+- **Database**: SQLite (better-sqlite3) + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
@@ -61,6 +61,87 @@ pnpm workspace monorepo using TypeScript. Aplikasi Manajemen Hutang (Debt Manage
 - `pelanggan` — customers (per business)
 - `hutang` — debts (per business)
 - `pembayaran` — payments (per debt)
+
+## Phase 5 Electron Desktop Packaging (Applied)
+
+### New Package: `artifacts/electron-app/`
+- **Main process**: `src/main.ts` → compiled to `build/main.js` (CommonJS, Electron-compatible)
+- **Preload**: `src/preload.ts` → exposes minimal `window.electronApp` context bridge
+- **Security**: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
+- **Build config**: `electron-builder.yml` (Windows target, NSIS installer)
+- **Entry point**: `main` = `build/main.js`
+
+### Backend Start Strategy
+- Uses `electron.utilityProcess.fork()` to spawn the ESM backend (`dist/index.mjs`) inside Electron's Node.js runtime
+- No separate Node.js binary needed — uses Electron's built-in
+- Backend started at `PORT=8080`; Electron waits via polling `/api/healthz` before opening window
+- On backend exit: shows error dialog and quits app
+- In dev mode: checks if backend already running; starts if not
+
+### Database Path (Desktop Mode)
+- Desktop: `app.getPath('userData')` → Windows AppData/Roaming/Buku Hutang/app.db
+- Dev: continues using `artifacts/api-server/data/app.db`
+
+### Static File Serving (Production Mode)
+- `artifacts/api-server/src/app.ts` updated:
+  - When `SERVE_STATIC=true`: serves static frontend files via Express
+  - When `STATIC_PATH` env is set: serves from that path, otherwise falls back to `../../hutang-app/dist/public`
+  - Uses `app.use(express.static(...))` + `app.use()` catch-all for SPA fallback
+  - API routes (`/api/*`) take priority over static files
+- Frontend must be built with `BASE_PATH=/` for Electron mode
+
+### Development Workflow (Electron)
+```bash
+# Terminal 1 — backend
+pnpm --filter @workspace/api-server run dev
+
+# Terminal 2 — frontend (optional for live reload)
+pnpm --filter @workspace/hutang-app run dev
+
+# Terminal 3 — Electron desktop window
+pnpm --filter @workspace/electron-app run electron
+```
+Electron in dev mode loads frontend at `http://localhost:VITE_PORT` (5173 by default).
+
+### Production Build Workflow
+```bash
+# Build all + package (dir only, no installer)
+pnpm --filter @workspace/electron-app run pack
+
+# Build all + create Windows installer
+pnpm --filter @workspace/electron-app run dist:win
+```
+`build:desktop` script builds: backend → frontend (BASE_PATH=/) → Electron main TypeScript
+
+### Scripts Summary
+
+| Command | What it does |
+|---------|-------------|
+| `pnpm --filter @workspace/electron-app run electron` | Run Electron in dev mode |
+| `pnpm --filter @workspace/electron-app run build:main` | Compile Electron TypeScript only |
+| `pnpm --filter @workspace/electron-app run build:desktop` | Build backend + frontend + Electron |
+| `pnpm --filter @workspace/electron-app run pack` | Build all + package (no installer) |
+| `pnpm --filter @workspace/electron-app run dist:win` | Build all + Windows .exe installer |
+
+### electron-builder extraResources Layout
+```
+resources/
+  backend/
+    dist/index.mjs          ← bundled API server
+    node_modules/
+      better-sqlite3/       ← only native dependency
+  frontend/
+    index.html              ← built React app (BASE_PATH=/)
+    assets/
+      index-*.css
+      index-*.js
+```
+
+### Notes for Final Windows Build
+- Icon: Place `icon.ico` in `artifacts/electron-app/assets/` (512px PNG → .ico via CloudConvert)
+- `better-sqlite3` native module must be rebuilt for Windows via `electron-builder --win` (`npmRebuild: true`)
+- `SESSION_SECRET` env should be set or will use built-in desktop fallback
+- Installer output: `artifacts/electron-app/release/`
 
 ## Phase 4 SQLite Migration (Applied)
 
