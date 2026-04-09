@@ -342,6 +342,23 @@ Gunakan checklist ini sebelum mendistribusikan ke pengguna:
 - Coba restart komputer, lalu buka aplikasi lagi
 - Jika masih gagal, uninstall dan install ulang aplikasi
 
+### Error: "Cannot find module better-sqlite3" atau database crash saat startup
+
+**Penyebab**: Native module `better-sqlite3` tidak terkompilasi untuk Electron ABI yang benar.
+
+**Solusi**: Pastikan build dilakukan dengan langkah yang benar:
+```powershell
+# Di folder proyek:
+pnpm install              # Install semua dependency (termasuk electron-app/package.json)
+pnpm run dist:win         # Build dan package untuk Windows
+```
+
+Perintah `dist:win` akan otomatis:
+1. Rebuild `better-sqlite3` untuk Electron ABI (`npmRebuild: true`)
+2. Copy binary yang benar ke dalam installer
+
+**Jangan** copy manual file `better-sqlite3` dari folder lain — harus melalui proses build ini.
+
 ### Dialog error muncul saat pertama buka
 
 **Kemungkinan penyebab dan solusi**:

@@ -16,7 +16,11 @@
     "pack": "pnpm run build:desktop && electron-builder --dir",
     "dist:win": "pnpm run build:desktop && electron-builder --win"
   },
+  "dependencies": {
+    "better-sqlite3": "^12.8.0"
+  },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^20.0.0",
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0",

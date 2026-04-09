@@ -151,6 +151,13 @@ function getBackendScriptPath(): string {
   return path.join(process.resourcesPath, "backend", "dist", "index.mjs");
 }
 
+function getBetterSqlite3Path(): string {
+  if (isDev) {
+    return path.resolve(__dirname, "../../api-server/node_modules/better-sqlite3");
+  }
+  return path.join(process.resourcesPath, "backend", "node_modules", "better-sqlite3");
+}
+
 function getFrontendDistPath(): string {
   if (isDev) {
     return path.resolve(__dirname, "../../hutang-app/dist/public");
@@ -176,10 +183,13 @@ function startBackend(): void {
   const scriptPath = getBackendScriptPath();
   const frontendPath = getFrontendDistPath();
   const dbPath = getDbPath();
+  const betterSqlite3Path = getBetterSqlite3Path();
 
   writeLog(`Starting backend: ${scriptPath}`);
   writeLog(`Database path: ${dbPath}`);
   writeLog(`Frontend path: ${frontendPath}`);
+  writeLog(`better-sqlite3 path: ${betterSqlite3Path}`);
+  writeLog(`better-sqlite3 exists: ${fs.existsSync(betterSqlite3Path)}`);
   writeLog(`isDev: ${isDev}`);
 
   if (!fs.existsSync(scriptPath)) {
@@ -213,6 +223,7 @@ function startBackend(): void {
       SERVE_STATIC: "true",
       STATIC_PATH: frontendPath,
       SESSION_SECRET: sessionSecret,
+      BETTER_SQLITE3_PATH: betterSqlite3Path,
     },
     stdio: "pipe",
   });

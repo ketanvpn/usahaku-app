@@ -62,6 +62,75 @@ pnpm workspace monorepo using TypeScript. Aplikasi Manajemen Hutang (Debt Manage
 - `hutang` — debts (per business)
 - `pembayaran` — payments (per debt)
 
+## Phase 8 — Fix better-sqlite3 Not Found in Packaged Mode (Applied)
+
+### Root Cause
+`better-sqlite3` (native `.node` module) crashed in packaged Windows app. Two interrelated problems:
+
+**Problem 1: ABI mismatch**
+The `extraResources` config previously copied `better-sqlite3` from `api-server/node_modules/better-sqlite3`. This binary is compiled for standard Node.js ABI. Electron uses a different ABI (Electron embeds its own Node.js). Result: binary loads but crashes or silently fails.
+
+**Problem 2: Module not found (caused by ABI crash)**
+When Node.js can't load the `.node` binary, it reports "Cannot find module: .../lib/database.js" — this is Node.js's way of reporting native binary load failures. Additionally, `drizzle-orm/better-sqlite3/driver.js` has a static `import Client from "better-sqlite3"` in the bundled file that also needs to resolve.
+
+### Fix Applied
+
+**1. Add `better-sqlite3` to electron-app's `dependencies`**
+```json
+"dependencies": { "better-sqlite3": "^12.8.0" }
+```
+electron-builder's `npmRebuild: true` now rebuilds this package with the correct **Electron ABI** (not regular Node.js ABI).
+
+**2. Change `extraResources` source from `api-server` to `electron-app`'s own rebuilt module**
+```yaml
+extraResources:
+  - from: ./node_modules/better-sqlite3   # electron-app's rebuilt version
+    to: backend/node_modules/better-sqlite3
+```
+Key sequence: electron-builder → rebuild native modules (`npmRebuild`) → copy extraResources. So the copied binary is the Electron-ABI version.
+
+**3. Dynamic require in `lib/db/src/index.ts`**
+Changed from static `import Database from "better-sqlite3"` to dynamic `createRequire` with `BETTER_SQLITE3_PATH` fallback:
+```typescript
+const _require = createRequire(import.meta.url);
+const Database = (_bsPath ? _require(_bsPath) : _require("better-sqlite3")) as typeof BetterSqlite3;
+```
+This provides an explicit path override AND keeps the normal module resolution as fallback.
+
+**4. `BETTER_SQLITE3_PATH` env var in main.ts**
+Electron main passes the absolute path to the backend:
+- Dev: `../../api-server/node_modules/better-sqlite3`
+- Production: `{resourcesPath}/backend/node_modules/better-sqlite3`
+
+**5. Logging**
+Added logging for `better-sqlite3 path` and `better-sqlite3 exists` so the log file shows diagnostic info.
+
+### Module Resolution Chain (Production)
+```
+resources/backend/dist/index.mjs  (entry point)
+  ↓ import Client from "better-sqlite3"  (Drizzle's static import)
+  ↓ Node.js ESM resolution: walks up from dist/ → backend/node_modules/
+  ↓ FOUND: resources/backend/node_modules/better-sqlite3/  (from extraResources)
+  ↓ binary: build/Release/better_sqlite3.node  (rebuilt for Electron ABI)
+  ✓ loads correctly
+```
+
+### Why `extraResources` from `./node_modules` works with `npmRebuild`
+electron-builder processing order:
+1. Install app dependencies (pnpm install)
+2. **Rebuild native modules** (npmRebuild: true) → `electron-app/node_modules/better-sqlite3` now has Electron ABI binary
+3. Copy `files` config into ASAR
+4. **Copy `extraResources`** → copies from the already-rebuilt `./node_modules/better-sqlite3`
+5. Pack ASAR
+
+So by the time extraResources copies, the binary is already rebuilt. ✓
+
+### Files Changed
+- `artifacts/electron-app/package.json` — added `better-sqlite3: ^12.8.0` in dependencies
+- `artifacts/electron-app/electron-builder.yml` — changed extraResources from `api-server/node_modules` to `./node_modules`, added `asarUnpack: ["**/*.node"]`
+- `artifacts/electron-app/src/main.ts` — `getBetterSqlite3Path()` function + `BETTER_SQLITE3_PATH` env + logging
+- `lib/db/src/index.ts` — dynamic `createRequire` instead of static `import`
+
 ## Phase 7 — Fix Backend Crash in Packaged Mode (Applied)
 
 ### Root Cause

@@ -1,8 +1,14 @@
-import Database from "better-sqlite3";
+import { createRequire } from "module";
+import type BetterSqlite3 from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { mkdirSync } from "fs";
 import path from "path";
 import * as schema from "./schema";
+
+const _require = createRequire(import.meta.url);
+
+const _bsPath = process.env.BETTER_SQLITE3_PATH;
+const Database = (_bsPath ? _require(_bsPath) : _require("better-sqlite3")) as typeof BetterSqlite3;
 
 const DB_PATH = process.env.DATABASE_PATH || path.join(process.cwd(), "data", "app.db");
 
