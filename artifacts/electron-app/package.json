@@ -2,8 +2,9 @@
   "name": "@workspace/electron-app",
   "version": "1.0.0",
   "private": true,
-  "description": "Buku Hutang — Aplikasi Desktop Windows",
+  "description": "Buku Hutang — Aplikasi Manajemen Hutang Desktop untuk Usaha Kecil",
   "author": "Buku Hutang",
+  "license": "UNLICENSED",
   "main": "build/main.js",
   "scripts": {
     "build:main": "tsc -p tsconfig.json",

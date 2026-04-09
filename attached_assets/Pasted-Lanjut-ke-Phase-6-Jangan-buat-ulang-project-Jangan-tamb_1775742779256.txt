@@ -1,0 +1,112 @@
+Lanjut ke Phase 6. Jangan buat ulang project. Jangan tambah fitur besar baru. Fokus hanya pada final polish, release readiness, dan pengecekan build Windows installer.
+
+KONTEKS
+Project sudah berhasil:
+- migrasi ke SQLite
+- berjalan lokal/offline
+- dibungkus dengan Electron
+- backend start otomatis
+- frontend tampil normal
+- fitur utama tetap jalan
+- build Windows installer sudah disiapkan
+
+TUJUAN PHASE 6
+Saya ingin project ini siap untuk dipakai sebagai aplikasi desktop Windows yang rapi dan layak dipasang.
+
+FOKUS PHASE 6
+1. final polish UI desktop
+2. rapikan identitas aplikasi
+3. siapkan icon aplikasi
+4. cek build installer Windows dari sudut pandang release
+5. pastikan lokasi database, backup, dan file output aman
+6. buat panduan penggunaan sederhana untuk user awam
+
+YANG HARUS DIKERJAKAN
+
+1. RAPIIKAN IDENTITAS APLIKASI
+- tetapkan nama aplikasi desktop yang rapi dan konsisten
+- perbarui productName
+- perbarui appId
+- perbarui judul window Electron
+- perbarui nama installer jika perlu
+- pastikan branding konsisten di Electron config dan package metadata
+
+2. ICON APLIKASI
+- siapkan alur penggunaan file icon.ico
+- hubungkan icon ke BrowserWindow dan electron-builder
+- jika file icon final belum ada, buat placeholder config yang benar
+- jelaskan di mana user harus menaruh file icon
+
+3. FINAL CHECK DATABASE DESKTOP
+- pastikan DATABASE_PATH di mode packaged benar-benar mengarah ke lokasi userData/AppData
+- pastikan folder database dibuat otomatis jika belum ada
+- pastikan jika app pertama kali dibuka, database otomatis siap
+- tambahkan penanganan error jika database gagal dibuat
+
+4. FINAL CHECK BACKUP / RESTORE / EXPORT
+- pastikan backup JSON tetap nyaman digunakan di mode desktop
+- pastikan restore tidak merusak data tanpa konfirmasi
+- pastikan export CSV tersimpan dengan benar
+- pastikan print tetap normal dari Electron
+
+5. PENGALAMAN DESKTOP
+- pastikan ukuran window default enak dipakai
+- set minimum window size agar layout tidak rusak
+- jika perlu, rapikan menu default Electron
+- pertimbangkan apakah perlu hide menu bar agar tampilan lebih rapi
+- pastikan tidak ada blank screen saat startup
+
+6. ERROR HANDLING DESKTOP
+- jika backend gagal start, tampilkan dialog error yang jelas
+- jika frontend gagal dimuat, tampilkan pesan yang lebih manusiawi
+- pastikan app exit dengan bersih
+- pastikan proses backend tidak tertinggal setelah app ditutup
+
+7. BUILD WINDOWS FINAL
+- review electron-builder.yml
+- pastikan target Windows sudah tepat
+- cek output release folder
+- pastikan file yang perlu ikut package sudah benar
+- cek dependensi native seperti better-sqlite3 sudah ditangani dengan benar
+
+8. README / PANDUAN USER
+Perbarui README agar cocok untuk user awam:
+- cara install aplikasi Windows
+- akun default login
+- lokasi database
+- cara backup
+- cara restore
+- cara print laporan
+- cara update icon
+- cara build installer ulang bila diperlukan
+
+9. TEST CHECKLIST FINAL
+Buat checklist pengujian final untuk skenario berikut:
+- install aplikasi
+- buka aplikasi pertama kali
+- login admin
+- login owner
+- tambah pelanggan
+- tambah hutang
+- tambah pembayaran
+- cek status lunas
+- print laporan
+- export CSV
+- backup JSON
+- restore JSON
+- tutup aplikasi
+- buka lagi
+- cek data tetap ada
+
+10. OUTPUT YANG SAYA MAU
+Setelah selesai, tampilkan:
+- file yang diubah
+- apa yang dirapikan
+- apa yang perlu saya siapkan manual (misalnya icon.ico)
+- langkah paling sederhana untuk build installer Windows final
+- checklist final test
+- catatan apakah project ini sudah layak dipakai harian di Windows
+
+Jangan ubah fitur bisnis.
+Jangan tambah fitur kompleks baru.
+Fokus ke finishing, kestabilan, dan kesiapan release Windows.

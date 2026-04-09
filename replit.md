@@ -62,6 +62,38 @@ pnpm workspace monorepo using TypeScript. Aplikasi Manajemen Hutang (Debt Manage
 - `hutang` — debts (per business)
 - `pembayaran` — payments (per debt)
 
+## Phase 6 Final Polish & Release Readiness (Applied)
+
+### Electron main.ts Improvements
+- `Menu.setApplicationMenu(null)` — sembunyikan menu bar default Electron (tampilan lebih rapi)
+- `app.setAppUserModelId('com.bukuhutang.app')` — Windows taskbar grouping yang benar
+- `app.setName('Buku Hutang')` — nama aplikasi konsisten
+- `ensureUserDataDir()` — auto-buat folder AppData sebelum start backend (dengan error dialog jika gagal)
+- `createLoadingWindow()` — tampilkan layar loading biru saat backend sedang start (no blank screen)
+- `loadApp(url)` — pisahkan loading window dari loadURL (transisi mulus dari loading ke app)
+- Icon support via `getIconPath()` — cari `icon.png` atau `icon.ico` di assets folder
+- Error messages lebih manusiawi dalam bahasa Indonesia
+- Session secret berbasis userData path (unik per mesin, tidak hardcoded)
+- Backend stdout disembunyikan di production, hanya stderr yang di-log
+
+### electron-builder.yml Improvements
+- `artifactName: "BukuHutang-Setup-${version}.exe"` — nama file installer yang rapi
+- `requestedExecutionLevel: asInvoker` — tidak perlu hak admin untuk install/run
+- `deleteAppDataOnUninstall: false` — data user aman saat uninstall
+- `allowToChangeInstallationDirectory: false` — install ke Program Files standar
+- Source map files (`!**/*.map`) dikecualikan dari extraResources untuk ukuran lebih kecil
+
+### Assets
+- `artifacts/electron-app/assets/icon.svg` — placeholder SVG icon (512x512, biru #1d4ed8)
+- Dokumentasi cara konversi SVG → ICO tersedia di README
+
+### README
+- Ditulis ulang lengkap untuk pengguna awam (non-teknis)
+- Mencakup: instalasi, cara pakai semua fitur, backup/restore, export, print
+- Panduan developer terpisah: dev mode, build, reset database
+- Tabel lokasi file penting (Windows AppData, folder Unduhan)
+- Checklist pengujian final lengkap (44 item)
+
 ## Phase 5 Electron Desktop Packaging (Applied)
 
 ### New Package: `artifacts/electron-app/`

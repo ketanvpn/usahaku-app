@@ -1,6 +1,7 @@
 appId: com.bukuhutang.app
 productName: Buku Hutang
 copyright: Copyright © 2025 Buku Hutang
+buildVersion: "1.0.0"
 
 directories:
   output: release
@@ -15,6 +16,7 @@ extraResources:
     to: backend/dist
     filter:
       - "**/*"
+      - "!**/*.map"
   - from: ../api-server/node_modules/better-sqlite3
     to: backend/node_modules/better-sqlite3
     filter:
@@ -29,17 +31,22 @@ win:
     - target: nsis
       arch:
         - x64
-  icon: assets/icon.ico
+  requestedExecutionLevel: asInvoker
+  artifactName: "BukuHutang-Setup-${version}.exe"
 
 nsis:
   oneClick: false
   perMachine: false
-  allowToChangeInstallationDirectory: true
+  allowToChangeInstallationDirectory: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Buku Hutang
-  installerHeaderIcon: assets/icon.ico
+  deleteAppDataOnUninstall: false
+  license: null
+  installerLanguages:
+    - en_US
 
 npmRebuild: true
-
 asar: true
+
+publish: null

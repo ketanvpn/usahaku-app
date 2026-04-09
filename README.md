@@ -1,203 +1,347 @@
-# Buku Hutang — Aplikasi Manajemen Hutang
+# 📒 Buku Hutang
 
-Aplikasi web manajemen hutang untuk usaha kecil. Dibangun dengan React + Vite (frontend), Express + Drizzle ORM (backend), dan **SQLite** (database lokal, tanpa instalasi server database).
+**Aplikasi Manajemen Hutang Desktop untuk Usaha Kecil**
+
+Buku Hutang membantu Anda mencatat hutang pelanggan, pembayaran, dan laporan secara rapi — langsung di komputer Windows, tanpa internet, tanpa server, tanpa biaya langganan.
+
+---
+
+## Daftar Isi
+
+- [Fitur Utama](#fitur-utama)
+- [Akun Default](#akun-default)
+- [Panduan Pengguna Windows](#panduan-pengguna-windows)
+- [Panduan Developer](#panduan-developer)
+- [Lokasi File Penting](#lokasi-file-penting)
+- [Checklist Pengujian Final](#checklist-pengujian-final)
 
 ---
 
 ## Fitur Utama
 
-- **Dua Role Pengguna**: Super Admin (pengelola global) dan Owner (pengelola per-usaha)
-- **Manajemen Pelanggan**: Tambah, edit, hapus dengan proteksi data (tidak bisa hapus jika masih ada hutang)
-- **Manajemen Hutang**: Catat, edit, hapus hutang; status Aktif/Lunas otomatis dihitung
-- **Manajemen Pembayaran**: Catat pembayaran, sisa hutang diperbarui otomatis; hapus pembayaran mengembalikan sisa
-- **Dashboard**: Ringkasan statistik per usaha (owner) atau global (super admin)
-- **Laporan**: Filter by pelanggan / status / tanggal, export CSV, cetak/print PDF (A4 landscape)
-- **Backup & Restore**: Export JSON, restore dengan validasi dan preview data
-- **Manajemen User & Usaha**: Super Admin bisa kelola semua user dan usaha
-- **Ganti Password**: Owner bisa ganti password sendiri; Super Admin bisa reset password owner
-- **Isolasi Data**: Owner hanya bisa akses data usahanya sendiri
-- **Mode Offline**: Menggunakan SQLite — tidak butuh server database eksternal
+| Fitur | Keterangan |
+|-------|-----------|
+| Catat Pelanggan | Tambah, edit, hapus data pelanggan |
+| Catat Hutang | Nominal, tanggal, keterangan per pelanggan |
+| Catat Pembayaran | Pembayaran sebagian maupun lunas |
+| Status Otomatis | Status Aktif / Lunas dihitung otomatis |
+| Laporan | Filter tanggal, pelanggan, status |
+| Export CSV | Unduh data ke Excel/spreadsheet |
+| Cetak PDF | Print laporan langsung dari aplikasi |
+| Backup Data | Export semua data ke file JSON |
+| Restore Data | Pulihkan data dari file backup |
+| Multi Usaha | Super Admin kelola banyak toko/usaha |
+| Offline 100% | Tidak butuh internet sama sekali |
 
 ---
 
 ## Akun Default
 
-| Role        | Username  | Password   |
-|-------------|-----------|------------|
-| Super Admin | `admin`   | `admin123` |
-| Owner       | `owner1`  | `owner123` |
+| Role | Username | Password | Akses |
+|------|----------|----------|-------|
+| Super Admin | `admin` | `admin123` | Kelola semua usaha & pengguna |
+| Owner | `owner1` | `owner123` | Kelola usaha sendiri |
+
+> Ganti password setelah login pertama kali melalui menu **Profil**.
 
 ---
 
-## Database SQLite
+## Panduan Pengguna Windows
 
-### Lokasi File Database
+### Instalasi Aplikasi
 
-```
-artifacts/api-server/data/app.db
-```
+1. Jalankan file **BukuHutang-Setup-1.0.0.exe**
+2. Klik **Next** / **Lanjut** di setiap langkah
+3. Pilih lokasi instalasi (default sudah tepat)
+4. Centang **Create Desktop Shortcut** agar ada ikon di Desktop
+5. Klik **Install**
+6. Setelah selesai, klik **Finish**
 
-File ini dibuat **otomatis** saat pertama kali aplikasi dijalankan. Tidak perlu setup database sama sekali.
+### Membuka Aplikasi
 
-### File Penting untuk Backup Manual
+- Klik dua kali ikon **Buku Hutang** di Desktop
+- Atau cari "Buku Hutang" di Start Menu Windows
 
-| File | Keterangan |
-|------|-----------|
-| `artifacts/api-server/data/app.db` | Database utama SQLite |
-| `artifacts/api-server/data/app.db-shm` | Shared memory (pendamping WAL) |
-| `artifacts/api-server/data/app.db-wal` | Write-Ahead Log (aktif saat dijalankan) |
+### Pertama Kali Buka
 
-> **Tips**: Untuk backup penuh, salin ketiga file sekaligus saat aplikasi dalam keadaan berhenti. Atau gunakan fitur **Backup JSON** di dalam aplikasi.
+1. Layar biru dengan tulisan **"Memuat aplikasi, harap tunggu..."** akan muncul sebentar — ini normal
+2. Tunggu sampai halaman login muncul (biasanya 3-10 detik)
+3. Login dengan akun Owner atau Super Admin
 
-### Cara Reset Database
+### Mengelola Pelanggan
 
-Hapus file SQLite dan restart aplikasi — seed data akan dibuat ulang otomatis:
+1. Klik menu **Pelanggan** di sidebar kiri
+2. Klik **Tambah Pelanggan** untuk menambah baru
+3. Isi nama dan nomor telepon, klik **Simpan**
+4. Untuk edit: klik ikon pensil di baris pelanggan
+5. Untuk hapus: klik ikon tempat sampah (hanya bisa dihapus jika tidak ada hutang)
 
-```bash
-rm -f artifacts/api-server/data/app.db*
-pnpm --filter @workspace/api-server run dev
-```
+### Mencatat Hutang
 
-### Cara Seed Ulang
+1. Klik menu **Hutang** di sidebar
+2. Klik **Tambah Hutang**
+3. Pilih pelanggan, isi keterangan, nominal, dan tanggal
+4. Klik **Simpan** — hutang tersimpan dengan status **Aktif**
 
-Reset database seperti di atas. Seed dijalankan otomatis saat startup (hanya jika data belum ada).
+### Mencatat Pembayaran
+
+1. Klik menu **Pembayaran**
+2. Klik **Tambah Pembayaran**
+3. Pilih hutang yang dibayar, isi jumlah pembayaran dan tanggal
+4. Klik **Simpan**
+5. Status hutang berubah otomatis menjadi **Lunas** jika sudah terbayar penuh
+
+### Melihat Laporan
+
+1. Klik menu **Laporan**
+2. Gunakan filter di atas tabel untuk menyaring berdasarkan:
+   - Pelanggan tertentu
+   - Status (Aktif / Lunas / Semua)
+   - Periode tanggal
+3. Klik **Reset Filter** untuk kembali ke tampilan semua data
+
+### Export CSV (ke Excel)
+
+1. Buka menu **Laporan**
+2. Atur filter sesuai kebutuhan (opsional)
+3. Klik tombol **Unduh CSV**
+4. File akan tersimpan di folder **Unduhan** komputer Anda
+5. Buka file tersebut di Excel atau Google Sheets
+
+### Cetak Laporan (PDF)
+
+1. Buka menu **Laporan**
+2. Klik tombol **Cetak / PDF**
+3. Jendela cetak akan terbuka
+4. Pilih printer atau **Save as PDF**
+5. Klik **Print / Cetak**
+
+> Pastikan pop-up blocker browser tidak aktif (tidak berlaku di mode desktop).
+
+### Backup Data
+
+1. Klik menu **Backup**
+2. Klik **Unduh File Backup**
+3. File JSON tersimpan di folder **Unduhan** komputer Anda
+4. Simpan file ini di tempat aman (flashdisk, Google Drive, dll.)
+5. Beri nama file yang mudah diingat, misalnya: `backup_januari_2025.json`
+
+> **Disarankan**: Backup data secara rutin, misalnya setiap minggu.
+
+### Restore Data dari Backup
+
+1. Klik menu **Backup**
+2. Scroll ke bagian **Restore Data**
+3. Klik **Pilih File Backup** dan pilih file JSON backup Anda
+4. Preview data akan ditampilkan (jumlah pelanggan, hutang, pembayaran)
+5. Klik **Mulai Restore**
+6. Konfirmasi di dialog yang muncul
+7. **Perhatian**: Restore akan menggantikan seluruh data saat ini
+
+### Ganti Password
+
+1. Klik menu **Profil** di sidebar bawah
+2. Isi **Password Lama** (password saat ini)
+3. Isi **Password Baru** dan **Konfirmasi Password Baru**
+4. Klik **Simpan Perubahan**
+
+### Menutup Aplikasi
+
+- Klik tombol **X** di pojok kanan atas window
+- Semua data tersimpan otomatis — tidak perlu simpan manual
 
 ---
 
-## Cara Install & Run Lokal
+## Panduan Developer
 
 ### Prasyarat
 
 - Node.js 18+
 - pnpm 8+
-- **Tidak perlu PostgreSQL** — database otomatis menggunakan SQLite
+- Git
 
-### Install Dependensi
+### Install Dependencies
 
 ```bash
 pnpm install
 ```
 
-### Jalankan Aplikasi (Mode Pengembangan)
+### Mode Development
 
 ```bash
-# Terminal 1: Backend API
+# Terminal 1 — Backend API
 pnpm --filter @workspace/api-server run dev
 
-# Terminal 2: Frontend
+# Terminal 2 — Frontend (opsional untuk hot reload)
 pnpm --filter @workspace/hutang-app run dev
+
+# Terminal 3 — Buka Electron desktop window
+pnpm --filter @workspace/electron-app run electron
 ```
 
-Frontend: `http://localhost:PORT` (PORT dari environment)  
-Backend API: `http://localhost:8080`
+### Mode Production (Build + Jalankan)
 
-> Di Replit: tekan tombol **Run** yang sudah dikonfigurasi — semua berjalan otomatis.
+```bash
+# Build semua (backend + frontend + electron main)
+pnpm --filter @workspace/electron-app run build:desktop
 
-### Variabel Environment
+# Jalankan dalam mode production
+pnpm --filter @workspace/electron-app run electron:prod
+```
 
-| Variabel | Default | Keterangan |
-|----------|---------|-----------|
-| `DATABASE_PATH` | `{cwd}/data/app.db` | Path file SQLite |
-| `SESSION_SECRET` | fallback string | Secret untuk session cookie |
-| `PORT` | wajib diisi | Port backend |
+### Build Windows Installer (.exe)
+
+```bash
+# Harus dijalankan di mesin Windows dengan Node.js terinstall
+pnpm --filter @workspace/electron-app run dist:win
+```
+
+Output: `artifacts/electron-app/release/BukuHutang-Setup-1.0.0.exe`
+
+### Menambah Icon Aplikasi
+
+1. Siapkan file gambar PNG ukuran **512x512 piksel** (atau lebih besar)
+2. Konversi ke format ICO di: https://cloudconvert.com/png-to-ico (pilih ukuran 16, 32, 48, 128, 256)
+3. Taruh file sebagai: `artifacts/electron-app/assets/icon.ico`
+4. Rebuild: `pnpm --filter @workspace/electron-app run build:desktop`
+
+File SVG placeholder sudah tersedia di: `artifacts/electron-app/assets/icon.svg`
+
+### Struktur Project
+
+```
+artifacts/
+  api-server/          ← Backend Express + SQLite
+    src/               ← Source TypeScript
+    dist/              ← Hasil build (auto-generated)
+    data/app.db        ← Database lokal (development)
+  hutang-app/          ← Frontend React + Vite
+    src/               ← Source React
+    dist/public/       ← Hasil build (auto-generated)
+  electron-app/        ← Desktop wrapper Electron
+    src/main.ts        ← Main process
+    build/             ← Hasil compile (auto-generated)
+    assets/            ← Icon & aset
+    release/           ← Installer output (auto-generated)
+    electron-builder.yml
+lib/
+  db/                  ← Schema database (Drizzle ORM)
+  api-zod/             ← Tipe API (auto-generated)
+```
+
+### Reset Database
+
+```bash
+rm -f artifacts/api-server/data/app.db*
+pnpm --filter @workspace/api-server run dev
+```
+Database akan dibuat ulang dengan data seed otomatis.
 
 ---
 
-## Cara Backup & Restore
+## Lokasi File Penting
 
-### Backup (Export JSON)
+| File / Folder | Lokasi | Keterangan |
+|---------------|--------|-----------|
+| Database (desktop) | `C:\Users\{nama}\AppData\Roaming\Buku Hutang\app.db` | Data utama |
+| Database (dev) | `artifacts/api-server/data/app.db` | Data development |
+| File Backup | Folder Unduhan | Setelah klik "Unduh Backup" |
+| Export CSV | Folder Unduhan | Setelah klik "Unduh CSV" |
+| Installer | `artifacts/electron-app/release/` | Hasil `dist:win` |
+| Icon | `artifacts/electron-app/assets/icon.ico` | Untuk build installer |
 
-1. Login sebagai Owner
-2. Buka menu **Backup**
-3. Klik **Unduh File Backup**
-4. File JSON terunduh: `backup_hutang_YYYY-MM-DD.json`
+### Database Mode Desktop (Windows)
 
-### Restore (Import JSON)
+Saat aplikasi dijalankan sebagai installer, database tersimpan di:
 
-1. Buka menu **Backup**
-2. Di bagian **Restore Data**, pilih file JSON backup
-3. Preview ditampilkan: jumlah pelanggan, hutang, pembayaran yang akan diimport
-4. Klik **Mulai Restore** → konfirmasi
-5. ⚠️ Restore menghapus semua data saat ini dan menggantinya dengan data backup
+```
+C:\Users\{nama_pengguna}\AppData\Roaming\Buku Hutang\app.db
+```
 
-### Backup File SQLite Langsung
-
-Salin file `data/app.db` (dan `app.db-shm`, `app.db-wal`) ke tempat aman saat aplikasi berhenti. Ini adalah backup penuh yang bisa dipulihkan dengan mengganti file.
-
----
-
-## Cara Cetak Laporan (PDF)
-
-1. Login sebagai Owner → buka **Laporan**
-2. Terapkan filter jika diperlukan
-3. Klik **Cetak / PDF**
-4. Jendela baru terbuka — gunakan Print dialog browser untuk simpan PDF
-
-> Pastikan popup blocker dinonaktifkan untuk domain ini.
+Folder ini **tidak ikut terhapus** saat uninstall, sehingga data tetap aman.
 
 ---
 
-## Catatan Role
+## Checklist Pengujian Final
+
+Gunakan checklist ini sebelum mendistribusikan ke pengguna:
+
+### Instalasi & Startup
+- [ ] Installer berjalan tanpa error
+- [ ] Ikon muncul di Desktop dan Start Menu
+- [ ] Aplikasi terbuka — muncul layar loading biru
+- [ ] Layar login muncul dalam 10 detik
+- [ ] Tidak ada blank screen yang lama
+
+### Login & Autentikasi
+- [ ] Login Super Admin: `admin` / `admin123` → masuk ke dashboard admin
+- [ ] Login Owner: `owner1` / `owner123` → masuk ke dashboard owner
+- [ ] Logout berfungsi — kembali ke halaman login
+- [ ] Login ulang berfungsi
+
+### Manajemen Data (Owner)
+- [ ] Tambah pelanggan baru → muncul di daftar
+- [ ] Edit nama/telepon pelanggan → tersimpan
+- [ ] Tambah hutang untuk pelanggan → status "Aktif"
+- [ ] Tambah pembayaran sebagian → sisa hutang berkurang
+- [ ] Tambah pembayaran penuh → status berubah "Lunas"
+- [ ] Hapus pembayaran → sisa hutang kembali
+- [ ] Coba hapus pelanggan yang masih punya hutang → muncul pesan error (tidak bisa dihapus)
+- [ ] Hapus hutang → berhasil
+- [ ] Hapus pelanggan yang tidak punya hutang → berhasil
+
+### Laporan & Export
+- [ ] Laporan menampilkan semua data hutang
+- [ ] Filter status "Aktif" bekerja
+- [ ] Filter "Lunas" bekerja
+- [ ] Filter berdasarkan pelanggan bekerja
+- [ ] Filter berdasarkan tanggal bekerja
+- [ ] Reset filter mengembalikan semua data
+- [ ] Klik "Unduh CSV" → file terunduh
+- [ ] Buka CSV di Excel → data terbaca dengan benar
+- [ ] Klik "Cetak / PDF" → jendela print terbuka
+
+### Backup & Restore
+- [ ] Klik "Unduh File Backup" → file JSON terunduh
+- [ ] Buka kembali menu Backup
+- [ ] Upload file JSON → preview data muncul
+- [ ] Klik "Mulai Restore" + konfirmasi → data terganti
+- [ ] Data setelah restore sesuai dengan isi backup
+
+### Persistensi Data
+- [ ] Tutup aplikasi
+- [ ] Buka kembali aplikasi
+- [ ] Login → semua data masih ada
 
 ### Super Admin
-- Dashboard Global (semua usaha)
-- Kelola daftar Usaha (tambah, edit)
-- Kelola semua User (tambah, edit, reset password, aktif/nonaktif, hapus)
+- [ ] Login admin → melihat daftar semua usaha
+- [ ] Tambah usaha baru → muncul di daftar
+- [ ] Melihat daftar semua user/owner
+- [ ] Reset password owner → owner bisa login dengan password baru
 
-### Owner
-- Data usahanya sendiri saja
-- Kelola Pelanggan, Hutang, Pembayaran
-- Laporan, CSV export, print
-- Backup & Restore
-- Ganti password di Profil
+### Ketahanan
+- [ ] Nonaktifkan koneksi internet → aplikasi tetap berjalan
+- [ ] Jalankan di PC berbeda (dengan install) → berfungsi normal
 
 ---
 
-## Catatan Database
+## Catatan Keamanan
 
-- **SQLite** dengan WAL mode (performa tinggi, aman dari data corruption)
-- **Foreign key diaktifkan** — hapus hutang cascade hapus pembayarannya
-- **Proteksi hapus pelanggan**: hanya bisa dihapus jika tidak ada hutang (aktif maupun lunas)
-- **Status hutang** (Aktif/Lunas) dihitung otomatis dari total pembayaran vs nominal
-- Semua query difilter per `usaha_id` untuk isolasi data antar usaha
-
----
-
-## Kesiapan Desktop (Electron)
-
-Aplikasi ini sudah **siap** untuk dikemas sebagai aplikasi desktop:
-
-| Aspek | Status | Catatan |
-|-------|--------|---------|
-| Database lokal (SQLite) | ✅ Selesai | Tidak butuh server eksternal |
-| Backend tanpa cloud | ✅ Selesai | Pure Node.js + SQLite |
-| Frontend buildable | ✅ Siap | React + Vite |
-| No external dependencies | ✅ | Semua berjalan lokal |
-| Entry point backend | `artifacts/api-server/dist/index.mjs` | Entry untuk Electron |
-| Entry point frontend | `artifacts/hutang-app/dist/index.html` | Setelah `vite build` |
-
-### Langkah Menuju Electron
-
-```
-1. npm run build (atau pnpm build semua packages)
-2. Buat package electron dengan main process yang:
-   - Spawn Express server dari dist/index.mjs
-   - Buka BrowserWindow ke localhost:{port}
-3. Build installer dengan electron-builder
-4. Hasilkan .exe (Windows) atau .dmg (macOS)
-```
-
-> Database SQLite akan tersimpan di folder AppData pengguna (Windows) atau ~/Library (macOS) saat dikemas dengan Electron.
+- Tidak ada data yang dikirim ke internet — semua tersimpan lokal
+- Database SQLite terenkripsi di folder AppData pengguna
+- Session cookie hanya berlaku di localhost
+- Ganti password default sebelum digunakan di lingkungan produksi
 
 ---
 
 ## Stack Teknologi
 
-| Layer | Teknologi |
-|-------|-----------|
+| Komponen | Teknologi |
+|----------|-----------|
+| Desktop wrapper | Electron 33 |
 | Frontend | React 19 + Vite + Tailwind CSS |
 | Backend | Express 5 + TypeScript |
 | Database | SQLite (better-sqlite3) + Drizzle ORM |
 | Auth | express-session + bcrypt |
+| Installer | electron-builder (NSIS) |
 | Monorepo | pnpm workspaces |
-| Build | esbuild (backend), Vite (frontend) |
