@@ -58,6 +58,43 @@ router.post("/auth/logout", (req, res): void => {
   });
 });
 
+router.post("/auth/change-password", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.session.userId;
+  if (!userId) {
+    res.status(401).json({ error: "Tidak terautentikasi." });
+    return;
+  }
+
+  const { current_password, new_password } = req.body;
+
+  if (!current_password || !new_password) {
+    res.status(400).json({ error: "Password lama dan password baru wajib diisi." });
+    return;
+  }
+
+  if (typeof new_password !== "string" || new_password.length < 6) {
+    res.status(400).json({ error: "Password baru minimal 6 karakter." });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+  if (!user) {
+    res.status(404).json({ error: "User tidak ditemukan." });
+    return;
+  }
+
+  const match = await bcrypt.compare(current_password, user.passwordHash);
+  if (!match) {
+    res.status(400).json({ error: "Password lama salah." });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(new_password, 10);
+  await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, userId));
+
+  res.json({ message: "Password berhasil diubah." });
+});
+
 router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId!));
 

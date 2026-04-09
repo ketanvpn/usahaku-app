@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, pelangganTable, hutangTable, pembayaranTable } from "@workspace/db";
-import { eq, and, sum } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import {
   CreatePelangganBody,
   GetPelangganParams,
@@ -113,11 +113,11 @@ router.get("/pelanggan/:id", requireAuth, async (req, res): Promise<void> => {
 
   const hutangList = await db.select().from(hutangTable)
     .where(and(eq(hutangTable.pelangganId, params.data.id), eq(hutangTable.usahaId, usahaId)))
-    .orderBy(hutangTable.tanggalHutang);
+    .orderBy(desc(hutangTable.tanggalHutang));
 
   const pembayaranList = await db.select().from(pembayaranTable)
     .where(and(eq(pembayaranTable.pelangganId, params.data.id), eq(pembayaranTable.usahaId, usahaId)))
-    .orderBy(pembayaranTable.tanggalBayar);
+    .orderBy(desc(pembayaranTable.tanggalBayar));
 
   const totalHutang = hutangList.reduce((sum, h) => sum + parseFloat(h.nominalHutang), 0);
   const totalDibayar = hutangList.reduce((sum, h) => sum + parseFloat(h.totalDibayar), 0);
@@ -183,14 +183,34 @@ router.delete("/pelanggan/:id", requireAuth, async (req, res): Promise<void> => 
     return;
   }
 
-  const [pelanggan] = await db.delete(pelangganTable)
-    .where(and(eq(pelangganTable.id, params.data.id), eq(pelangganTable.usahaId, usahaId)))
-    .returning();
+  const [existing] = await db.select().from(pelangganTable)
+    .where(and(eq(pelangganTable.id, params.data.id), eq(pelangganTable.usahaId, usahaId)));
 
-  if (!pelanggan) {
+  if (!existing) {
     res.status(404).json({ error: "Pelanggan tidak ditemukan." });
     return;
   }
+
+  const hutangCheck = await db.select({ id: hutangTable.id, status: hutangTable.status })
+    .from(hutangTable)
+    .where(and(eq(hutangTable.pelangganId, params.data.id), eq(hutangTable.usahaId, usahaId)));
+
+  if (hutangCheck.length > 0) {
+    const aktif = hutangCheck.filter((h) => h.status === "aktif").length;
+    if (aktif > 0) {
+      res.status(400).json({
+        error: `Pelanggan ini masih memiliki ${aktif} hutang aktif. Selesaikan atau hapus semua hutang terlebih dahulu.`,
+      });
+    } else {
+      res.status(400).json({
+        error: `Pelanggan ini memiliki ${hutangCheck.length} riwayat hutang yang sudah lunas. Hapus semua hutang terlebih dahulu sebelum menghapus pelanggan.`,
+      });
+    }
+    return;
+  }
+
+  await db.delete(pelangganTable)
+    .where(and(eq(pelangganTable.id, params.data.id), eq(pelangganTable.usahaId, usahaId)));
 
   res.json({ message: "Pelanggan berhasil dihapus." });
 });

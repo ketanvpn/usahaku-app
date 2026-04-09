@@ -71,7 +71,7 @@ export default function AdminUsahaPage() {
             setIsDialogOpen(false);
           },
           onError: (err: any) => {
-            toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" });
+            toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" });
           }
         }
       );
@@ -85,7 +85,7 @@ export default function AdminUsahaPage() {
             setIsDialogOpen(false);
           },
           onError: (err: any) => {
-            toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" });
+            toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" });
           }
         }
       );

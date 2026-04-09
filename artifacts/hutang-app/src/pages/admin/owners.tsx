@@ -102,7 +102,7 @@ export default function AdminOwnersPage() {
             queryClient.invalidateQueries({ queryKey: getGetUsersQueryKey() });
             setIsUserDialogOpen(false);
           },
-          onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" })
+          onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
         }
       );
     } else {
@@ -114,7 +114,7 @@ export default function AdminOwnersPage() {
             queryClient.invalidateQueries({ queryKey: getGetUsersQueryKey() });
             setIsUserDialogOpen(false);
           },
-          onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" })
+          onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
         }
       );
     }
@@ -129,7 +129,7 @@ export default function AdminOwnersPage() {
           toast({ title: "Password berhasil direset" });
           setIsResetPwdDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" })
+        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
       }
     );
   };
@@ -142,7 +142,7 @@ export default function AdminOwnersPage() {
           toast({ title: `User berhasil di${user.is_active ? 'nonaktifkan' : 'aktifkan'}` });
           queryClient.invalidateQueries({ queryKey: getGetUsersQueryKey() });
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" })
+        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
       }
     );
   };
@@ -157,7 +157,7 @@ export default function AdminOwnersPage() {
           queryClient.invalidateQueries({ queryKey: getGetUsersQueryKey() });
           setIsDeleteDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" })
+        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
       }
     );
   };

@@ -1,10 +1,10 @@
 import { useRoute } from "wouter";
-import { useGetPelanggan, getGetPelangganQueryKey } from "@workspace/api-client-react";
+import { useGetPelanggan } from "@workspace/api-client-react";
 import { formatRupiah, formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, User, Phone, MapPin, AlignLeft } from "lucide-react";
+import { Loader2, ArrowLeft, User, Phone, MapPin, AlignLeft, TrendingUp, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
@@ -13,14 +13,22 @@ export default function PelangganDetail() {
   const id = parseInt(params?.id || "0");
 
   const { data, isLoading } = useGetPelanggan(id, {
-    query: { enabled: !!id }
+    query: { enabled: !!id },
   });
 
   if (isLoading) {
-    return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return (
+      <div className="flex justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  if (!data) return <div>Pelanggan tidak ditemukan.</div>;
+  if (!data) return <div className="p-8 text-muted-foreground">Pelanggan tidak ditemukan.</div>;
+
+  const hutangAktif = data.hutang_list.filter((h) => h.status === "aktif");
+  const hutangLunas = data.hutang_list.filter((h) => h.status === "lunas");
+  const sisaAktif = hutangAktif.reduce((s, h) => s + h.sisa_hutang, 0);
 
   return (
     <div className="space-y-6">
@@ -77,28 +85,41 @@ export default function PelangganDetail() {
           <CardHeader>
             <CardTitle>Ringkasan Hutang</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             <div className="flex justify-between items-center p-3 bg-blue-50/50 rounded-lg border border-blue-100">
-              <div className="text-sm font-medium text-blue-800">Total Hutang Tercatat</div>
+              <div className="text-sm font-medium text-blue-800">Total Nominal Hutang</div>
               <div className="font-bold text-blue-700">{formatRupiah(data.total_hutang)}</div>
             </div>
             <div className="flex justify-between items-center p-3 bg-emerald-50/50 rounded-lg border border-emerald-100">
-              <div className="text-sm font-medium text-emerald-800">Total Dibayar</div>
+              <div className="text-sm font-medium text-emerald-800">Total Telah Dibayar</div>
               <div className="font-bold text-emerald-700">{formatRupiah(data.total_dibayar)}</div>
             </div>
             <div className="flex justify-between items-center p-4 bg-orange-50/50 rounded-lg border border-orange-100">
               <div className="text-sm font-medium text-orange-800">Total Sisa Hutang Aktif</div>
-              <div className="text-xl font-bold text-orange-700">{formatRupiah(data.sisa_hutang)}</div>
+              <div className="text-xl font-bold text-orange-700">{formatRupiah(sisaAktif)}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="text-center p-2 bg-amber-50 rounded border border-amber-100">
+                <div className="text-lg font-bold text-amber-700">{hutangAktif.length}</div>
+                <div className="text-xs text-amber-600">Hutang Aktif</div>
+              </div>
+              <div className="text-center p-2 bg-emerald-50 rounded border border-emerald-100">
+                <div className="text-lg font-bold text-emerald-700">{hutangLunas.length}</div>
+                <div className="text-xs text-emerald-600">Hutang Lunas</div>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      {hutangAktif.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Riwayat Hutang</CardTitle>
-            <CardDescription>Semua catatan hutang pelanggan ini</CardDescription>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-amber-600" />
+              <CardTitle>Hutang Aktif</CardTitle>
+            </div>
+            <CardDescription>{hutangAktif.length} hutang belum lunas</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -106,43 +127,41 @@ export default function PelangganDetail() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Tanggal</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Keterangan</TableHead>
+                    <TableHead className="text-right">Nominal</TableHead>
                     <TableHead className="text-right">Sisa</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.hutang_list.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">Tidak ada hutang</TableCell></TableRow>
-                  ) : (
-                    data.hutang_list.map(h => (
-                      <TableRow key={h.id}>
-                        <TableCell>{formatDate(h.tanggal_hutang)}</TableCell>
-                        <TableCell>
-                          <Badge variant={h.status === "lunas" ? "outline" : "default"} 
-                                className={h.status === "aktif" ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-emerald-100 text-emerald-800 border-emerald-200"}>
-                            {h.status === "aktif" ? "Aktif" : "Lunas"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">{formatRupiah(h.sisa_hutang)}</TableCell>
-                        <TableCell className="text-right">
-                          <Link href={`/hutang/${h.id}`}>
-                            <Button variant="ghost" size="sm">Detail</Button>
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
+                  {hutangAktif.map((h) => (
+                    <TableRow key={h.id}>
+                      <TableCell className="whitespace-nowrap">{formatDate(h.tanggal_hutang)}</TableCell>
+                      <TableCell className="text-muted-foreground max-w-[180px] truncate">{h.keterangan || "-"}</TableCell>
+                      <TableCell className="text-right">{formatRupiah(h.nominal_hutang)}</TableCell>
+                      <TableCell className="text-right font-bold text-orange-600">{formatRupiah(h.sisa_hutang)}</TableCell>
+                      <TableCell className="text-right">
+                        <Link href={`/hutang/${h.id}`}>
+                          <Button variant="ghost" size="sm">Detail</Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>
           </CardContent>
         </Card>
+      )}
 
+      {hutangLunas.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Riwayat Pembayaran</CardTitle>
-            <CardDescription>Semua pembayaran dari pelanggan ini</CardDescription>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              <CardTitle>Hutang Lunas</CardTitle>
+            </div>
+            <CardDescription>{hutangLunas.length} hutang sudah dilunasi</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -150,28 +169,77 @@ export default function PelangganDetail() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Tanggal</TableHead>
-                    <TableHead>Catatan</TableHead>
+                    <TableHead>Keterangan</TableHead>
                     <TableHead className="text-right">Nominal</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.pembayaran_list.length === 0 ? (
-                    <TableRow><TableCell colSpan={3} className="text-center py-4 text-muted-foreground">Tidak ada pembayaran</TableCell></TableRow>
-                  ) : (
-                    data.pembayaran_list.map(p => (
-                      <TableRow key={p.id}>
-                        <TableCell>{formatDate(p.tanggal_bayar)}</TableCell>
-                        <TableCell className="truncate max-w-[150px]">{p.catatan || "-"}</TableCell>
-                        <TableCell className="text-right font-medium text-emerald-600">+{formatRupiah(p.nominal_bayar)}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
+                  {hutangLunas.map((h) => (
+                    <TableRow key={h.id} className="text-muted-foreground">
+                      <TableCell className="whitespace-nowrap">{formatDate(h.tanggal_hutang)}</TableCell>
+                      <TableCell className="max-w-[180px] truncate">{h.keterangan || "-"}</TableCell>
+                      <TableCell className="text-right">{formatRupiah(h.nominal_hutang)}</TableCell>
+                      <TableCell className="text-right">
+                        <Link href={`/hutang/${h.id}`}>
+                          <Button variant="ghost" size="sm">Detail</Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
+
+      {data.hutang_list.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            Pelanggan ini belum memiliki catatan hutang.
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Riwayat Pembayaran Terbaru</CardTitle>
+          <CardDescription>Semua pembayaran dari pelanggan ini (terbaru di atas)</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Catatan</TableHead>
+                  <TableHead className="text-right">Nominal</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.pembayaran_list.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                      Tidak ada riwayat pembayaran.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  data.pembayaran_list.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="whitespace-nowrap">{formatDate(p.tanggal_bayar)}</TableCell>
+                      <TableCell className="truncate max-w-[200px] text-muted-foreground">{p.catatan || "-"}</TableCell>
+                      <TableCell className="text-right font-medium text-emerald-600">
+                        +{formatRupiah(p.nominal_bayar)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

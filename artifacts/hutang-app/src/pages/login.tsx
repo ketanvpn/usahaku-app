@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,6 +41,16 @@ export default function LoginPage() {
     },
   });
 
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && user) {
+      if (user.role === "super_admin") {
+        setLocation("/admin/dashboard");
+      } else {
+        setLocation("/dashboard");
+      }
+    }
+  }, [authLoading, isAuthenticated, user, setLocation]);
+
   if (authLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-muted/30">
@@ -50,11 +60,6 @@ export default function LoginPage() {
   }
 
   if (isAuthenticated && user) {
-    if (user.role === "super_admin") {
-      setLocation("/admin/dashboard");
-    } else {
-      setLocation("/dashboard");
-    }
     return null;
   }
 
@@ -73,7 +78,7 @@ export default function LoginPage() {
           toast({
             variant: "destructive",
             title: "Login gagal",
-            description: error?.error || "Username atau password salah",
+            description: error?.data?.error || error?.message || "Username atau password salah",
           });
         },
       }
@@ -101,7 +106,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Username</FormLabel>
                     <FormControl>
-                      <Input placeholder="Masukkan username" {...field} />
+                      <Input placeholder="Masukkan username" autoFocus {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

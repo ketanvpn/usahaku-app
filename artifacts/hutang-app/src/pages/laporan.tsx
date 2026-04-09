@@ -28,7 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2, Download, Printer, Filter } from "lucide-react";
+import { Loader2, Download, Printer, Filter, X } from "lucide-react";
 
 // ─── helpers (used inside the print HTML generator — no external imports) ─────
 
@@ -343,6 +343,15 @@ export default function LaporanPage() {
     year: "numeric",
   }).format(new Date());
 
+  const hasActiveFilter = !!filterPelanggan || !!filterStatus || !!dateFrom || !!dateTo;
+
+  const resetFilter = () => {
+    setFilterPelanggan(undefined);
+    setFilterStatus(undefined);
+    setDateFrom("");
+    setDateTo("");
+  };
+
   const filterLines: { label: string; value: string }[] = [];
   if (selectedPelanggan) filterLines.push({ label: "Pelanggan", value: selectedPelanggan.nama });
   if (filterStatus)
@@ -456,8 +465,16 @@ export default function LaporanPage() {
       {/* Filter panel */}
       <Card className="bg-muted/30 border-primary/20 shadow-sm">
         <CardContent className="p-5">
-          <div className="flex items-center gap-2 text-sm font-semibold text-primary mb-4">
-            <Filter className="h-4 w-4" /> Filter Laporan
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+              <Filter className="h-4 w-4" /> Filter Laporan
+            </div>
+            {hasActiveFilter && (
+              <Button variant="ghost" size="sm" onClick={resetFilter} className="text-muted-foreground hover:text-foreground h-7 px-2">
+                <X className="h-3 w-3 mr-1" />
+                Reset Filter
+              </Button>
+            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
@@ -520,6 +537,29 @@ export default function LaporanPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Active filter summary */}
+      {hasActiveFilter && laporanData && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Filter aktif:</span>
+          {selectedPelanggan && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+              Pelanggan: {selectedPelanggan.nama}
+            </span>
+          )}
+          {filterStatus && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+              Status: {filterStatus === "aktif" ? "Aktif" : "Lunas"}
+            </span>
+          )}
+          {(dateFrom || dateTo) && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+              Periode: {dateFrom || "awal"} s/d {dateTo || "sekarang"}
+            </span>
+          )}
+          <span className="text-muted-foreground">— {laporanData.length} baris</span>
+        </div>
+      )}
 
       {/* Data table (screen view) */}
       <Card>

@@ -1,0 +1,162 @@
+Lanjut ke tahap 3. Jangan buat ulang project. Fokus pada hardening, finishing, dan kualitas produksi lokal.
+
+KONTEKS
+Tahap 2 sudah berhasil.
+Checklist yang sudah lolos:
+- project berjalan lokal
+- login super admin & owner normal
+- role restriction jalan
+- owner hanya bisa akses data usaha sendiri
+- tambah/edit/hapus hutang normal
+- tambah/hapus pembayaran normal
+- sisa hutang dan status lunas dihitung otomatis
+- export CSV jalan
+- backup export JSON jalan
+- restore ada konfirmasi
+- print laporan aman
+
+Sekarang fokus tahap 3:
+- menutup edge case
+- meningkatkan keamanan lokal
+- memperbaiki pengalaman pakai
+- menyiapkan aplikasi agar terasa lebih matang
+- tetap sederhana dan tidak over-engineering
+
+PRIORITAS TAHAP 3
+
+1. UJI EDGE CASE PEMBAYARAN
+Periksa dan pastikan aman untuk kasus berikut:
+- bayar tepat sama dengan sisa hutang
+- bayar 1 rupiah di bawah sisa hutang
+- bayar 1 rupiah di atas sisa hutang
+- edit hutang setelah sebagian pembayaran sudah masuk
+- edit pembayaran menjadi lebih kecil
+- edit pembayaran menjadi lebih besar
+- hapus pembayaran terakhir
+- hutang dengan nominal sangat besar
+- hutang dengan keterangan kosong
+- pelanggan dengan banyak hutang aktif
+
+Jika ada bug, perbaiki.
+
+2. VALIDASI DELETE YANG LEBIH AMAN
+Periksa semua aksi hapus:
+- hapus pelanggan
+- hapus hutang
+- hapus pembayaran
+- hapus owner
+- hapus usaha
+
+Tambahkan aturan aman:
+- jangan izinkan hapus pelanggan jika masih punya hutang aktif, kecuali ada penanganan jelas
+- jangan izinkan hapus usaha jika masih ada owner/data terkait, kecuali ada alur yang aman
+- tampilkan pesan konfirmasi yang jelas, bukan konfirmasi umum yang terlalu singkat
+
+3. PENGATURAN PASSWORD YANG LEBIH BAIK
+Perbaiki area akun:
+- super admin bisa reset password owner
+- owner bisa ganti password sendiri
+- validasi password minimum masuk akal
+- tampilkan pesan sukses/gagal yang jelas
+- jangan tampilkan password lama di UI
+- pastikan password tetap di-hash
+
+4. SESSION / AUTH HARDENING
+Periksa sistem login:
+- pastikan logout benar-benar membersihkan sesi/token
+- pastikan route terlindungi tidak bisa diakses tanpa login
+- tangani kasus token/session expired dengan redirect yang rapi ke login
+- jangan biarkan halaman blank/error ketika auth gagal
+
+5. RAPIIKAN HALAMAN DETAIL HUTANG
+Buat halaman detail hutang lebih enak:
+- ringkasan hutang di bagian atas
+- info pelanggan
+- tanggal hutang
+- nominal hutang
+- total dibayar
+- sisa hutang
+- status
+- tabel riwayat pembayaran
+- tombol edit/hapus pembayaran lebih jelas
+- urutan pembayaran terbaru di atas
+
+6. RAPIIKAN HALAMAN DETAIL PELANGGAN
+Perbaiki halaman detail pelanggan:
+- ringkasan pelanggan
+- total hutang
+- total dibayar
+- sisa hutang
+- daftar hutang aktif
+- daftar hutang lunas
+- riwayat pembayaran terbaru
+- tombol aksi yang jelas
+
+7. PENINGKATAN LAPORAN
+Rapikan halaman laporan:
+- filter lebih nyaman
+- tombol reset filter
+- info hasil filter aktif
+- total hasil filter di atas tabel
+- jika tidak ada data, tampilkan empty state yang bagus
+- pastikan export CSV mengikuti filter aktif
+- pastikan print mengikuti filter aktif
+
+8. PERSIAPAN IMPOR/RESTORE YANG LEBIH AMAN
+Perbaiki restore:
+- validasi versi/struktur file backup
+- tampilkan preview singkat sebelum restore jika memungkinkan
+- minimal tampilkan jumlah pelanggan, hutang, pembayaran yang akan di-restore
+- beri pilihan paling aman yang sederhana
+- jika terlalu kompleks, cukup lakukan validasi ketat + konfirmasi final
+
+9. PENGALAMAN PAKAI YANG LEBIH HALUS
+Tambahkan hal kecil yang berguna:
+- autofocus pada field penting
+- enter key submit di form login
+- tombol simpan/hapus punya loading state
+- tombol kembali yang jelas di halaman detail
+- notifikasi tidak terlalu cepat hilang
+- tabel tetap nyaman dibaca saat data banyak
+- pagination sederhana atau limit data jika perlu
+
+10. FORMAT DAN KONSISTENSI
+Periksa semua tampilan:
+- rupiah konsisten
+- tanggal konsisten Indonesia
+- label tombol konsisten
+- nama menu konsisten
+- status badge konsisten
+- warna status aktif/lunas konsisten
+- typo teks diperbaiki
+
+11. DATABASE & INTEGRITAS DATA
+Pastikan:
+- foreign key bekerja benar
+- transaksi database aman saat operasi penting
+- recalculation hutang tidak meninggalkan data nyangkut
+- tidak ada data pembayaran yatim tanpa hutang
+- tidak ada data pelanggan lintas usaha
+
+12. README FINAL LOKAL
+Perbarui README agar lebih matang:
+- ringkasan fitur
+- akun default
+- cara install
+- cara run lokal
+- cara backup & restore
+- cara print laporan
+- catatan role
+- catatan packaging desktop di masa depan
+
+13. OUTPUT YANG SAYA MAU
+Setelah selesai, tampilkan:
+- daftar edge case yang diuji
+- bug yang ditemukan dan diperbaiki
+- file yang diubah
+- peningkatan utama tahap 3
+- saran langkah berikutnya agar siap dijadikan aplikasi desktop Windows
+
+Jangan over-engineering.
+Tetap pertahankan kesederhanaan project.
+Fokus pada kestabilan, kejelasan, dan pengalaman pakai.
