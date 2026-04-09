@@ -62,6 +62,40 @@ pnpm workspace monorepo using TypeScript. Aplikasi Manajemen Hutang (Debt Manage
 - `hutang` — debts (per business)
 - `pembayaran` — payments (per debt)
 
+## Phase 4 SQLite Migration (Applied)
+
+### Database
+- **Migrated from PostgreSQL → SQLite** using `better-sqlite3` + Drizzle ORM
+- Database file: `artifacts/api-server/data/app.db` (created automatically on first run)
+- WAL mode enabled for performance and safety
+- Foreign keys enabled via `PRAGMA foreign_keys = ON`
+- Tables created inline with `CREATE TABLE IF NOT EXISTS` on startup
+- No external database server required — fully self-contained
+
+### Schema Changes (PostgreSQL → SQLite)
+- `pgTable` → `sqliteTable`
+- `serial("id").primaryKey()` → `integer("id").primaryKey({ autoIncrement: true })`
+- `timestamp(...)` → `integer("...", { mode: "timestamp_ms" })` (epoch ms, returns `Date`)
+- `boolean("is_active")` → `integer("is_active", { mode: "boolean" })`
+- `numeric("nominal", ...)` → `text("nominal")` (string storage, parseFloat on read — same as before)
+
+### Package Changes
+- Removed: `pg`, `@types/pg` from `lib/db`
+- Added: `better-sqlite3`, `@types/better-sqlite3` to `lib/db`
+- Added: `better-sqlite3` to `artifacts/api-server` (required for esbuild external resolution)
+- Added `better-sqlite3` to `pnpm-workspace.yaml` `onlyBuiltDependencies`
+
+### Build System
+- `better-sqlite3` already listed in `artifacts/api-server/build.mjs` external list
+- `lib/db/dist/` rebuilt with SQLite types (`tsc -b lib/db/tsconfig.json`)
+- `lib/api-zod/src/index.ts` fixed: removed duplicate `export * from "./generated/types"` (pre-existing bug)
+
+### Kesiapan Desktop (Electron Ready)
+- No cloud/external DB dependency
+- Backend entry: `artifacts/api-server/dist/index.mjs`
+- Frontend entry: `artifacts/hutang-app/dist/index.html` (after `vite build`)
+- `DATABASE_PATH` env var lets Electron control DB file location
+
 ## Phase 3 Hardening (Applied)
 
 ### Backend

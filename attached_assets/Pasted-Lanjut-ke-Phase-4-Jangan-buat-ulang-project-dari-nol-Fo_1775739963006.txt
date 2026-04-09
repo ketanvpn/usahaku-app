@@ -1,0 +1,111 @@
+Lanjut ke Phase 4. Jangan buat ulang project dari nol. Fokus pada migrasi project agar benar-benar cocok untuk penggunaan lokal/offline di komputer sendiri.
+
+TUJUAN PHASE 4
+Saya ingin project ini bergerak ke arah aplikasi lokal Windows.
+Karena itu, prioritas utama sekarang adalah:
+1. migrasi database ke SQLite
+2. mempertahankan semua fitur yang sudah berjalan
+3. menyiapkan struktur agar nanti mudah dibungkus jadi Electron desktop app
+
+PRINSIP PENTING
+- jangan ubah alur bisnis yang sudah benar
+- jangan merusak login, role, hutang, pembayaran, laporan, backup, print
+- jangan over-engineering
+- utamakan kestabilan lokal/offline
+
+TARGET PHASE 4
+
+1. MIGRASI DATABASE KE SQLITE
+- pindahkan dari PostgreSQL ke SQLite
+- gunakan solusi yang paling sederhana dan stabil sesuai stack project sekarang
+- jika project memakai Drizzle, gunakan adapter SQLite yang paling cocok
+- simpan database sebagai file lokal yang jelas, misalnya di folder data/app.db
+- pastikan database bisa dibuat otomatis saat pertama kali dijalankan
+- pastikan foreign key tetap aktif
+
+2. PERTAHANKAN FITUR YANG SUDAH ADA
+Setelah migrasi, pastikan fitur berikut tetap jalan:
+- login super admin
+- login owner
+- role restriction
+- CRUD usaha
+- CRUD owner
+- CRUD pelanggan
+- CRUD hutang
+- CRUD pembayaran
+- perubahan status lunas otomatis
+- export CSV
+- backup JSON
+- restore JSON
+- print laporan
+- ganti password
+
+3. SEED DATA SQLITE
+- buat seed data default untuk SQLite
+- tetap sediakan akun:
+  - admin / admin123
+  - owner1 / owner123
+- sediakan 1 usaha contoh
+- sediakan beberapa pelanggan, hutang, dan pembayaran contoh
+
+4. KONFIGURASI LOKAL YANG LEBIH SEDERHANA
+- minimalkan kebutuhan env yang rumit
+- jika ada variabel environment yang tidak lagi perlu setelah migrasi, sederhanakan
+- buat mode lokal yang mudah dijalankan oleh pemula
+- targetnya cukup:
+  - npm install
+  - npm run dev
+atau
+  - npm run start
+
+5. STRUKTUR FILE DATABASE
+- tentukan lokasi file SQLite yang aman dan jelas
+- buat folder data jika belum ada
+- tambahkan ignore yang sesuai bila perlu
+- jelaskan file mana yang penting untuk backup manual
+
+6. BACKUP & RESTORE
+- sesuaikan backup/restore agar tetap cocok setelah SQLite
+- backup JSON tetap dipertahankan
+- bila perlu tambahkan catatan bahwa file SQLite juga bisa menjadi backup penuh lokal
+- jangan ubah UX backup yang sudah bagus kecuali perlu
+
+7. SELF-CHECK SETELAH MIGRASI
+Lakukan pengecekan menyeluruh:
+- apakah migrasi berhasil
+- apakah semua query masih benar
+- apakah data antar usaha tetap terpisah
+- apakah pembayaran tetap menghitung sisa hutang dengan benar
+- apakah status lunas tetap akurat
+- apakah print dan export tetap aman
+
+8. PERSIAPAN ELEKTRON
+Belum perlu membuat Electron penuh sekarang, tapi siapkan pondasinya:
+- pastikan backend bisa berjalan lokal tanpa layanan eksternal
+- pastikan frontend bisa dibuild dengan rapi
+- catat entry point mana yang nanti akan dipakai Electron
+- hindari ketergantungan cloud/external DB
+- buat catatan singkat “desktop readiness”
+
+9. README
+Perbarui README:
+- sekarang project memakai SQLite
+- lokasi file database
+- cara reset database
+- cara seed ulang
+- cara run lokal
+- akun default
+- catatan persiapan desktop app
+
+10. OUTPUT YANG SAYA MAU
+Setelah selesai, tampilkan:
+- file apa saja yang diubah
+- perubahan apa saja terkait migrasi
+- bagaimana cara menjalankan project lokal setelah pakai SQLite
+- lokasi file database
+- checklist hasil test setelah migrasi
+- catatan kesiapan menuju Electron
+
+Jangan membuat ulang aplikasi.
+Jangan mengubah fitur yang sudah stabil tanpa alasan kuat.
+Fokus pada migrasi aman ke SQLite dan kesiapan offline lokal.

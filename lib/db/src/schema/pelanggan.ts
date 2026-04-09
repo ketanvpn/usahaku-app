@@ -1,16 +1,16 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usahaTable } from "./usaha";
 
-export const pelangganTable = pgTable("pelanggan", {
-  id: serial("id").primaryKey(),
+export const pelangganTable = sqliteTable("pelanggan", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   usahaId: integer("usaha_id").notNull().references(() => usahaTable.id),
   nama: text("nama").notNull(),
   telepon: text("telepon"),
   alamat: text("alamat"),
   catatan: text("catatan"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 
 export const insertPelangganSchema = createInsertSchema(pelangganTable).omit({ id: true, createdAt: true });
