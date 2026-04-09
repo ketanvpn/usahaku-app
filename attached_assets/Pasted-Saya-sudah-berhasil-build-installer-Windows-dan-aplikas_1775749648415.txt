@@ -1,0 +1,61 @@
+Saya sudah berhasil build installer Windows dan aplikasi desktop bisa terbuka, tetapi backend internal gagal start saat mode packaged/installed.
+
+Gejala:
+- Electron window terbuka
+- loading screen muncul
+- lalu dialog error muncul: "Server tidak merespons setelah 20 detik"
+- di CMD saat menjalankan electron:prod terlihat: [backend] Exited with code 1
+
+Artinya:
+- frontend desktop terbuka
+- backend child process gagal start di mode production packaged
+
+Tolong fokus perbaiki KHUSUS mode packaged Windows, bukan mode dev.
+
+Yang perlu dicek dan diperbaiki:
+1. Jalur file backend saat packaged
+- pastikan path ke backend dist/index.mjs benar saat app sudah dipackage
+- jangan bergantung pada path yang hanya benar saat development
+- cek penggunaan app.getAppPath(), process.resourcesPath, __dirname, dan lokasi resources
+
+2. Jalur frontend/static saat packaged
+- pastikan SERVE_STATIC dan path frontend build benar saat mode packaged
+- cek apakah backend bisa menemukan folder build frontend di dalam package
+
+3. Masalah ASAR / packaged resources
+- cek apakah backend dijalankan dari dalam app.asar dan itu menyebabkan gagal
+- jika ya, unpack backend dist atau pindahkan backend ke extraResources / asarUnpack
+- pastikan file backend yang dijalankan benar-benar tersedia di lokasi packaged app
+
+4. SQLite path
+- pastikan DATABASE_PATH diarahkan ke AppData/userData yang valid
+- pastikan folder database dibuat sebelum backend start
+- tangani error jika folder tidak bisa dibuat
+- pastikan backend tidak mencoba menulis database ke lokasi read-only dalam package
+
+5. Logging yang jelas
+- tambahkan logging stdout/stderr backend ke file log atau console yang jelas
+- jangan hanya tampilkan “[backend] Exited with code 1”
+- tampilkan error backend asli supaya mudah didiagnosis
+
+6. Timeout/health check
+- cek apakah backend sebenarnya crash langsung atau health endpoint salah
+- pastikan health check menunggu port/path yang benar
+
+7. Build Windows
+- review electron-builder config
+- pastikan file backend dist, frontend build, dan resource penting ikut masuk ke package
+- pastikan struktur win-unpacked/resources sesuai yang dibutuhkan runtime
+
+8. Setelah diperbaiki
+Tolong tampilkan:
+- file yang diubah
+- penyebab utama backend gagal start saat packaged
+- perubahan path/runtime yang dilakukan
+- langkah build ulang installer Windows
+- checklist test ulang installer
+
+Fokus utama:
+- installer Windows yang sudah terpasang harus bisa dibuka normal
+- backend internal harus start otomatis
+- login page/dashboard harus tampil, bukan stuck di loading screen

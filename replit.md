@@ -62,6 +62,37 @@ pnpm workspace monorepo using TypeScript. Aplikasi Manajemen Hutang (Debt Manage
 - `hutang` — debts (per business)
 - `pembayaran` — payments (per debt)
 
+## Phase 7 — Fix Backend Crash in Packaged Mode (Applied)
+
+### Root Cause
+`bcrypt` (native C++ module) was listed as **external** in `artifacts/api-server/build.mjs`, meaning it was NOT bundled into `dist/index.mjs`. However, it was also NOT included in `electron-builder.yml`'s `extraResources`. Result: in packaged mode, the backend process started, tried to `require('bcrypt')`, failed to find it, and exited with code 1 within milliseconds. The frontend showed "Server tidak merespons setelah 20 detik."
+
+### Fix Applied
+- **Replaced `bcrypt` (native) with `bcryptjs` (pure JavaScript)** across all 3 files that used it:
+  - `artifacts/api-server/src/routes/auth.ts`
+  - `artifacts/api-server/src/routes/users.ts`
+  - `artifacts/api-server/src/seed.ts`
+- **Removed `"bcrypt"` from `external` list in `build.mjs`** → `bcryptjs` is now bundled by esbuild into `dist/index.mjs`
+- **Removed `@types/bcrypt` devDependency** (no longer needed)
+- **Hash compatibility**: `bcryptjs` uses the same `$2a$`/`$2b$` hash format as `bcrypt` — all existing database passwords are fully compatible, no migration needed
+
+### Improved Error Logging in main.ts
+- `initLogFile()` — writes all backend stdout/stderr + startup info to `{userData}/buku-hutang.log`
+- `writeLog()` — unified logging function that writes to both console and log file
+- `backendStderrBuffer` — buffers last 4KB of backend stderr, shown in error dialogs
+- On backend exit with non-zero code: dialog shows actual error output + log file path
+- On startup failure: dialog shows stderr buffer for debugging
+
+### Key Insight for Native Modules in Packaged Electron
+Only `better-sqlite3` requires `extraResources` because it has a `.node` native binary.
+`bcryptjs` is pure JavaScript → esbuild bundles it → no extraResources needed.
+Rule: **Only native (.node) modules need extraResources; pure JS packages are bundled.**
+
+### Build Verification
+- `bcryptjs` appears 9 times as identifier + full source bundled in `dist/index.mjs` (2.1MB)
+- Login with admin/admin123 and owner1/owner123 tested via HTTP → both return 200 OK
+- Full E2E test (22 scenarios) passed after fix
+
 ## Phase 6 Final Polish & Release Readiness (Applied)
 
 ### Electron main.ts Improvements

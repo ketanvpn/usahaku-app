@@ -13,6 +13,8 @@ const isDev = !app.isPackaged || process.env.NODE_ENV === "development";
 
 let backendProcess: Electron.UtilityProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
+let backendStderrBuffer = "";
+let logFilePath = "";
 
 app.setName(APP_NAME);
 if (process.platform === "win32") {
@@ -30,9 +32,7 @@ const LOADING_HTML = `<!DOCTYPE html>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       height: 100vh;
       background: #1d4ed8;
       color: white;
@@ -41,7 +41,7 @@ const LOADING_HTML = `<!DOCTYPE html>
     }
     .container { text-align: center; }
     .icon { font-size: 3rem; margin-bottom: 0.75rem; }
-    h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.5px; }
+    h1 { font-size: 1.75rem; font-weight: 700; }
     .subtitle { font-size: 0.875rem; opacity: 0.7; margin-top: 0.25rem; }
     .spinner {
       width: 36px; height: 36px;
@@ -70,6 +70,28 @@ function getDbPath(): string {
   return path.join(app.getPath("userData"), "app.db");
 }
 
+function initLogFile(): void {
+  const userDataDir = app.getPath("userData");
+  logFilePath = path.join(userDataDir, "buku-hutang.log");
+  try {
+    const timestamp = new Date().toISOString();
+    fs.appendFileSync(logFilePath, `\n=== Buku Hutang started at ${timestamp} ===\n`);
+  } catch {
+    logFilePath = "";
+  }
+}
+
+function writeLog(message: string): void {
+  const line = `[${new Date().toISOString()}] ${message}`;
+  console.log(line);
+  if (logFilePath) {
+    try {
+      fs.appendFileSync(logFilePath, line + "\n");
+    } catch {
+    }
+  }
+}
+
 function ensureUserDataDir(): void {
   const userDataDir = app.getPath("userData");
   if (!fs.existsSync(userDataDir)) {
@@ -79,7 +101,7 @@ function ensureUserDataDir(): void {
       const msg = err instanceof Error ? err.message : String(err);
       dialog.showErrorBox(
         "Gagal Membuat Folder Data",
-        `Tidak dapat membuat folder penyimpanan data:\n${userDataDir}\n\nError: ${msg}\n\nPastikan Anda memiliki izin tulis di folder AppData.`
+        `Tidak dapat membuat folder penyimpanan:\n${userDataDir}\n\nError: ${msg}\n\nPastikan Anda memiliki izin menulis di folder AppData.`
       );
       app.quit();
     }
@@ -110,7 +132,7 @@ function waitForBackend(port: number, maxWaitMs = 25000): Promise<void> {
       if (Date.now() - start >= maxWaitMs) {
         reject(
           new Error(
-            `Server tidak merespons setelah ${maxWaitMs / 1000} detik.\n\nKemungkinan penyebab:\n- Port ${port} sedang dipakai aplikasi lain\n- Izin akses jaringan lokal diblokir\n\nCoba tutup dan buka kembali aplikasi.`
+            `Server tidak merespons setelah ${maxWaitMs / 1000} detik.\n\nPort ${port} mungkin tidak dapat diakses atau server gagal start.\n\nCoba tutup dan buka kembali aplikasi.`
           )
         );
       } else {
@@ -155,20 +177,32 @@ function startBackend(): void {
   const frontendPath = getFrontendDistPath();
   const dbPath = getDbPath();
 
+  writeLog(`Starting backend: ${scriptPath}`);
+  writeLog(`Database path: ${dbPath}`);
+  writeLog(`Frontend path: ${frontendPath}`);
+  writeLog(`isDev: ${isDev}`);
+
   if (!fs.existsSync(scriptPath)) {
     const hint = isDev
-      ? "Jalankan terlebih dahulu:\npnpm --filter @workspace/api-server run build"
-      : "Instalasi aplikasi mungkin rusak atau tidak lengkap.\nCoba uninstall dan install ulang aplikasi.";
+      ? "Jalankan:\npnpm --filter @workspace/api-server run build"
+      : "Instalasi aplikasi tidak lengkap.\nCoba uninstall dan install ulang.";
     dialog.showErrorBox(
       "File Aplikasi Tidak Ditemukan",
-      `Tidak dapat menemukan file server:\n${scriptPath}\n\n${hint}`
+      `File server tidak ditemukan:\n${scriptPath}\n\n${hint}`
     );
     app.quit();
     return;
   }
 
+  if (!fs.existsSync(frontendPath) && !isDev) {
+    writeLog(`WARNING: Frontend path not found: ${frontendPath}`);
+  }
+
   const sessionSecret =
-    process.env.SESSION_SECRET || `buku-hutang-${app.getPath("userData").replace(/\\/g, "/")}`;
+    process.env.SESSION_SECRET ||
+    `buku-hutang-${Buffer.from(app.getPath("userData")).toString("base64").slice(0, 20)}`;
+
+  backendStderrBuffer = "";
 
   backendProcess = utilityProcess.fork(scriptPath, [], {
     env: {
@@ -184,23 +218,34 @@ function startBackend(): void {
   });
 
   backendProcess.stdout?.on("data", (data: Buffer) => {
-    if (isDev) console.log("[backend]", data.toString().trim());
+    const text = data.toString().trim();
+    writeLog(`[backend] ${text}`);
   });
 
   backendProcess.stderr?.on("data", (data: Buffer) => {
-    console.error("[backend:err]", data.toString().trim());
+    const text = data.toString().trim();
+    writeLog(`[backend:err] ${text}`);
+    backendStderrBuffer += text + "\n";
+    if (backendStderrBuffer.length > 4000) {
+      backendStderrBuffer = backendStderrBuffer.slice(-4000);
+    }
   });
 
   backendProcess.on("exit", (code: number) => {
-    console.log(`[backend] Exited with code ${code}`);
+    writeLog(`[backend] Exited with code ${code}`);
     backendProcess = null;
+
     if (mainWindow && !mainWindow.isDestroyed()) {
+      const errorDetail = backendStderrBuffer.trim()
+        ? `\n\nDetail error:\n${backendStderrBuffer.slice(-1000)}`
+        : "";
+      const logInfo = logFilePath ? `\n\nLog tersimpan di:\n${logFilePath}` : "";
+
       dialog
         .showMessageBox(mainWindow, {
           type: "error",
           title: "Layanan Aplikasi Berhenti",
-          message:
-            "Layanan server lokal berhenti tidak terduga.\n\nAplikasi perlu ditutup. Silakan buka kembali.",
+          message: `Server berhenti tidak terduga (kode: ${code}).\n\nAplikasi perlu ditutup dan dibuka kembali.${errorDetail}${logInfo}`,
           buttons: ["Tutup Aplikasi"],
           defaultId: 0,
         })
@@ -249,17 +294,26 @@ function createLoadingWindow(): void {
 
 async function loadApp(appUrl: string): Promise<void> {
   if (!mainWindow || mainWindow.isDestroyed()) return;
+  writeLog(`Loading app URL: ${appUrl}`);
 
   await mainWindow.loadURL(appUrl).catch((err: Error) => {
     dialog.showErrorBox(
       "Gagal Memuat Antarmuka",
-      `Tidak dapat memuat halaman aplikasi.\n\nError: ${err.message}\n\nCoba tutup dan buka kembali aplikasi.`
+      `Tidak dapat memuat halaman aplikasi.\n\nError: ${err.message}\n\nCoba tutup dan buka kembali.`
     );
     app.quit();
   });
 }
 
 app.whenReady().then(async () => {
+  ensureUserDataDir();
+  initLogFile();
+  writeLog(`App starting, isDev=${isDev}, platform=${process.platform}`);
+  writeLog(`userData: ${app.getPath("userData")}`);
+  if (!isDev) {
+    writeLog(`resourcesPath: ${process.resourcesPath}`);
+  }
+
   try {
     if (isDev) {
       const backendAlreadyRunning = await waitForBackend(BACKEND_PORT, 3000)
@@ -270,26 +324,35 @@ app.whenReady().then(async () => {
 
       if (!backendAlreadyRunning) {
         startBackend();
-        console.log("[electron] Waiting for backend to start...");
+        writeLog("Waiting for backend to start...");
         await waitForBackend(BACKEND_PORT, 20000);
       } else {
-        console.log("[electron] Backend already running on port", BACKEND_PORT);
+        writeLog("Backend already running on port " + BACKEND_PORT);
       }
 
       const devUrl = `http://localhost:${FRONTEND_DEV_PORT}`;
-      console.log("[electron] Loading:", devUrl);
+      writeLog("Dev mode: loading " + devUrl);
       await loadApp(devUrl);
     } else {
-      ensureUserDataDir();
       createLoadingWindow();
       startBackend();
-      console.log("[electron] Waiting for backend...");
+      writeLog("Production mode: waiting for backend...");
       await waitForBackend(BACKEND_PORT, 30000);
       await loadApp(`http://localhost:${BACKEND_PORT}`);
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    dialog.showErrorBox("Gagal Memulai Buku Hutang", message);
+    writeLog("FATAL: " + message);
+
+    const stderrDetail = backendStderrBuffer.trim()
+      ? `\n\nOutput error backend:\n${backendStderrBuffer.slice(-800)}`
+      : "";
+    const logInfo = logFilePath ? `\n\nLog: ${logFilePath}` : "";
+
+    dialog.showErrorBox(
+      "Gagal Memulai Buku Hutang",
+      `${message}${stderrDetail}${logInfo}`
+    );
     app.quit();
   }
 });
@@ -301,6 +364,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("will-quit", () => {
+  writeLog("App quitting, killing backend...");
   if (backendProcess) {
     backendProcess.kill();
     backendProcess = null;

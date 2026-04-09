@@ -325,6 +325,50 @@ Gunakan checklist ini sebelum mendistribusikan ke pengguna:
 
 ---
 
+## Troubleshooting (Masalah Umum)
+
+### Aplikasi stuck di layar loading / "Server tidak merespons"
+
+**Penyebab**: Backend gagal start saat pertama buka.
+
+**Langkah diagnosis**:
+1. Lihat file log di: `C:\Users\{nama}\AppData\Roaming\Buku Hutang\buku-hutang.log`
+2. Cari baris `[backend:err]` atau `FATAL` di log tersebut
+3. Kirim isi log tersebut ke pengembang untuk analisis lebih lanjut
+
+**Solusi umum**:
+- Tutup aplikasi dan buka kembali
+- Pastikan tidak ada aplikasi lain yang menggunakan port 8080
+- Coba restart komputer, lalu buka aplikasi lagi
+- Jika masih gagal, uninstall dan install ulang aplikasi
+
+### Dialog error muncul saat pertama buka
+
+**Kemungkinan penyebab dan solusi**:
+
+| Error | Solusi |
+|-------|--------|
+| "File Aplikasi Tidak Ditemukan" | Uninstall dan install ulang |
+| "Gagal Membuat Folder Data" | Periksa izin folder AppData (biasanya izin administrator) |
+| "Server tidak merespons setelah 30 detik" | Port 8080 mungkin dipakai app lain; coba restart PC |
+| "Layanan Aplikasi Berhenti" (saat sudah jalan) | Lihat log di AppData, kirim ke pengembang |
+
+### Data hilang setelah uninstall lalu install ulang
+
+Data **tidak** dihapus saat uninstall. Data tersimpan di:
+```
+C:\Users\{nama}\AppData\Roaming\Buku Hutang\app.db
+```
+Saat install ulang, data lama otomatis digunakan kembali.
+
+### Lupa password
+
+Hubungi Super Admin untuk melakukan reset password melalui menu **Admin → Kelola User**.
+
+Super Admin bisa reset password di: *Admin → Users → Edit User → Reset Password*
+
+---
+
 ## Catatan Keamanan
 
 - Tidak ada data yang dikirim ke internet — semua tersimpan lokal
