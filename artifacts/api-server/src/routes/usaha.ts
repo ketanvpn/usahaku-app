@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, usahaTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { CreateUsahaBody, GetUsahaParams, UpdateUsahaParams, UpdateUsahaBody } from "@workspace/api-zod";
-import { requireSuperAdmin } from "../middlewares/auth";
+import { requireAuth, requireSuperAdmin } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -43,10 +43,16 @@ router.post("/usaha", requireSuperAdmin, async (req, res): Promise<void> => {
   });
 });
 
-router.get("/usaha/:id", requireSuperAdmin, async (req, res): Promise<void> => {
+router.get("/usaha/:id", requireAuth, async (req, res): Promise<void> => {
   const params = GetUsahaParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "ID tidak valid." });
+    return;
+  }
+
+  // Owner may only fetch their own usaha; super_admin may fetch any
+  if (req.session.role !== "super_admin" && req.session.usahaId !== params.data.id) {
+    res.status(403).json({ error: "Akses ditolak." });
     return;
   }
 

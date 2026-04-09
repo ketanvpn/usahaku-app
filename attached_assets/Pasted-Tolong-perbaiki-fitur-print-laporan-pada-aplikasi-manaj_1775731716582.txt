@@ -1,0 +1,79 @@
+Tolong perbaiki fitur print laporan pada aplikasi manajemen hutang saya.
+
+Masalah yang harus diperbaiki:
+1. Saat print / simpan PDF, tabel laporan kepotong di sisi kanan.
+2. Saat print laporan yang difilter untuk 1 pelanggan, tidak ada informasi yang jelas bahwa laporan itu milik siapa.
+3. Header print masih terlalu umum, jadi kalau difilter hasilnya membingungkan.
+
+Perbaikan yang saya inginkan:
+
+A. Perbaiki layout print agar tidak kepotong
+- Buat CSS khusus print menggunakan @media print
+- Pastikan tabel muat ke halaman PDF
+- Gunakan ukuran font print yang lebih kecil dan rapi
+- Kurangi padding tabel saat print
+- Gunakan width: 100%
+- Gunakan table-layout yang stabil
+- Hindari elemen overflow saat print
+- Jika perlu gunakan orientasi landscape untuk laporan
+- Pastikan semua kolom tampil utuh:
+  - tanggal
+  - pelanggan
+  - keterangan
+  - status
+  - nominal hutang
+  - total dibayar
+  - sisa hutang
+- Pastikan total keseluruhan juga tidak kepotong
+
+B. Tambahkan header print yang jelas
+Di bagian atas halaman print tampilkan:
+- Nama usaha
+- Judul laporan
+- Tanggal cetak
+- Filter aktif
+
+Contoh:
+Nama Usaha: Toko ABC
+Judul: Laporan Buku Hutang
+Tanggal Cetak: 9 April 2026
+Pelanggan: Sari Dewi
+Periode: 1 Maret 2026 - 9 April 2026
+Status: Aktif
+
+C. Jika laporan difilter 1 pelanggan
+- Tampilkan teks yang jelas seperti:
+  "Laporan Hutang Pelanggan: Sari Dewi"
+- Tambahkan ringkasan pelanggan:
+  - nama pelanggan
+  - total hutang
+  - total dibayar
+  - sisa hutang
+- Jadi saat diprint langsung jelas ini data milik siapa
+
+D. Tambahkan kolom sisa hutang di tabel print
+Rumus:
+sisa_hutang = nominal_hutang - total_dibayar
+
+E. Rapikan print
+- Sembunyikan tombol, sidebar, navbar, input filter, dan elemen yang tidak perlu saat print
+- Hanya tampilkan area laporan
+- Hindari halaman kosong tambahan
+- Hindari teks development preview ikut tercetak kalau bisa
+- Pastikan warna tetap terbaca meski print hitam putih
+
+F. Jika data hanya 1 pelanggan
+- Header print harus berubah dinamis
+- Judul lebih spesifik, misalnya:
+  "Laporan Hutang Pel Pelanggan"
+  atau
+  "Riwayat Hutang Pelanggan"
+
+G. Implementasi teknis
+- Buat komponen print-friendly terpisah jika perlu
+- Jangan hanya print tampilan layar biasa
+- Buat versi layout khusus print/PDF
+- Pastikan data filter yang sedang aktif ikut masuk ke header print
+
+Tolong langsung perbaiki kode yang ada, bukan membuat ulang dari nol.
+Setelah itu tampilkan file mana saja yang diubah dan jelaskan penyebab masalah print sebelumnya.

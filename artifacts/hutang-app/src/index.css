@@ -162,18 +162,139 @@
 }
 
 @media print {
-  .no-print, nav, aside, header, button, footer {
+  @page {
+    size: A4 landscape;
+    margin: 12mm 14mm;
+  }
+
+  /* Hide all UI chrome */
+  .no-print,
+  nav,
+  aside,
+  header,
+  button,
+  footer,
+  [data-radix-popper-content-wrapper],
+  .print-hide {
     display: none !important;
   }
-  main {
-    padding: 0 !important;
-    margin: 0 !important;
-  }
+
+  /* Reset layout — sidebar is fixed, so main needs full width */
   body {
-    background: white;
+    background: white !important;
+    color: black !important;
+    font-size: 10pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
+
+  #root {
+    display: block !important;
+  }
+
+  /* The main content area — full width, no sidebar offset */
+  main {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Reset inner content wrapper */
+  main > div {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Cards */
   .print-clean {
-    border: none !important;
+    border: 1px solid #ccc !important;
     box-shadow: none !important;
+    background: white !important;
+    border-radius: 0 !important;
+  }
+
+  /* Fix overflow so table doesn't get clipped */
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  /* Table styles */
+  table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    font-size: 9pt !important;
+  }
+
+  th, td {
+    padding: 4px 6px !important;
+    border: 1px solid #ccc !important;
+    word-break: break-word !important;
+    overflow: visible !important;
+    white-space: normal !important;
+  }
+
+  th {
+    background-color: #f0f0f0 !important;
+    font-weight: bold !important;
+    color: black !important;
+  }
+
+  /* Override any text colour classes to print readable in B&W */
+  .text-emerald-600, .text-emerald-700 {
+    color: #1a7a4a !important;
+  }
+  .text-orange-600, .text-orange-700 {
+    color: #b45309 !important;
+  }
+  .text-muted-foreground {
+    color: #555 !important;
+  }
+
+  /* Badges — remove coloured backgrounds, use border instead */
+  .print-badge-aktif {
+    border: 1px solid #b45309 !important;
+    color: #b45309 !important;
+    background: transparent !important;
+    padding: 1px 5px !important;
+    border-radius: 3px !important;
+    font-size: 8pt !important;
+  }
+  .print-badge-lunas {
+    border: 1px solid #1a7a4a !important;
+    color: #1a7a4a !important;
+    background: transparent !important;
+    padding: 1px 5px !important;
+    border-radius: 3px !important;
+    font-size: 8pt !important;
+  }
+
+  /* Print header */
+  .print-header {
+    display: block !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* Avoid page breaks inside rows */
+  tr {
+    page-break-inside: avoid !important;
+  }
+
+  /* Footer total row */
+  tfoot tr {
+    background-color: #f0f0f0 !important;
+    font-weight: bold !important;
+  }
+
+  /* Truncated cells should show full text in print */
+  .truncate {
+    overflow: visible !important;
+    text-overflow: unset !important;
+    white-space: normal !important;
+    max-width: none !important;
   }
 }
