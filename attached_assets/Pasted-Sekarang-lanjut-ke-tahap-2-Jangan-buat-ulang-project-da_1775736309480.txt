@@ -1,0 +1,203 @@
+Sekarang lanjut ke tahap 2. Jangan buat ulang project dari nol. Fokus hanya pada perapihan, validasi, pengecekan bug, dan peningkatan kualitas dari aplikasi yang sudah ada.
+
+KONTEKS
+Project aplikasi manajemen hutang lokal sudah berhasil dibuat.
+Fitur print laporan sudah jauh lebih baik.
+Sekarang saya ingin tahap 2 berfokus pada:
+- cek bug alur utama
+- perkuat validasi data
+- pastikan role dan pembatasan data aman
+- rapikan UI/UX
+- pastikan alur hutang -> pembayaran -> status lunas benar
+- pastikan backup/restore dan export CSV bekerja baik
+- siapkan pondasi agar nanti mudah dijadikan aplikasi Windows desktop
+
+JANGAN UBAH ARSITEKTUR BESAR
+- jangan ganti stack utama
+- jangan buat ulang database dari nol kalau tidak perlu
+- jangan merusak fitur print yang sudah benar
+- cukup perbaiki project yang sudah ada
+
+PRIORITAS TAHAP 2
+
+1. AUDIT BUG ALUR UTAMA
+Tolong cek dan perbaiki semua kemungkinan bug pada alur berikut:
+- login
+- logout
+- session / auth
+- CRUD usaha
+- CRUD owner
+- CRUD pelanggan
+- CRUD hutang
+- input pembayaran
+- perubahan status hutang
+- dashboard
+- laporan
+- print
+- export CSV
+- backup & restore
+
+Saya ingin kamu review kode yang ada dan cari bug potensial, lalu perbaiki.
+
+2. VALIDASI HUTANG
+Perkuat validasi saat tambah/edit hutang:
+- nominal hutang harus lebih dari 0
+- pelanggan wajib dipilih
+- tanggal hutang wajib valid
+- keterangan boleh opsional tapi tetap rapi
+- jangan izinkan data kosong yang merusak laporan
+- tampilkan pesan error yang ramah user
+
+3. VALIDASI PEMBAYARAN
+Perkuat validasi pembayaran:
+- nominal bayar harus lebih dari 0
+- hutang wajib dipilih
+- tanggal bayar wajib valid
+- jangan izinkan bayar ke hutang yang sudah lunas tanpa penanganan jelas
+- jangan izinkan nominal bayar melebihi sisa hutang jika sistem memang tidak mendukung kelebihan bayar
+- jika nominal bayar lebih besar dari sisa hutang, tampilkan pesan validasi yang jelas
+- setelah pembayaran disimpan, total_dibayar, sisa_hutang, dan status harus selalu konsisten
+
+4. KONSISTENSI STATUS HUTANG
+Pastikan logika ini selalu benar:
+- jika sisa_hutang > 0 => status aktif
+- jika sisa_hutang <= 0 => status lunas
+- jika edit atau hapus pembayaran dilakukan, status hutang harus dihitung ulang
+- jika edit nominal hutang dilakukan, sisa_hutang juga harus dihitung ulang
+- jangan hanya simpan angka statis tanpa sinkronisasi
+
+5. FITUR EDIT / HAPUS PEMBAYARAN
+Jika belum ada, tambahkan:
+- edit pembayaran
+- hapus pembayaran
+Dengan aturan:
+- setelah edit pembayaran, hutang terkait dihitung ulang
+- setelah hapus pembayaran, hutang terkait dihitung ulang
+- status hutang ikut diperbarui otomatis
+- tampilkan konfirmasi sebelum hapus pembayaran
+
+6. KEAMANAN ROLE DAN DATA
+Periksa semua endpoint dan halaman:
+- owner hanya boleh akses data usaha_id miliknya
+- owner tidak boleh melihat data usaha lain lewat URL, API, atau manipulasi request
+- super admin boleh melihat semua
+- semua query pelanggan, hutang, pembayaran, laporan harus dibatasi usaha_id
+- jika ada celah akses, perbaiki
+
+7. RAPIIKAN DASHBOARD
+Rapikan dashboard owner dan super admin:
+- loading state
+- empty state
+- format angka rupiah rapi
+- kartu statistik lebih konsisten
+- tabel pembayaran terbaru lebih enak dibaca
+- daftar sisa hutang terbesar lebih rapi
+- hindari tampilan berantakan jika data kosong
+
+8. RAPIIKAN HALAMAN FORM
+Rapikan semua form:
+- tambah pelanggan
+- tambah hutang
+- tambah pembayaran
+- tambah usaha
+- tambah owner
+
+Perbaikan:
+- label jelas
+- placeholder masuk akal
+- validasi inline
+- tombol simpan/nonaktif saat submit
+- tampilkan loading saat proses simpan
+- notifikasi sukses/gagal konsisten
+
+9. BACKUP & RESTORE
+Cek dan rapikan fitur backup restore:
+- backup owner hanya berisi data usaha miliknya
+- format JSON harus jelas
+- restore harus validasi struktur file
+- jika file rusak / format salah, tampilkan pesan error jelas
+- jangan sampai restore merusak data tanpa konfirmasi
+- tambahkan konfirmasi sebelum restore
+- jika perlu, buat opsi restore replace atau merge, pilih yang paling sederhana dan aman
+- utamakan kestabilan
+
+10. EXPORT CSV
+Periksa dan perbaiki export CSV:
+- pastikan kolom sesuai laporan
+- encoding aman
+- header kolom jelas
+- filter aktif ikut memengaruhi hasil export
+- jika filter pelanggan dipilih, export hanya data pelanggan itu
+- jika filter tanggal dipilih, export hanya data dalam rentang itu
+
+11. PENCARIAN DAN FILTER
+Rapikan filter dan pencarian:
+- pencarian pelanggan
+- filter status hutang
+- filter tanggal
+- filter laporan
+- reset filter
+- tampilkan info filter aktif dengan jelas
+
+12. PENINGKATAN UX KECIL TAPI PENTING
+Tambahkan atau rapikan:
+- konfirmasi hapus
+- toast/notifikasi konsisten
+- disable tombol saat loading
+- skeleton/loading state sederhana
+- pesan data kosong yang manusiawi
+- scroll tabel lebih aman di layar kecil
+- urutan data default masuk akal (terbaru di atas)
+
+13. ERROR HANDLING
+Perbaiki penanganan error:
+- frontend error message harus jelas
+- backend kirim response error yang rapi
+- jangan tampilkan error mentah yang membingungkan user
+- tangani error database dengan lebih aman
+- tambahkan fallback jika data tidak ditemukan
+
+14. KODE DAN STRUKTUR
+Rapikan kode yang ada:
+- hapus kode duplikat jika ada
+- buat helper perhitungan hutang yang reusable
+- rapikan penamaan fungsi
+- pisahkan logic yang terlalu panjang
+- pertahankan struktur yang mudah dipahami pemula
+
+15. PERSIAPAN UNTUK DESKTOP KE DEPAN
+Belum perlu membuat Electron sekarang.
+Tetapi tolong siapkan project agar nanti mudah dibungkus jadi aplikasi Windows desktop:
+- pastikan tidak bergantung ke layanan cloud
+- pastikan semua path file lokal aman
+- backup/restore gunakan file lokal
+- hindari dependensi yang menyulitkan packaging
+- catat apa saja yang nantinya perlu saat dibungkus jadi desktop app
+
+16. README TAHAP 2
+Perbarui README dengan:
+- fitur yang sudah ditambahkan/diperbaiki
+- cara menjalankan lokal
+- akun default
+- catatan bug yang sudah diperbaiki
+- daftar hal yang masih bisa ditingkatkan nanti
+
+17. OUTPUT YANG SAYA MAU DARI KAMU
+Setelah selesai, tampilkan:
+- daftar bug/masalah yang kamu temukan
+- apa saja yang kamu perbaiki
+- file mana saja yang diubah
+- ringkasan perubahan tahap 2
+- langkah test manual yang bisa saya lakukan satu per satu
+
+18. PRIORITAS PALING PENTING
+Fokus utama tahap 2:
+- alur pembayaran stabil
+- status lunas akurat
+- role aman
+- export/backup aman
+- UI lebih nyaman
+- project tetap bisa dijalankan lokal tanpa ribet
+
+Jangan over-engineering.
+Pilih solusi yang sederhana, stabil, dan realistis.

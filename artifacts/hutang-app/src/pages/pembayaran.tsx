@@ -85,7 +85,7 @@ export default function PembayaranPage() {
           queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
           setIsDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" })
+        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
       }
     );
   };
@@ -101,7 +101,7 @@ export default function PembayaranPage() {
           queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
           setIsDeleteDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" })
+        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
       }
     );
   };

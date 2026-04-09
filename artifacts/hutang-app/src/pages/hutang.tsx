@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { 
   useGetHutangList, useCreateHutang, useUpdateHutang, useDeleteHutang, useGetPelangganList,
-  getGetHutangListQueryKey, Hutang, GetHutangListStatus 
+  getGetHutangListQueryKey, getGetPembayaranListQueryKey, Hutang, GetHutangListStatus 
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -97,7 +97,7 @@ export default function HutangPage() {
           queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
           setIsDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" })
+        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
       }
     );
   };
@@ -112,7 +112,7 @@ export default function HutangPage() {
           queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
           setIsDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" })
+        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
       }
     );
   };
@@ -125,9 +125,10 @@ export default function HutangPage() {
         onSuccess: () => {
           toast({ title: "Hutang berhasil dihapus" });
           queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetPembayaranListQueryKey() });
           setIsDeleteDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" })
+        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
       }
     );
   };

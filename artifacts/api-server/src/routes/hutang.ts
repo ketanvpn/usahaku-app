@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, hutangTable, pelangganTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import {
   CreateHutangBody,
   GetHutangListQueryParams,
@@ -58,7 +58,7 @@ router.get("/hutang", requireAuth, async (req, res): Promise<void> => {
     .from(hutangTable)
     .leftJoin(pelangganTable, eq(hutangTable.pelangganId, pelangganTable.id))
     .where(and(...conditions))
-    .orderBy(hutangTable.tanggalHutang);
+    .orderBy(desc(hutangTable.tanggalHutang));
 
   res.json(hutangList.map(({ hutang: h, pelangganNama }) => formatHutang(h, pelangganNama ?? "")));
 });
@@ -230,14 +230,16 @@ router.delete("/hutang/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const [hutang] = await db.delete(hutangTable)
-    .where(and(eq(hutangTable.id, params.data.id), eq(hutangTable.usahaId, usahaId)))
-    .returning();
+  const [existing] = await db.select().from(hutangTable)
+    .where(and(eq(hutangTable.id, params.data.id), eq(hutangTable.usahaId, usahaId)));
 
-  if (!hutang) {
+  if (!existing) {
     res.status(404).json({ error: "Hutang tidak ditemukan." });
     return;
   }
+
+  await db.delete(pembayaranTable).where(eq(pembayaranTable.hutangId, params.data.id));
+  await db.delete(hutangTable).where(eq(hutangTable.id, params.data.id));
 
   res.json({ message: "Hutang berhasil dihapus." });
 });

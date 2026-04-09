@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Eye, Search } from "lucide-react";
 
 const pelangganSchema = z.object({
   nama: z.string().min(1, { message: "Nama wajib diisi" }),
@@ -27,6 +27,7 @@ type PelangganFormValues = z.infer<typeof pelangganSchema>;
 
 export default function PelangganPage() {
   const { data: pelangganList, isLoading } = useGetPelangganList();
+  const [search, setSearch] = useState("");
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -71,7 +72,7 @@ export default function PelangganPage() {
             queryClient.invalidateQueries({ queryKey: getGetPelangganListQueryKey() });
             setIsDialogOpen(false);
           },
-          onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" })
+          onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
         }
       );
     } else {
@@ -83,7 +84,7 @@ export default function PelangganPage() {
             queryClient.invalidateQueries({ queryKey: getGetPelangganListQueryKey() });
             setIsDialogOpen(false);
           },
-          onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" })
+          onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
         }
       );
     }
@@ -99,10 +100,16 @@ export default function PelangganPage() {
           queryClient.invalidateQueries({ queryKey: getGetPelangganListQueryKey() });
           setIsDeleteDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.error || "Terjadi kesalahan" })
+        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
       }
     );
   };
+
+  const filteredList = pelangganList?.filter(p =>
+    p.nama.toLowerCase().includes(search.toLowerCase()) ||
+    (p.telepon || "").includes(search) ||
+    (p.alamat || "").toLowerCase().includes(search.toLowerCase())
+  ) ?? [];
 
   return (
     <div className="space-y-6">
@@ -115,6 +122,16 @@ export default function PelangganPage() {
           <Plus className="mr-2 h-4 w-4" />
           Tambah Pelanggan
         </Button>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Cari nama, telepon, atau alamat..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -194,14 +211,14 @@ export default function PelangganPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {!pelangganList || pelangganList.length === 0 ? (
+                {filteredList.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      Belum ada data pelanggan.
+                      {search ? "Tidak ada pelanggan yang sesuai pencarian." : "Belum ada data pelanggan."}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  pelangganList.map((p) => (
+                  filteredList.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.nama}</TableCell>
                       <TableCell>{p.telepon || "-"}</TableCell>
@@ -228,6 +245,11 @@ export default function PelangganPage() {
             </Table>
           )}
         </CardContent>
+        {search && filteredList.length > 0 && (
+          <div className="px-4 py-2 text-xs text-muted-foreground border-t">
+            Menampilkan {filteredList.length} dari {pelangganList?.length ?? 0} pelanggan
+          </div>
+        )}
       </Card>
     </div>
   );

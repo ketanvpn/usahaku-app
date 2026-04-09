@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, pembayaranTable, hutangTable, pelangganTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import {
   CreatePembayaranBody,
   GetPembayaranListQueryParams,
@@ -36,7 +36,7 @@ router.get("/pembayaran", requireAuth, async (req, res): Promise<void> => {
     .from(pembayaranTable)
     .leftJoin(pelangganTable, eq(pembayaranTable.pelangganId, pelangganTable.id))
     .where(and(...conditions))
-    .orderBy(pembayaranTable.tanggalBayar);
+    .orderBy(desc(pembayaranTable.tanggalBayar));
 
   res.json(list.map(({ pembayaran: p, pelangganNama }) => ({
     id: p.id,

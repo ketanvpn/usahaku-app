@@ -1,10 +1,17 @@
+import { useState } from "react";
 import { useRoute } from "wouter";
-import { useGetHutang, getGetHutangQueryKey } from "@workspace/api-client-react";
+import { 
+  useGetHutang, useDeletePembayaran,
+  getGetHutangQueryKey, getGetHutangListQueryKey, getGetPembayaranListQueryKey, getGetOwnerDashboardQueryKey
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, Calendar, FileText, User } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Loader2, ArrowLeft, Calendar, FileText, User, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +22,32 @@ export default function HutangDetail() {
   const { data, isLoading } = useGetHutang(id, {
     query: { enabled: !!id }
   });
+
+  const [isDeletePayDialogOpen, setIsDeletePayDialogOpen] = useState(false);
+  const [selectedPayId, setSelectedPayId] = useState<number | null>(null);
+  const [selectedPayNominal, setSelectedPayNominal] = useState<number>(0);
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const deletePayMutation = useDeletePembayaran();
+
+  const handleDeletePayment = () => {
+    if (!selectedPayId) return;
+    deletePayMutation.mutate(
+      { id: selectedPayId },
+      {
+        onSuccess: () => {
+          toast({ title: "Pembayaran berhasil dihapus" });
+          queryClient.invalidateQueries({ queryKey: getGetHutangQueryKey(id) });
+          queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetPembayaranListQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetOwnerDashboardQueryKey() });
+          setIsDeletePayDialogOpen(false);
+        },
+        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
+      }
+    );
+  };
 
   if (isLoading) {
     return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -113,17 +146,33 @@ export default function HutangDetail() {
                   <TableHead>Tanggal Bayar</TableHead>
                   <TableHead>Catatan</TableHead>
                   <TableHead className="text-right">Nominal Bayar</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.pembayaran_list.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="text-center py-6 text-muted-foreground">Belum ada riwayat pembayaran.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground">Belum ada riwayat pembayaran.</TableCell></TableRow>
                 ) : (
                   data.pembayaran_list.map(p => (
                     <TableRow key={p.id}>
                       <TableCell>{formatDate(p.tanggal_bayar)}</TableCell>
                       <TableCell className="text-muted-foreground">{p.catatan || "-"}</TableCell>
                       <TableCell className="text-right font-semibold text-emerald-600">+{formatRupiah(p.nominal_bayar)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          title="Hapus Pembayaran"
+                          onClick={() => {
+                            setSelectedPayId(p.id);
+                            setSelectedPayNominal(p.nominal_bayar);
+                            setIsDeletePayDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -132,6 +181,24 @@ export default function HutangDetail() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={isDeletePayDialogOpen} onOpenChange={setIsDeletePayDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Pembayaran?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Menghapus pembayaran {formatRupiah(selectedPayNominal)} ini akan mengembalikan sisa hutang ke nominal sebelumnya. Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePayment} className="bg-destructive text-destructive-foreground">
+              {deletePayMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Hapus Pembayaran
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

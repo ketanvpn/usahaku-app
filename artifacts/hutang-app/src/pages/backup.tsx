@@ -4,12 +4,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Loader2, Download, Upload, AlertTriangle, FileJson } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function BackupPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [isConfirmRestoreOpen, setIsConfirmRestoreOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -20,8 +22,7 @@ export default function BackupPage() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      // Create a link to download the JSON data
-      const response = await fetch(getExportBackupUrl());
+      const response = await fetch(getExportBackupUrl(), { credentials: "include" });
       if (!response.ok) throw new Error("Gagal mengunduh backup");
       
       const data = await response.json();
@@ -50,7 +51,7 @@ export default function BackupPage() {
     }
   };
 
-  const handleImport = async () => {
+  const handleImportConfirmed = () => {
     if (!file) return;
     
     const reader = new FileReader();
@@ -59,7 +60,6 @@ export default function BackupPage() {
         const jsonStr = e.target?.result as string;
         const data = JSON.parse(jsonStr);
         
-        // Basic validation
         if (!data.version || !data.usaha_id) {
           throw new Error("Format file backup tidak valid.");
         }
@@ -71,11 +71,10 @@ export default function BackupPage() {
               toast({ title: "Restore data berhasil!" });
               setFile(null);
               if (fileInputRef.current) fileInputRef.current.value = '';
-              // Invalidate all queries to refresh UI
               queryClient.invalidateQueries();
             },
             onError: (err: any) => {
-              toast({ variant: "destructive", title: "Restore gagal", description: err?.error || "Terjadi kesalahan" });
+              toast({ variant: "destructive", title: "Restore gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" });
             }
           }
         );
@@ -133,7 +132,7 @@ export default function BackupPage() {
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Perhatian!</AlertTitle>
               <AlertDescription className="text-xs mt-1">
-                Melakukan restore akan menimpa data yang ada saat ini jika terjadi konflik ID. Lakukan dengan hati-hati.
+                Melakukan restore akan menghapus semua data saat ini dan menggantinya dengan data dari file backup. Pastikan Anda sudah mengunduh backup terbaru sebelum melanjutkan.
               </AlertDescription>
             </Alert>
             
@@ -156,7 +155,7 @@ export default function BackupPage() {
           <CardFooter>
             <Button 
               variant="destructive" 
-              onClick={handleImport} 
+              onClick={() => setIsConfirmRestoreOpen(true)} 
               disabled={!file || importMutation.isPending} 
               className="w-full sm:w-auto"
             >
@@ -166,6 +165,29 @@ export default function BackupPage() {
           </CardFooter>
         </Card>
       </div>
+
+      <AlertDialog open={isConfirmRestoreOpen} onOpenChange={setIsConfirmRestoreOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Restore Data</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tindakan ini akan <strong>menghapus seluruh data yang ada</strong> (pelanggan, hutang, dan pembayaran) dan menggantinya dengan data dari file <strong>{file?.name}</strong>. Proses ini tidak dapat dibatalkan. Apakah Anda yakin ingin melanjutkan?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setIsConfirmRestoreOpen(false);
+                handleImportConfirmed();
+              }}
+              className="bg-destructive text-destructive-foreground"
+            >
+              Ya, Restore Sekarang
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
