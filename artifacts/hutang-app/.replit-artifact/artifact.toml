@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Manajemen Hutang"
+version = "1.0.0"
+id = "artifacts/hutang-app"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24582
+
+[services.development]
+run = "pnpm --filter @workspace/hutang-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/hutang-app", "run", "build" ]
+publicDir = "artifacts/hutang-app/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24582"
+BASE_PATH = "/"

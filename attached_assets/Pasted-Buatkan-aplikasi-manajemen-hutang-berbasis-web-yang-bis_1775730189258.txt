@@ -1,0 +1,341 @@
+Buatkan aplikasi manajemen hutang berbasis web yang bisa dijalankan secara lokal di komputer sendiri (localhost), bukan aplikasi online. Gunakan stack yang sederhana, rapi, dan mudah dijalankan oleh pemula.
+
+TUJUAN APLIKASI
+Aplikasi ini dipakai untuk mencatat hutang pelanggan pada beberapa usaha. Sistem memiliki 2 role:
+1. Super Admin
+2. Owner Usaha
+
+Aplikasi harus mendukung multi-usaha, artinya satu aplikasi bisa dipakai untuk banyak usaha, tetapi setiap Owner hanya bisa mengakses data usahanya sendiri.
+
+TARGET TEKNOLOGI
+Gunakan:
+- Frontend: React + Vite
+- Backend: Node.js + Express
+- Database lokal: SQLite
+- Styling: Tailwind CSS
+- ORM/query boleh pakai Prisma atau better-sqlite3 atau sqlite3, pilih yang paling stabil dan sederhana
+- Auth login sederhana tapi aman untuk lokal
+- Export CSV
+- Print halaman laporan yang rapi
+- Backup & restore data
+
+APLIKASI HARUS BISA DIJALANKAN LOKAL
+Aplikasi harus bisa dijalankan dengan langkah sederhana seperti:
+- npm install
+- npm run dev
+
+Kalau perlu, buat frontend dan backend dalam satu project yang mudah dijalankan.
+Tambahkan file README.md berisi panduan instalasi dan cara menjalankan aplikasi di localhost.
+
+FITUR UTAMA
+
+1. LOGIN DAN ROLE
+Ada 2 jenis akun:
+
+A. Super Admin
+Hak akses:
+- login
+- melihat daftar semua usaha
+- membuat usaha baru
+- mengelola akun owner usaha
+- reset password owner
+- aktif/nonaktif akun owner
+- melihat ringkasan global semua usaha
+
+B. Owner Usaha
+Hak akses:
+- login ke akun miliknya
+- hanya melihat data usaha miliknya sendiri
+- input hutang
+- input pembayaran
+- lihat dashboard usahanya
+- lihat laporan
+- backup & restore
+- print laporan
+- kelola data usahanya sendiri
+
+Buat middleware auth dan proteksi role.
+Pastikan owner tidak bisa mengakses data usaha lain.
+
+2. DATA USAHA
+Buat data usaha dengan field minimal:
+- id
+- nama_usaha
+- alamat
+- telepon
+- catatan
+- created_at
+
+Super Admin bisa:
+- tambah usaha
+- edit usaha
+- lihat daftar usaha
+
+3. DATA USER / AKUN
+Field minimal:
+- id
+- nama
+- username
+- password_hash
+- role (super_admin / owner)
+- usaha_id nullable
+- is_active
+- created_at
+
+Ketentuan:
+- super_admin tidak terikat ke usaha tertentu
+- owner harus terikat ke satu usaha
+- password disimpan dalam bentuk hash
+- sediakan seed default:
+  - 1 akun super admin
+  - 1 akun owner
+  - 1 data usaha contoh
+
+4. DATA PELANGGAN
+Setiap usaha punya data pelanggan sendiri.
+Field minimal:
+- id
+- usaha_id
+- nama
+- telepon
+- alamat
+- catatan
+- created_at
+
+Fitur:
+- tambah pelanggan
+- edit pelanggan
+- hapus pelanggan
+- lihat detail pelanggan
+
+Halaman detail pelanggan harus menampilkan:
+- data pelanggan
+- semua hutang pelanggan
+- semua riwayat pembayaran pelanggan
+- total hutang
+- total dibayar
+- sisa hutang
+
+5. DATA HUTANG
+Field minimal:
+- id
+- usaha_id
+- pelanggan_id
+- tanggal_hutang
+- keterangan
+- nominal_hutang
+- total_dibayar
+- sisa_hutang
+- status (aktif / lunas)
+- created_at
+- updated_at
+
+Fitur:
+- tambah hutang baru
+- edit hutang
+- hapus hutang
+- lihat detail hutang
+- otomatis hitung:
+  - total dibayar
+  - sisa hutang
+  - status lunas/belum
+
+Aturan:
+- saat hutang baru dibuat:
+  - total_dibayar = 0
+  - sisa_hutang = nominal_hutang
+  - status = aktif
+
+6. DATA PEMBAYARAN
+Field minimal:
+- id
+- usaha_id
+- hutang_id
+- pelanggan_id
+- tanggal_bayar
+- nominal_bayar
+- catatan
+- created_at
+
+Fitur:
+- catat pembayaran
+- pembayaran harus terkait ke hutang tertentu
+- saat input pembayaran tidak perlu hafal ID hutang
+- user bisa pilih pelanggan dulu lalu pilih daftar hutangnya
+- setelah pembayaran disimpan:
+  - total_dibayar pada hutang bertambah
+  - sisa_hutang berkurang
+  - jika sisa_hutang <= 0 maka status jadi lunas
+  - jangan izinkan pembayaran minus
+  - tangani jika nominal bayar melebihi sisa hutang dengan validasi yang jelas
+
+7. DASHBOARD OWNER USAHA
+Tampilkan ringkasan:
+- total hutang
+- total dibayar
+- sisa hutang
+- jumlah pelanggan yang masih berhutang
+- jumlah hutang aktif
+- jumlah hutang lunas
+- daftar pembayaran terbaru
+- daftar sisa hutang terbesar
+
+Buat tampilan dashboard yang rapi, sederhana, dan mudah dipahami.
+
+8. DASHBOARD SUPER ADMIN
+Tampilkan ringkasan global:
+- jumlah usaha
+- jumlah owner aktif
+- total pelanggan seluruh usaha
+- total hutang seluruh usaha
+- total dibayar seluruh usaha
+- total sisa hutang seluruh usaha
+- daftar usaha terbaru
+- usaha dengan sisa hutang terbesar
+
+9. LAPORAN
+Buat halaman laporan untuk owner usaha.
+Fitur:
+- filter berdasarkan pelanggan
+- filter berdasarkan tanggal
+- filter berdasarkan status hutang
+- tabel hasil laporan
+- export CSV
+- print halaman laporan
+- layout print harus bersih
+
+Data laporan minimal memuat:
+- tanggal hutang
+- nama pelanggan
+- keterangan
+- nominal hutang
+- total dibayar
+- sisa hutang
+- status
+
+10. BACKUP & RESTORE
+Buat fitur backup dan restore untuk owner usaha.
+Pilihan implementasi:
+- export data usaha owner ke file JSON
+- import file JSON untuk restore
+
+Ketentuan:
+- backup hanya mencakup data usaha milik owner tersebut
+- restore harus punya validasi struktur data
+- tampilkan notifikasi sukses/gagal
+
+11. UI / UX
+Buat UI modern, sederhana, dan enak dipakai.
+Gunakan:
+- layout sidebar + header
+- card untuk ringkasan
+- tabel data
+- modal/form yang rapi
+- validasi form
+- notifikasi sukses/gagal
+- konfirmasi sebelum hapus data
+- empty state jika data kosong
+- format angka rupiah Indonesia
+- format tanggal Indonesia
+
+12. HALAMAN / MENU YANG DIBUTUHKAN
+
+Umum:
+- Login
+
+Super Admin:
+- Dashboard Global
+- Daftar Usaha
+- Kelola Owner
+- Profil / Logout
+
+Owner:
+- Dashboard
+- Pelanggan
+- Hutang
+- Pembayaran
+- Laporan
+- Backup & Restore
+- Profil Usaha / Logout
+
+13. STRUKTUR DATABASE
+Buat skema database yang rapi untuk:
+- users
+- usaha
+- pelanggan
+- hutang
+- pembayaran
+
+Semua tabel terkait owner harus memakai usaha_id agar data tidak bercampur antar usaha.
+
+14. VALIDASI PENTING
+- owner hanya boleh mengakses data dengan usaha_id miliknya
+- super admin boleh melihat semua
+- username harus unik
+- nominal hutang harus > 0
+- nominal bayar harus > 0
+- tidak boleh input pembayaran ke hutang yang sudah lunas tanpa penanganan yang jelas
+- semua form wajib punya validasi yang ramah user
+
+15. SEED DATA
+Buat seed data contoh:
+- super admin:
+  - username: admin
+  - password: admin123
+- owner:
+  - username: owner1
+  - password: owner123
+- 1 usaha contoh
+- beberapa pelanggan contoh
+- beberapa hutang contoh
+- beberapa pembayaran contoh
+
+16. DETAIL IMPLEMENTASI
+- buat struktur folder rapi
+- pisahkan frontend dan backend dengan jelas jika perlu
+- buat API endpoint yang jelas
+- gunakan reusable components
+- buat helper untuk perhitungan hutang
+- gunakan state management sederhana dan rapi
+- buat README lengkap
+
+17. OUTPUT YANG SAYA INGINKAN
+Saya ingin kamu menghasilkan:
+- kode project lengkap
+- database schema
+- seed data
+- halaman login
+- dashboard super admin
+- dashboard owner
+- CRUD usaha
+- CRUD owner
+- CRUD pelanggan
+- CRUD hutang
+- input pembayaran
+- halaman laporan
+- export CSV
+- print laporan
+- backup & restore JSON
+- README cara menjalankan lokal
+
+18. PRIORITAS
+Fokus utama:
+- aplikasi harus benar-benar bisa dijalankan lokal
+- login dan role berjalan
+- data antar usaha tidak tercampur
+- alur hutang -> pembayaran -> status lunas bekerja dengan benar
+- UI cukup rapi dan mudah dipakai
+- jangan membuat fitur online/cloud/deploy dulu
+- jangan buat terlalu rumit
+- utamakan kestabilan dan kejelasan kode
+
+19. TAMBAHAN PENTING
+Tolong buat implementasi yang realistis dan tidak terlalu rumit.
+Kalau ada bagian yang berpotensi terlalu kompleks, pilih pendekatan yang lebih sederhana tetapi tetap rapi dan bisa dipakai.
+Utamakan agar project ini berhasil dijalankan lokal oleh orang awam.
+
+Setelah selesai:
+- jelaskan struktur project
+- jelaskan cara install
+- jelaskan cara menjalankan
+- jelaskan akun default login

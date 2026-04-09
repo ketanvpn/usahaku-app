@@ -1,22 +1,39 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Debt Management API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: usaha
+    description: Business management
+  - name: users
+    description: User management
+  - name: pelanggan
+    description: Customer management
+  - name: hutang
+    description: Debt management
+  - name: pembayaran
+    description: Payment management
+  - name: laporan
+    description: Reports
+  - name: dashboard
+    description: Dashboard summaries
+  - name: backup
+    description: Backup and restore
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +41,599 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /usaha:
+    get:
+      operationId: getUsahaList
+      tags: [usaha]
+      summary: Get all businesses (super admin)
+      responses:
+        "200":
+          description: List of businesses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Usaha"
+    post:
+      operationId: createUsaha
+      tags: [usaha]
+      summary: Create a business
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUsahaBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Usaha"
+
+  /usaha/{id}:
+    get:
+      operationId: getUsaha
+      tags: [usaha]
+      summary: Get a business
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Business
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Usaha"
+    put:
+      operationId: updateUsaha
+      tags: [usaha]
+      summary: Update a business
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUsahaBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Usaha"
+
+  /users:
+    get:
+      operationId: getUsers
+      tags: [users]
+      summary: Get all users (super admin)
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a user (super admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    put:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /users/{id}/reset-password:
+    post:
+      operationId: resetUserPassword
+      tags: [users]
+      summary: Reset user password
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordBody"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /users/{id}/toggle-active:
+    post:
+      operationId: toggleUserActive
+      tags: [users]
+      summary: Toggle user active status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /pelanggan:
+    get:
+      operationId: getPelangganList
+      tags: [pelanggan]
+      summary: Get all customers for owner's business
+      responses:
+        "200":
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pelanggan"
+    post:
+      operationId: createPelanggan
+      tags: [pelanggan]
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePelangganBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pelanggan"
+
+  /pelanggan/{id}:
+    get:
+      operationId: getPelanggan
+      tags: [pelanggan]
+      summary: Get a customer with debt summary
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customer detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PelangganDetail"
+    put:
+      operationId: updatePelanggan
+      tags: [pelanggan]
+      summary: Update a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePelangganBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pelanggan"
+    delete:
+      operationId: deletePelanggan
+      tags: [pelanggan]
+      summary: Delete a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /hutang:
+    get:
+      operationId: getHutangList
+      tags: [hutang]
+      summary: Get all debts for owner's business
+      parameters:
+        - name: pelanggan_id
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [aktif, lunas]
+      responses:
+        "200":
+          description: List of debts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Hutang"
+    post:
+      operationId: createHutang
+      tags: [hutang]
+      summary: Create a debt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHutangBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Hutang"
+
+  /hutang/{id}:
+    get:
+      operationId: getHutang
+      tags: [hutang]
+      summary: Get a debt with payment history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Debt detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HutangDetail"
+    put:
+      operationId: updateHutang
+      tags: [hutang]
+      summary: Update a debt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateHutangBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Hutang"
+    delete:
+      operationId: deleteHutang
+      tags: [hutang]
+      summary: Delete a debt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /pembayaran:
+    get:
+      operationId: getPembayaranList
+      tags: [pembayaran]
+      summary: Get all payments for owner's business
+      parameters:
+        - name: hutang_id
+          in: query
+          schema:
+            type: integer
+        - name: pelanggan_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pembayaran"
+    post:
+      operationId: createPembayaran
+      tags: [pembayaran]
+      summary: Record a payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePembayaranBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pembayaran"
+
+  /pembayaran/{id}:
+    delete:
+      operationId: deletePembayaran
+      tags: [pembayaran]
+      summary: Delete a payment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /dashboard/owner:
+    get:
+      operationId: getOwnerDashboard
+      tags: [dashboard]
+      summary: Get owner dashboard summary
+      responses:
+        "200":
+          description: Owner dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerDashboard"
+
+  /dashboard/admin:
+    get:
+      operationId: getAdminDashboard
+      tags: [dashboard]
+      summary: Get super admin dashboard summary
+      responses:
+        "200":
+          description: Admin dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+
+  /laporan:
+    get:
+      operationId: getLaporan
+      tags: [laporan]
+      summary: Get report data with filters
+      parameters:
+        - name: pelanggan_id
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [aktif, lunas]
+        - name: tanggal_dari
+          in: query
+          schema:
+            type: string
+        - name: tanggal_sampai
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Report data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LaporanItem"
+
+  /backup/export:
+    get:
+      operationId: exportBackup
+      tags: [backup]
+      summary: Export owner data as JSON backup
+      responses:
+        "200":
+          description: Backup data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupData"
+
+  /backup/restore:
+    post:
+      operationId: importBackup
+      tags: [backup]
+      summary: Restore owner data from JSON backup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BackupData"
+      responses:
+        "200":
+          description: Restore result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +641,445 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    LoginBody:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required: [username, password]
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        message:
+          type: string
+      required: [user, message]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        nama:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+          enum: [super_admin, owner]
+        usaha_id:
+          type: integer
+          nullable: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+      required: [id, nama, username, role, is_active, created_at]
+
+    CreateUserBody:
+      type: object
+      properties:
+        nama:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [super_admin, owner]
+        usaha_id:
+          type: integer
+          nullable: true
+      required: [nama, username, password, role]
+
+    UpdateUserBody:
+      type: object
+      properties:
+        nama:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+          enum: [super_admin, owner]
+        usaha_id:
+          type: integer
+          nullable: true
+        is_active:
+          type: boolean
+
+    ResetPasswordBody:
+      type: object
+      properties:
+        new_password:
+          type: string
+      required: [new_password]
+
+    Usaha:
+      type: object
+      properties:
+        id:
+          type: integer
+        nama_usaha:
+          type: string
+        alamat:
+          type: string
+          nullable: true
+        telepon:
+          type: string
+          nullable: true
+        catatan:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+      required: [id, nama_usaha, created_at]
+
+    CreateUsahaBody:
+      type: object
+      properties:
+        nama_usaha:
+          type: string
+        alamat:
+          type: string
+          nullable: true
+        telepon:
+          type: string
+          nullable: true
+        catatan:
+          type: string
+          nullable: true
+      required: [nama_usaha]
+
+    Pelanggan:
+      type: object
+      properties:
+        id:
+          type: integer
+        usaha_id:
+          type: integer
+        nama:
+          type: string
+        telepon:
+          type: string
+          nullable: true
+        alamat:
+          type: string
+          nullable: true
+        catatan:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+      required: [id, usaha_id, nama, created_at]
+
+    PelangganDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        usaha_id:
+          type: integer
+        nama:
+          type: string
+        telepon:
+          type: string
+          nullable: true
+        alamat:
+          type: string
+          nullable: true
+        catatan:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+        hutang_list:
+          type: array
+          items:
+            $ref: "#/components/schemas/Hutang"
+        pembayaran_list:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pembayaran"
+        total_hutang:
+          type: number
+        total_dibayar:
+          type: number
+        sisa_hutang:
+          type: number
+      required: [id, usaha_id, nama, created_at, hutang_list, pembayaran_list, total_hutang, total_dibayar, sisa_hutang]
+
+    CreatePelangganBody:
+      type: object
+      properties:
+        nama:
+          type: string
+        telepon:
+          type: string
+          nullable: true
+        alamat:
+          type: string
+          nullable: true
+        catatan:
+          type: string
+          nullable: true
+      required: [nama]
+
+    Hutang:
+      type: object
+      properties:
+        id:
+          type: integer
+        usaha_id:
+          type: integer
+        pelanggan_id:
+          type: integer
+        pelanggan_nama:
+          type: string
+        tanggal_hutang:
+          type: string
+        keterangan:
+          type: string
+          nullable: true
+        nominal_hutang:
+          type: number
+        total_dibayar:
+          type: number
+        sisa_hutang:
+          type: number
+        status:
+          type: string
+          enum: [aktif, lunas]
+        created_at:
+          type: string
+        updated_at:
+          type: string
+      required: [id, usaha_id, pelanggan_id, pelanggan_nama, tanggal_hutang, nominal_hutang, total_dibayar, sisa_hutang, status, created_at, updated_at]
+
+    HutangDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        usaha_id:
+          type: integer
+        pelanggan_id:
+          type: integer
+        pelanggan_nama:
+          type: string
+        tanggal_hutang:
+          type: string
+        keterangan:
+          type: string
+          nullable: true
+        nominal_hutang:
+          type: number
+        total_dibayar:
+          type: number
+        sisa_hutang:
+          type: number
+        status:
+          type: string
+          enum: [aktif, lunas]
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        pembayaran_list:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pembayaran"
+      required: [id, usaha_id, pelanggan_id, pelanggan_nama, tanggal_hutang, nominal_hutang, total_dibayar, sisa_hutang, status, created_at, updated_at, pembayaran_list]
+
+    CreateHutangBody:
+      type: object
+      properties:
+        pelanggan_id:
+          type: integer
+        tanggal_hutang:
+          type: string
+        keterangan:
+          type: string
+          nullable: true
+        nominal_hutang:
+          type: number
+      required: [pelanggan_id, tanggal_hutang, nominal_hutang]
+
+    UpdateHutangBody:
+      type: object
+      properties:
+        tanggal_hutang:
+          type: string
+        keterangan:
+          type: string
+          nullable: true
+        nominal_hutang:
+          type: number
+
+    Pembayaran:
+      type: object
+      properties:
+        id:
+          type: integer
+        usaha_id:
+          type: integer
+        hutang_id:
+          type: integer
+        pelanggan_id:
+          type: integer
+        pelanggan_nama:
+          type: string
+        tanggal_bayar:
+          type: string
+        nominal_bayar:
+          type: number
+        catatan:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+      required: [id, usaha_id, hutang_id, pelanggan_id, pelanggan_nama, tanggal_bayar, nominal_bayar, created_at]
+
+    CreatePembayaranBody:
+      type: object
+      properties:
+        hutang_id:
+          type: integer
+        tanggal_bayar:
+          type: string
+        nominal_bayar:
+          type: number
+        catatan:
+          type: string
+          nullable: true
+      required: [hutang_id, tanggal_bayar, nominal_bayar]
+
+    OwnerDashboard:
+      type: object
+      properties:
+        total_hutang:
+          type: number
+        total_dibayar:
+          type: number
+        sisa_hutang:
+          type: number
+        jumlah_pelanggan_berhutang:
+          type: integer
+        jumlah_hutang_aktif:
+          type: integer
+        jumlah_hutang_lunas:
+          type: integer
+        pembayaran_terbaru:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pembayaran"
+        hutang_terbesar:
+          type: array
+          items:
+            $ref: "#/components/schemas/Hutang"
+      required: [total_hutang, total_dibayar, sisa_hutang, jumlah_pelanggan_berhutang, jumlah_hutang_aktif, jumlah_hutang_lunas, pembayaran_terbaru, hutang_terbesar]
+
+    AdminDashboard:
+      type: object
+      properties:
+        jumlah_usaha:
+          type: integer
+        jumlah_owner_aktif:
+          type: integer
+        total_pelanggan:
+          type: integer
+        total_hutang:
+          type: number
+        total_dibayar:
+          type: number
+        total_sisa_hutang:
+          type: number
+        usaha_terbaru:
+          type: array
+          items:
+            $ref: "#/components/schemas/Usaha"
+        usaha_hutang_terbesar:
+          type: array
+          items:
+            $ref: "#/components/schemas/UsahaHutangSummary"
+      required: [jumlah_usaha, jumlah_owner_aktif, total_pelanggan, total_hutang, total_dibayar, total_sisa_hutang, usaha_terbaru, usaha_hutang_terbesar]
+
+    UsahaHutangSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        nama_usaha:
+          type: string
+        sisa_hutang:
+          type: number
+        jumlah_pelanggan:
+          type: integer
+      required: [id, nama_usaha, sisa_hutang, jumlah_pelanggan]
+
+    LaporanItem:
+      type: object
+      properties:
+        tanggal_hutang:
+          type: string
+        nama_pelanggan:
+          type: string
+        keterangan:
+          type: string
+          nullable: true
+        nominal_hutang:
+          type: number
+        total_dibayar:
+          type: number
+        sisa_hutang:
+          type: number
+        status:
+          type: string
+          enum: [aktif, lunas]
+      required: [tanggal_hutang, nama_pelanggan, nominal_hutang, total_dibayar, sisa_hutang, status]
+
+    BackupData:
+      type: object
+      properties:
+        version:
+          type: string
+        exported_at:
+          type: string
+        usaha_id:
+          type: integer
+        usaha:
+          $ref: "#/components/schemas/Usaha"
+        pelanggan:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pelanggan"
+        hutang:
+          type: array
+          items:
+            $ref: "#/components/schemas/Hutang"
+        pembayaran:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pembayaran"
+      required: [version, exported_at, usaha_id, usaha, pelanggan, hutang, pembayaran]
