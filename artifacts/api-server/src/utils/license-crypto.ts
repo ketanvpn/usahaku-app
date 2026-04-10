@@ -16,7 +16,7 @@ const CODE_TIPE: Record<number, LicenseTipe> = {
   3: "tahunan",
 };
 
-const DURASI_HARI: Record<LicenseTipe, number> = {
+export const DURASI_HARI: Record<LicenseTipe, number> = {
   harian: 1,
   bulanan: 30,
   tahunan: 365,

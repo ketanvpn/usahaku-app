@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, licenseKeysTable, usahaTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth, requireSuperAdmin, requireOwner } from "../middlewares/auth";
-import { generateLicenseKey, verifyLicenseKey, type LicenseTipe } from "../utils/license-crypto";
+import { generateLicenseKey, verifyLicenseKey, DURASI_HARI, type LicenseTipe } from "../utils/license-crypto";
 
 const router: IRouter = Router();
 
@@ -94,27 +94,52 @@ router.post("/lisensi/aktivasi", requireOwner, async (req, res): Promise<void> =
     return;
   }
 
-  const now = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
   const normalizedKey = key.trim().toUpperCase();
 
+  // Hitung tanggal expired baru:
+  // - Jika masih punya lisensi aktif → tambah durasi dari tanggal expired yang ada
+  // - Jika tidak aktif / belum pernah → pakai tanggal dari key (sejak key dibuat)
+  const [usaha] = await db.select({ licenseExpiresAt: usahaTable.licenseExpiresAt }).from(usahaTable).where(eq(usahaTable.id, usahaId));
+  const currentExpiry = usaha?.licenseExpiresAt ? new Date(usaha.licenseExpiresAt) : null;
+  const isStillActive = currentExpiry !== null && currentExpiry > now;
+
+  let newExpiresAt: Date;
+  if (isStillActive) {
+    // Perpanjang dari tanggal expired yang ada
+    newExpiresAt = new Date(currentExpiry!);
+    newExpiresAt.setDate(newExpiresAt.getDate() + DURASI_HARI[result.tipe!]);
+  } else {
+    // Aktivasi baru — gunakan tanggal yang sudah tertanam di dalam key
+    newExpiresAt = result.expiresAt!;
+  }
+
   if (existing.length > 0) {
-    await db.update(licenseKeysTable).set({ isUsed: true, usedAt: now }).where(eq(licenseKeysTable.key, normalizedKey));
+    await db.update(licenseKeysTable).set({ isUsed: true, usedAt: nowIso }).where(eq(licenseKeysTable.key, normalizedKey));
   } else {
     await db.insert(licenseKeysTable).values({
       key: normalizedKey,
       tipe: result.tipe!,
       expiresAt: result.expiresAt!.toISOString(),
       isUsed: true,
-      usedAt: now,
+      usedAt: nowIso,
     });
   }
 
-  await db.update(usahaTable).set({ licenseExpiresAt: result.expiresAt!.toISOString() }).where(eq(usahaTable.id, usahaId));
+  await db.update(usahaTable).set({ licenseExpiresAt: newExpiresAt.toISOString() }).where(eq(usahaTable.id, usahaId));
+
+  const sisaHari = Math.ceil((newExpiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const pesan = isStillActive
+    ? `Lisensi diperpanjang! Sekarang aktif sampai ${newExpiresAt.toLocaleDateString("id-ID")} (${sisaHari} hari).`
+    : "Lisensi berhasil diaktifkan!";
 
   res.json({
-    message: "Lisensi berhasil diaktifkan!",
+    message: pesan,
     tipe: result.tipe,
-    expires_at: result.expiresAt!.toISOString(),
+    expires_at: newExpiresAt.toISOString(),
+    diperpanjang: isStillActive,
+    sisa_hari: sisaHari,
   });
 });
 
