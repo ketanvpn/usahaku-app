@@ -8,7 +8,7 @@ import {
   UpdatePelangganBody,
   DeletePelangganParams,
 } from "@workspace/api-zod";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireLicense } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -70,7 +70,7 @@ router.get("/pelanggan", requireAuth, async (req, res): Promise<void> => {
   res.json(list.map(formatPelanggan));
 });
 
-router.post("/pelanggan", requireAuth, async (req, res): Promise<void> => {
+router.post("/pelanggan", requireAuth, requireLicense, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
   if (!usahaId) {
     res.status(403).json({ error: "Akses ditolak." });
@@ -137,7 +137,7 @@ router.get("/pelanggan/:id", requireAuth, async (req, res): Promise<void> => {
   });
 });
 
-router.put("/pelanggan/:id", requireAuth, async (req, res): Promise<void> => {
+router.put("/pelanggan/:id", requireAuth, requireLicense, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
   if (!usahaId) {
     res.status(403).json({ error: "Akses ditolak." });
@@ -174,7 +174,7 @@ router.put("/pelanggan/:id", requireAuth, async (req, res): Promise<void> => {
   res.json(formatPelanggan(pelanggan));
 });
 
-router.delete("/pelanggan/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete("/pelanggan/:id", requireAuth, requireLicense, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
   if (!usahaId) {
     res.status(403).json({ error: "Akses ditolak." });

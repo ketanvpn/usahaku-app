@@ -21,6 +21,8 @@ import ProfilPage from "@/pages/profil";
 import AdminDashboardPage from "@/pages/admin/dashboard";
 import AdminUsahaPage from "@/pages/admin/usaha";
 import AdminOwnersPage from "@/pages/admin/owners";
+import AdminLisensiPage from "@/pages/admin/lisensi";
+import LisensiPage from "@/pages/lisensi";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +72,11 @@ function Router() {
           <Layout><BackupPage /></Layout>
         </ProtectedRoute>
       </Route>
+      <Route path="/lisensi">
+        <ProtectedRoute allowedRoles={["owner"]}>
+          <Layout><LisensiPage /></Layout>
+        </ProtectedRoute>
+      </Route>
 
       {/* Protected Admin Routes */}
       <Route path="/admin/dashboard">
@@ -85,6 +92,11 @@ function Router() {
       <Route path="/admin/owners">
         <ProtectedRoute allowedRoles={["super_admin"]}>
           <Layout><AdminOwnersPage /></Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/lisensi">
+        <ProtectedRoute allowedRoles={["super_admin"]}>
+          <Layout><AdminLisensiPage /></Layout>
         </ProtectedRoute>
       </Route>
 

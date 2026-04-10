@@ -10,7 +10,9 @@ import {
   UserCircle,
   Building2,
   LogOut,
-  Menu
+  Menu,
+  KeyRound,
+  ShieldCheck
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -41,6 +43,7 @@ export function Layout({ children }: { children: ReactNode }) {
     { href: "/pembayaran", label: "Pembayaran", icon: CreditCard },
     { href: "/laporan", label: "Laporan", icon: FileText },
     { href: "/backup", label: "Backup & Restore", icon: DatabaseBackup },
+    { href: "/lisensi", label: "Lisensi", icon: ShieldCheck },
     { href: "/profil", label: "Profil", icon: UserCircle },
   ];
 
@@ -48,6 +51,7 @@ export function Layout({ children }: { children: ReactNode }) {
     { href: "/admin/dashboard", label: "Dashboard Global", icon: LayoutDashboard },
     { href: "/admin/usaha", label: "Daftar Usaha", icon: Building2 },
     { href: "/admin/owners", label: "Kelola Owner", icon: Users },
+    { href: "/admin/lisensi", label: "Lisensi Key", icon: KeyRound },
     { href: "/profil", label: "Profil", icon: UserCircle },
   ];
 

@@ -6,7 +6,7 @@ import {
   GetPembayaranListQueryParams,
   DeletePembayaranParams,
 } from "@workspace/api-zod";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireLicense } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -51,7 +51,7 @@ router.get("/pembayaran", requireAuth, async (req, res): Promise<void> => {
   })));
 });
 
-router.post("/pembayaran", requireAuth, async (req, res): Promise<void> => {
+router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
   if (!usahaId) {
     res.status(403).json({ error: "Akses ditolak." });
@@ -125,7 +125,7 @@ router.post("/pembayaran", requireAuth, async (req, res): Promise<void> => {
   });
 });
 
-router.delete("/pembayaran/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete("/pembayaran/:id", requireAuth, requireLicense, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
   if (!usahaId) {
     res.status(403).json({ error: "Akses ditolak." });

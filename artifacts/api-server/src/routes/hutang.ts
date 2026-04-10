@@ -10,7 +10,7 @@ import {
   DeleteHutangParams,
 } from "@workspace/api-zod";
 import { pembayaranTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireLicense } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -63,7 +63,7 @@ router.get("/hutang", requireAuth, async (req, res): Promise<void> => {
   res.json(hutangList.map(({ hutang: h, pelangganNama }) => formatHutang(h, pelangganNama ?? "")));
 });
 
-router.post("/hutang", requireAuth, async (req, res): Promise<void> => {
+router.post("/hutang", requireAuth, requireLicense, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
   if (!usahaId) {
     res.status(403).json({ error: "Akses ditolak." });
@@ -152,7 +152,7 @@ router.get("/hutang/:id", requireAuth, async (req, res): Promise<void> => {
   });
 });
 
-router.put("/hutang/:id", requireAuth, async (req, res): Promise<void> => {
+router.put("/hutang/:id", requireAuth, requireLicense, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
   if (!usahaId) {
     res.status(403).json({ error: "Akses ditolak." });
@@ -217,7 +217,7 @@ router.put("/hutang/:id", requireAuth, async (req, res): Promise<void> => {
   res.json(formatHutang(updated.hutang, updated.pelangganNama ?? ""));
 });
 
-router.delete("/hutang/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete("/hutang/:id", requireAuth, requireLicense, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
   if (!usahaId) {
     res.status(403).json({ error: "Akses ditolak." });
