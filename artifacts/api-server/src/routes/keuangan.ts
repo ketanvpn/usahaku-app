@@ -18,6 +18,63 @@ function formatKeuangan(k: typeof keuanganTable.$inferSelect) {
   };
 }
 
+// GET /api/keuangan/rekap-kategori?bulan=4&tahun=2026
+router.get("/keuangan/rekap-kategori", requireAuth, async (req, res): Promise<void> => {
+  const usahaId = req.session.usahaId;
+  if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  const { bulan, tahun } = req.query as { bulan?: string; tahun?: string };
+  const conditions = [eq(keuanganTable.usahaId, usahaId)];
+  if (tahun) conditions.push(sql`strftime('%Y', ${keuanganTable.tanggal}) = ${tahun}`);
+  if (bulan) conditions.push(sql`strftime('%m', ${keuanganTable.tanggal}) = ${bulan.padStart(2, "0")}`);
+
+  const rows = await db.select().from(keuanganTable).where(and(...conditions));
+
+  const map: Record<string, { tipe: string; total: number; jumlah_transaksi: number }> = {};
+  for (const r of rows) {
+    const key = `${r.tipe}__${r.kategori ?? "Lainnya"}`;
+    if (!map[key]) map[key] = { tipe: r.tipe, total: 0, jumlah_transaksi: 0 };
+    map[key].total += parseFloat(r.jumlah) || 0;
+    map[key].jumlah_transaksi += 1;
+  }
+
+  const result = Object.entries(map).map(([key, val]) => ({
+    kategori: key.split("__")[1],
+    tipe: val.tipe,
+    total: val.total,
+    jumlah_transaksi: val.jumlah_transaksi,
+  })).sort((a, b) => b.total - a.total);
+
+  res.json(result);
+});
+
+// GET /api/keuangan/rekap-bulanan?tahun=2026
+router.get("/keuangan/rekap-bulanan", requireAuth, async (req, res): Promise<void> => {
+  const usahaId = req.session.usahaId;
+  if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  const tahun = (req.query.tahun as string) || String(new Date().getFullYear());
+  const rows = await db.select().from(keuanganTable)
+    .where(and(eq(keuanganTable.usahaId, usahaId), sql`strftime('%Y', ${keuanganTable.tanggal}) = ${tahun}`));
+
+  const bulanMap: Record<number, { masuk: number; keluar: number }> = {};
+  for (let i = 1; i <= 12; i++) bulanMap[i] = { masuk: 0, keluar: 0 };
+  for (const r of rows) {
+    const bulan = parseInt(r.tanggal.split("-")[1]);
+    const nominal = parseFloat(r.jumlah) || 0;
+    if (r.tipe === "masuk") bulanMap[bulan].masuk += nominal;
+    else bulanMap[bulan].keluar += nominal;
+  }
+
+  const NAMA_BULAN = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+  res.json(Object.entries(bulanMap).map(([bulan, val]) => ({
+    bulan: parseInt(bulan),
+    nama: NAMA_BULAN[parseInt(bulan) - 1],
+    masuk: val.masuk,
+    keluar: val.keluar,
+  })));
+});
+
 // GET /api/keuangan?bulan=4&tahun=2026&tipe=masuk
 router.get("/keuangan", requireAuth, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
