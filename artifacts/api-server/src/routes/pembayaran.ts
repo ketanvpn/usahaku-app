@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, pembayaranTable, hutangTable, pelangganTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { db, pembayaranTable, hutangTable, pelangganTable, usahaTable } from "@workspace/db";
+import { eq, and, desc, count } from "drizzle-orm";
 import {
   CreatePembayaranBody,
   GetPembayaranListQueryParams,
@@ -32,13 +32,18 @@ router.get("/pembayaran", requireAuth, async (req, res): Promise<void> => {
   const list = await db.select({
     pembayaran: pembayaranTable,
     pelangganNama: pelangganTable.nama,
+    hutangKeterangan: hutangTable.keterangan,
+    hutangNominal: hutangTable.nominalHutang,
+    namaUsaha: usahaTable.namaUsaha,
   })
     .from(pembayaranTable)
     .leftJoin(pelangganTable, eq(pembayaranTable.pelangganId, pelangganTable.id))
+    .leftJoin(hutangTable, eq(pembayaranTable.hutangId, hutangTable.id))
+    .leftJoin(usahaTable, eq(pembayaranTable.usahaId, usahaTable.id))
     .where(and(...conditions))
     .orderBy(desc(pembayaranTable.tanggalBayar), desc(pembayaranTable.id));
 
-  res.json(list.map(({ pembayaran: p, pelangganNama }) => ({
+  res.json(list.map(({ pembayaran: p, pelangganNama, hutangKeterangan, hutangNominal, namaUsaha }) => ({
     id: p.id,
     usaha_id: p.usahaId,
     hutang_id: p.hutangId,
@@ -47,6 +52,11 @@ router.get("/pembayaran", requireAuth, async (req, res): Promise<void> => {
     tanggal_bayar: p.tanggalBayar,
     nominal_bayar: parseFloat(p.nominalBayar),
     catatan: p.catatan ?? null,
+    nomor_kwitansi: p.nomorKwitansi ?? null,
+    hutang_keterangan: hutangKeterangan ?? null,
+    hutang_nominal: hutangNominal ? parseFloat(hutangNominal) : 0,
+    sisa_hutang_setelah: p.sisaHutangSetelah ? parseFloat(p.sisaHutangSetelah) : null,
+    nama_usaha: namaUsaha ?? "",
     created_at: p.createdAt.toISOString(),
   })));
 });
@@ -91,6 +101,15 @@ router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promis
   }
 
   const [pelanggan] = await db.select().from(pelangganTable).where(eq(pelangganTable.id, hutang.pelangganId));
+  const [usaha] = await db.select().from(usahaTable).where(eq(usahaTable.id, usahaId));
+
+  // Auto-generate nomor kwitansi: KWT-YYYY-NNNN (sequential per usaha)
+  const tahun = new Date().getFullYear();
+  const [{ jumlah }] = await db.select({ jumlah: count() }).from(pembayaranTable).where(eq(pembayaranTable.usahaId, usahaId));
+  const nomorUrut = String(jumlah + 1).padStart(4, "0");
+  const nomorKwitansi = `KWT-${tahun}-${nomorUrut}`;
+
+  const sisaSetelah = Math.max(0, parseFloat(hutang.nominalHutang) - (parseFloat(hutang.totalDibayar) + parsed.data.nominal_bayar));
 
   const [pembayaran] = await db.insert(pembayaranTable).values({
     usahaId,
@@ -99,6 +118,8 @@ router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promis
     tanggalBayar: parsed.data.tanggal_bayar,
     nominalBayar: parsed.data.nominal_bayar.toString(),
     catatan: parsed.data.catatan ?? null,
+    nomorKwitansi,
+    sisaHutangSetelah: sisaSetelah.toString(),
   }).returning();
 
   const newTotalDibayar = parseFloat(hutang.totalDibayar) + parsed.data.nominal_bayar;
@@ -121,6 +142,11 @@ router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promis
     tanggal_bayar: pembayaran.tanggalBayar,
     nominal_bayar: parseFloat(pembayaran.nominalBayar),
     catatan: pembayaran.catatan ?? null,
+    nomor_kwitansi: nomorKwitansi,
+    hutang_keterangan: hutang.keterangan ?? null,
+    hutang_nominal: parseFloat(hutang.nominalHutang),
+    sisa_hutang_setelah: sisaSetelah,
+    nama_usaha: usaha?.namaUsaha ?? "",
     created_at: pembayaran.createdAt.toISOString(),
   });
 });

@@ -13,6 +13,8 @@ export const pembayaranTable = sqliteTable("pembayaran", {
   tanggalBayar: text("tanggal_bayar").notNull(),
   nominalBayar: text("nominal_bayar").notNull(),
   catatan: text("catatan"),
+  nomorKwitansi: text("nomor_kwitansi"),
+  sisaHutangSetelah: text("sisa_hutang_setelah"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 

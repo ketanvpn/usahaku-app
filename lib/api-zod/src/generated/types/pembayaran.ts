@@ -15,5 +15,10 @@ export interface Pembayaran {
   tanggal_bayar: string;
   nominal_bayar: number;
   catatan?: string | null;
+  nomor_kwitansi?: string | null;
+  hutang_keterangan?: string | null;
+  hutang_nominal?: number;
+  sisa_hutang_setelah?: number | null;
+  nama_usaha?: string;
   created_at: string;
 }
