@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, hutangTable, pelangganTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, asc } from "drizzle-orm";
 import {
   CreateHutangBody,
   GetHutangListQueryParams,
@@ -58,7 +58,7 @@ router.get("/hutang", requireAuth, async (req, res): Promise<void> => {
     .from(hutangTable)
     .leftJoin(pelangganTable, eq(hutangTable.pelangganId, pelangganTable.id))
     .where(and(...conditions))
-    .orderBy(desc(hutangTable.tanggalHutang));
+    .orderBy(desc(hutangTable.tanggalHutang), desc(hutangTable.id));
 
   res.json(hutangList.map(({ hutang: h, pelangganNama }) => formatHutang(h, pelangganNama ?? "")));
 });
@@ -132,7 +132,7 @@ router.get("/hutang/:id", requireAuth, async (req, res): Promise<void> => {
 
   const pembayaranList = await db.select().from(pembayaranTable)
     .where(and(eq(pembayaranTable.hutangId, params.data.id), eq(pembayaranTable.usahaId, usahaId)))
-    .orderBy(pembayaranTable.tanggalBayar);
+    .orderBy(asc(pembayaranTable.tanggalBayar), asc(pembayaranTable.id));
 
   const formatted = formatHutang(row.hutang, row.pelangganNama ?? "");
 

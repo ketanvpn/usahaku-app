@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, pelangganTable, hutangTable, pembayaranTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, asc } from "drizzle-orm";
 import {
   CreatePelangganBody,
   GetPelangganParams,
@@ -62,7 +62,7 @@ router.get("/pelanggan", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const list = await db.select().from(pelangganTable).where(eq(pelangganTable.usahaId, usahaId)).orderBy(pelangganTable.nama);
+  const list = await db.select().from(pelangganTable).where(eq(pelangganTable.usahaId, usahaId)).orderBy(asc(pelangganTable.nama), asc(pelangganTable.id));
   res.json(list.map(formatPelanggan));
 });
 
@@ -113,11 +113,11 @@ router.get("/pelanggan/:id", requireAuth, async (req, res): Promise<void> => {
 
   const hutangList = await db.select().from(hutangTable)
     .where(and(eq(hutangTable.pelangganId, params.data.id), eq(hutangTable.usahaId, usahaId)))
-    .orderBy(desc(hutangTable.tanggalHutang));
+    .orderBy(desc(hutangTable.tanggalHutang), desc(hutangTable.id));
 
   const pembayaranList = await db.select().from(pembayaranTable)
     .where(and(eq(pembayaranTable.pelangganId, params.data.id), eq(pembayaranTable.usahaId, usahaId)))
-    .orderBy(desc(pembayaranTable.tanggalBayar));
+    .orderBy(desc(pembayaranTable.tanggalBayar), desc(pembayaranTable.id));
 
   const totalHutang = hutangList.reduce((sum, h) => sum + parseFloat(h.nominalHutang), 0);
   const totalDibayar = hutangList.reduce((sum, h) => sum + parseFloat(h.totalDibayar), 0);

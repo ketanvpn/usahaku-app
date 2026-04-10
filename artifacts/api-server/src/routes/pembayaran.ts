@@ -36,7 +36,7 @@ router.get("/pembayaran", requireAuth, async (req, res): Promise<void> => {
     .from(pembayaranTable)
     .leftJoin(pelangganTable, eq(pembayaranTable.pelangganId, pelangganTable.id))
     .where(and(...conditions))
-    .orderBy(desc(pembayaranTable.tanggalBayar));
+    .orderBy(desc(pembayaranTable.tanggalBayar), desc(pembayaranTable.id));
 
   res.json(list.map(({ pembayaran: p, pelangganNama }) => ({
     id: p.id,
