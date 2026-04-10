@@ -4,6 +4,7 @@ import { useLogout } from "@workspace/api-client-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -12,13 +13,23 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { UserCircle, Shield, LogOut, Loader2, KeyRound, Check } from "lucide-react";
+import { UserCircle, Shield, LogOut, Loader2, KeyRound, Check, Store, Phone, MapPin, Pencil, X } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+const usahaSchema = z.object({
+  nama_usaha: z.string().min(2, "Nama usaha minimal 2 karakter"),
+  telepon: z.string().optional(),
+  alamat: z.string().optional(),
+  catatan: z.string().optional(),
+});
+type UsahaForm = z.infer<typeof usahaSchema>;
 
 const changePasswordSchema = z
   .object({
@@ -37,7 +48,51 @@ export default function ProfilPage() {
   const { user, logout } = useAuth();
   const logoutMutation = useLogout();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [pwdSuccess, setPwdSuccess] = useState(false);
+  const [editingUsaha, setEditingUsaha] = useState(false);
+
+  const { data: usahaData, isLoading: usahaLoading } = useQuery({
+    queryKey: ["usaha-mine", user?.usaha_id],
+    enabled: !!user?.usaha_id,
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/usaha/${user!.usaha_id}`, { credentials: "include" });
+      if (!r.ok) return null;
+      return r.json() as Promise<{ id: number; nama_usaha: string; telepon: string | null; alamat: string | null; catatan: string | null; created_at: string }>;
+    },
+  });
+
+  const usahaForm = useForm<UsahaForm>({
+    resolver: zodResolver(usahaSchema),
+    values: {
+      nama_usaha: usahaData?.nama_usaha ?? "",
+      telepon: usahaData?.telepon ?? "",
+      alamat: usahaData?.alamat ?? "",
+      catatan: usahaData?.catatan ?? "",
+    },
+  });
+
+  const updateUsahaMutation = useMutation({
+    mutationFn: async (values: UsahaForm) => {
+      const res = await fetch(`${BASE}/api/usaha/mine`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(values),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal menyimpan");
+      return data;
+    },
+    onSuccess: () => {
+      toast({ title: "Data usaha berhasil diperbarui" });
+      queryClient.invalidateQueries({ queryKey: ["usaha-mine"] });
+      setEditingUsaha(false);
+    },
+    onError: (err: any) => {
+      toast({ variant: "destructive", title: "Gagal", description: err.message });
+    },
+  });
 
   const pwdForm = useForm<ChangePasswordValues>({
     resolver: zodResolver(changePasswordSchema),
@@ -163,6 +218,114 @@ export default function ProfilPage() {
             </Button>
           </CardFooter>
         </Card>
+
+        {user.role === "owner" && (
+          <Card className="shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Store className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle>Info Usaha / Toko</CardTitle>
+                  <CardDescription>Data toko yang terhubung ke akun Anda.</CardDescription>
+                </div>
+              </div>
+              {!editingUsaha && (
+                <Button variant="outline" size="sm" onClick={() => setEditingUsaha(true)}>
+                  <Pencil className="h-4 w-4 mr-1" /> Edit
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {usahaLoading ? (
+                <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+              ) : !usahaData ? (
+                <p className="text-sm text-muted-foreground">Data usaha tidak ditemukan.</p>
+              ) : editingUsaha ? (
+                <Form {...usahaForm}>
+                  <form onSubmit={usahaForm.handleSubmit((v) => updateUsahaMutation.mutate(v))} className="space-y-4">
+                    <FormField control={usahaForm.control} name="nama_usaha" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nama Usaha / Toko</FormLabel>
+                        <FormControl><Input {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={usahaForm.control} name="telepon" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nomor Telepon</FormLabel>
+                        <FormControl><Input placeholder="08xxxxxxxxxx" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={usahaForm.control} name="alamat" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Alamat</FormLabel>
+                        <FormControl><Input placeholder="Jl. ..." {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={usahaForm.control} name="catatan" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Catatan</FormLabel>
+                        <FormControl><Textarea placeholder="Keterangan tambahan..." rows={3} {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={updateUsahaMutation.isPending}>
+                        {updateUsahaMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
+                        Simpan
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => { setEditingUsaha(false); usahaForm.reset(); }}>
+                        <X className="h-4 w-4 mr-1" /> Batal
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <Store className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Nama Usaha</p>
+                      <p className="font-semibold text-lg">{usahaData.nama_usaha}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Nomor Telepon</p>
+                      <p className="font-medium">{usahaData.telepon || <span className="text-muted-foreground italic">Belum diisi</span>}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Alamat</p>
+                      <p className="font-medium">{usahaData.alamat || <span className="text-muted-foreground italic">Belum diisi</span>}</p>
+                    </div>
+                  </div>
+                  {usahaData.catatan && (
+                    <div className="flex items-start gap-3">
+                      <div className="h-4 w-4 mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Catatan</p>
+                        <p className="font-medium">{usahaData.catatan}</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-start gap-3 pt-2 border-t">
+                    <div className="h-4 w-4 mt-0.5" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Terdaftar Sejak</p>
+                      <p className="font-medium">{formatDate(usahaData.created_at)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="shadow-md">
           <CardHeader>

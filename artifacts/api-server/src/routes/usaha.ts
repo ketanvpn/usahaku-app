@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, usahaTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { CreateUsahaBody, GetUsahaParams, UpdateUsahaParams, UpdateUsahaBody } from "@workspace/api-zod";
-import { requireAuth, requireSuperAdmin } from "../middlewares/auth";
+import { requireAuth, requireSuperAdmin, requireOwner } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -57,6 +57,44 @@ router.get("/usaha/:id", requireAuth, async (req, res): Promise<void> => {
   }
 
   const [usaha] = await db.select().from(usahaTable).where(eq(usahaTable.id, params.data.id));
+  if (!usaha) {
+    res.status(404).json({ error: "Usaha tidak ditemukan." });
+    return;
+  }
+
+  res.json({
+    id: usaha.id,
+    nama_usaha: usaha.namaUsaha,
+    alamat: usaha.alamat ?? null,
+    telepon: usaha.telepon ?? null,
+    catatan: usaha.catatan ?? null,
+    created_at: usaha.createdAt.toISOString(),
+  });
+});
+
+router.put("/usaha/mine", requireOwner, async (req, res): Promise<void> => {
+  const usahaId = req.session.usahaId;
+  if (!usahaId) {
+    res.status(403).json({ error: "Tidak terhubung ke usaha manapun." });
+    return;
+  }
+
+  const parsed = UpdateUsahaBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [usaha] = await db.update(usahaTable)
+    .set({
+      namaUsaha: parsed.data.nama_usaha,
+      alamat: parsed.data.alamat ?? null,
+      telepon: parsed.data.telepon ?? null,
+      catatan: parsed.data.catatan ?? null,
+    })
+    .where(eq(usahaTable.id, usahaId))
+    .returning();
+
   if (!usaha) {
     res.status(404).json({ error: "Usaha tidak ditemukan." });
     return;
