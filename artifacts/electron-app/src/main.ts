@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, shell, Menu } from "electron";
+import { app, BrowserWindow, dialog, shell, Menu, ipcMain } from "electron";
 import { utilityProcess } from "electron";
 import * as path from "path";
 import * as http from "http";
@@ -283,8 +283,28 @@ function startBackend(): void {
   });
 }
 
+// IPC: handle print request from renderer
+ipcMain.handle("print-page", () => {
+  return new Promise<void>((resolve) => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      resolve();
+      return;
+    }
+    mainWindow.webContents.print(
+      { silent: false, printBackground: true },
+      (_success: boolean, failureReason: string) => {
+        if (failureReason && failureReason !== "cancelled") {
+          writeLog(`Print failed: ${failureReason}`);
+        }
+        resolve();
+      }
+    );
+  });
+});
+
 function createLoadingWindow(): void {
   const iconPath = getIconPath();
+  const preloadPath = path.join(__dirname, "preload.js");
 
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -297,7 +317,8 @@ function createLoadingWindow(): void {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      sandbox: false,
+      preload: preloadPath,
     },
     show: false,
   });
