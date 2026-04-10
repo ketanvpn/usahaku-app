@@ -39,14 +39,46 @@ function fmtDate(iso: string) {
   }).format(new Date(iso));
 }
 
-// ─── Open print window using Blob URL (works in Electron & all browsers) ──────
+// ─── Print via @media print overlay (works in Electron + all browsers) ────────
+// This approach injects content into the CURRENT page as a print-only layer.
+// No window.open(), no blob URL, no iframe cross-origin — fully Electron-safe.
 function openPrintWindow(html: string) {
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const win = window.open(url, "_blank", "width=1200,height=750");
-  if (win) {
-    win.addEventListener("beforeunload", () => URL.revokeObjectURL(url));
-  }
+  // Clean up any leftover from previous calls
+  document.getElementById("__print_overlay__")?.remove();
+  document.getElementById("__print_style__")?.remove();
+
+  // Extract body content and styles from the generated HTML
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const bodyContent = bodyMatch ? bodyMatch[1] : html;
+  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  const printStyles = styleMatch ? styleMatch[1] : "";
+
+  // Inject print-only overlay
+  const overlay = document.createElement("div");
+  overlay.id = "__print_overlay__";
+  overlay.innerHTML = bodyContent;
+  document.body.appendChild(overlay);
+
+  // Inject styles: hide everything except overlay when printing
+  // printStyles is placed OUTSIDE @media print so @page rule stays valid
+  const style = document.createElement("style");
+  style.id = "__print_style__";
+  style.textContent = `
+    @media screen { #__print_overlay__ { display: none !important; } }
+    @media print {
+      body > *:not(#__print_overlay__) { display: none !important; visibility: hidden; }
+      #__print_overlay__ { display: block !important; visibility: visible; }
+    }
+    ${printStyles}
+  `;
+  document.head.appendChild(style);
+
+  // Trigger native print dialog (synchronous — blocks until user closes dialog)
+  window.print();
+
+  // Cleanup after print dialog is closed
+  overlay.remove();
+  style.remove();
 }
 
 // ─── Shared print CSS ─────────────────────────────────────────────────────────
@@ -86,7 +118,7 @@ function printHead(judul: string) {
 <style>${PRINT_CSS}</style></head><body>`;
 }
 function printFoot() {
-  return `<script>window.onload=function(){window.focus();window.print();}<\/script></body></html>`;
+  return `</body></html>`;
 }
 function filterTableHtml(lines: { label: string; value: string }[]) {
   return `<table class="fi-table"><tbody>${lines.map(f =>
