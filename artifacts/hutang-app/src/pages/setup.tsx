@@ -207,6 +207,17 @@ export default function SetupPage() {
                   <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Memproses...</>
                 ) : "Mulai Setup"}
               </Button>
+
+              <p className="text-center text-xs text-muted-foreground pt-1">
+                Sudah punya akun?{" "}
+                <button
+                  type="button"
+                  className="underline hover:text-primary transition-colors"
+                  onClick={() => setLocation("/login")}
+                >
+                  Masuk di sini
+                </button>
+              </p>
             </form>
           </Form>
         </CardContent>

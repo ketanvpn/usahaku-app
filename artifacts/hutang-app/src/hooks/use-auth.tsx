@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isOwner = user?.role === "owner";
 
   useEffect(() => {
-    if (!isSetupLoading && setupStatus?.needsSetup && location !== "/setup") {
+    if (!isSetupLoading && setupStatus?.needsSetup && location !== "/setup" && location !== "/login") {
       setLocation("/setup");
     }
   }, [isSetupLoading, setupStatus, location, setLocation]);
