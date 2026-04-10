@@ -39,61 +39,32 @@ function fmtDate(iso: string) {
   }).format(new Date(iso));
 }
 
-// ─── Print via @media print overlay ──────────────────────────────────────────
-// In Electron: uses ipcRenderer → webContents.print() (100% reliable).
-// In browser: uses window.print() (synchronous, works everywhere).
+// ─── Print / PDF ──────────────────────────────────────────────────────────────
+// Electron build : kirim HTML ke main process → tulis ke file temp →
+//                  shell.openPath() buka di browser default → Ctrl+P / Save as PDF
+// Browser biasa  : buka via blob URL di tab baru
 declare global {
   interface Window {
     electronApp?: {
       platform: string;
       isElectron: boolean;
-      print: () => Promise<void>;
+      openInBrowser: (html: string) => Promise<string>;
     };
   }
 }
 
 function openPrintWindow(html: string) {
-  // Clean up any leftover from previous calls
-  document.getElementById("__print_overlay__")?.remove();
-  document.getElementById("__print_style__")?.remove();
-
-  // Extract body content and styles from the generated HTML
-  const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-  const bodyContent = bodyMatch ? bodyMatch[1] : html;
-  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-  const printStyles = styleMatch ? styleMatch[1] : "";
-
-  // Inject print-only overlay (hidden on screen, visible during print)
-  const overlay = document.createElement("div");
-  overlay.id = "__print_overlay__";
-  overlay.innerHTML = bodyContent;
-  document.body.appendChild(overlay);
-
-  // Inject styles — printStyles placed OUTSIDE @media print so @page rule stays valid
-  const style = document.createElement("style");
-  style.id = "__print_style__";
-  style.textContent = `
-    @media screen { #__print_overlay__ { display: none !important; } }
-    @media print {
-      body > *:not(#__print_overlay__) { display: none !important; visibility: hidden; }
-      #__print_overlay__ { display: block !important; visibility: visible; }
-    }
-    ${printStyles}
-  `;
-  document.head.appendChild(style);
-
-  // Trigger print
-  if (window.electronApp?.isElectron && typeof window.electronApp.print === "function") {
-    // Electron: use IPC → webContents.print() which is always available
-    window.electronApp.print().finally(() => {
-      overlay.remove();
-      style.remove();
-    });
+  if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
+    // Electron: tulis ke temp file lalu buka di browser default
+    window.electronApp.openInBrowser(html);
   } else {
-    // Browser: window.print() is synchronous, blocks until dialog closed
-    window.print();
-    overlay.remove();
-    style.remove();
+    // Browser biasa: buka di tab baru via blob URL
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const tab = window.open(url, "_blank");
+    if (tab) {
+      tab.addEventListener("load", () => setTimeout(() => URL.revokeObjectURL(url), 2000));
+    }
   }
 }
 

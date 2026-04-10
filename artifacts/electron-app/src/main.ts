@@ -3,6 +3,7 @@ import { utilityProcess } from "electron";
 import * as path from "path";
 import * as http from "http";
 import * as fs from "fs";
+import * as os from "os";
 
 const APP_NAME = "Usahaku";
 const APP_ID = "com.bukuhutang.app";
@@ -283,23 +284,19 @@ function startBackend(): void {
   });
 }
 
-// IPC: handle print request from renderer
-ipcMain.handle("print-page", () => {
-  return new Promise<void>((resolve) => {
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      resolve();
-      return;
-    }
-    mainWindow.webContents.print(
-      { silent: false, printBackground: true },
-      (_success: boolean, failureReason: string) => {
-        if (failureReason && failureReason !== "cancelled") {
-          writeLog(`Print failed: ${failureReason}`);
-        }
-        resolve();
-      }
-    );
-  });
+// IPC: write HTML to temp file and open in default browser for print/PDF
+ipcMain.handle("open-in-browser", async (_event, html: string) => {
+  try {
+    const tempPath = path.join(os.tmpdir(), "usahaku-laporan.html");
+    fs.writeFileSync(tempPath, html, "utf8");
+    const err = await shell.openPath(tempPath);
+    if (err) writeLog(`open-in-browser shell.openPath error: ${err}`);
+    return err;
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    writeLog(`open-in-browser error: ${msg}`);
+    return msg;
+  }
 });
 
 function createLoadingWindow(): void {
