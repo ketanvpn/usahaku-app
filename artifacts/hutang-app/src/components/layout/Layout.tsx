@@ -25,33 +25,57 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+type NavLink = { href: string; label: string; icon: React.ElementType };
+type NavGroup = { label: string; links: NavLink[] };
+
 export function Layout({ children }: { children: ReactNode }) {
   const { isSuperAdmin, logout } = useAuth();
   const [location] = useLocation();
   const logoutMutation = useLogout();
 
   const handleLogout = () => {
-    logoutMutation.mutate(undefined, {
-      onSuccess: () => {
-        logout();
-      }
-    });
+    logoutMutation.mutate(undefined, { onSuccess: () => logout() });
   };
 
-  const ownerLinks = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/pelanggan", label: "Pelanggan", icon: Users },
-    { href: "/hutang", label: "Hutang", icon: WalletCards },
-    { href: "/pembayaran", label: "Pembayaran", icon: CreditCard },
-    { href: "/stok", label: "Stok Barang", icon: Package },
-    { href: "/keuangan", label: "Keuangan", icon: BookOpen },
-    { href: "/laporan", label: "Laporan", icon: FileText },
-    { href: "/backup", label: "Backup & Restore", icon: DatabaseBackup },
-    { href: "/lisensi", label: "Lisensi", icon: ShieldCheck },
-    { href: "/profil", label: "Profil", icon: UserCircle },
+  const ownerGroups: NavGroup[] = [
+    {
+      label: "UTAMA",
+      links: [
+        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      ],
+    },
+    {
+      label: "TRANSAKSI",
+      links: [
+        { href: "/pelanggan", label: "Pelanggan", icon: Users },
+        { href: "/hutang", label: "Hutang", icon: WalletCards },
+        { href: "/pembayaran", label: "Pembayaran", icon: CreditCard },
+      ],
+    },
+    {
+      label: "BISNIS",
+      links: [
+        { href: "/stok", label: "Stok Barang", icon: Package },
+        { href: "/keuangan", label: "Keuangan", icon: BookOpen },
+      ],
+    },
+    {
+      label: "LAPORAN",
+      links: [
+        { href: "/laporan", label: "Laporan", icon: FileText },
+      ],
+    },
+    {
+      label: "SISTEM",
+      links: [
+        { href: "/backup", label: "Backup & Restore", icon: DatabaseBackup },
+        { href: "/lisensi", label: "Lisensi", icon: ShieldCheck },
+        { href: "/profil", label: "Profil", icon: UserCircle },
+      ],
+    },
   ];
 
-  const adminLinks = [
+  const adminLinks: NavLink[] = [
     { href: "/admin/dashboard", label: "Dashboard Global", icon: LayoutDashboard },
     { href: "/admin/usaha", label: "Daftar Usaha", icon: Building2 },
     { href: "/admin/owners", label: "Kelola Owner", icon: Users },
@@ -59,29 +83,40 @@ export function Layout({ children }: { children: ReactNode }) {
     { href: "/profil", label: "Profil", icon: UserCircle },
   ];
 
-  const links = isSuperAdmin ? adminLinks : ownerLinks;
+  const renderLink = (link: NavLink) => {
+    const isActive = location === link.href || location.startsWith(`${link.href}/`);
+    const Icon = link.icon;
+    return (
+      <Link key={link.href} href={link.href}>
+        <div className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer ${
+          isActive
+            ? "bg-primary text-primary-foreground font-medium"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        }`}>
+          <Icon className="h-5 w-5" />
+          <span>{link.label}</span>
+        </div>
+      </Link>
+    );
+  };
 
   const NavLinks = () => (
-    <div className="space-y-1 py-4">
-      {links.map((link) => {
-        const isActive = location === link.href || location.startsWith(`${link.href}/`);
-        const Icon = link.icon;
-        return (
-          <Link key={link.href} href={link.href}>
-            <div
-              className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer ${
-                isActive 
-                  ? "bg-primary text-primary-foreground font-medium" 
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-              <span>{link.label}</span>
-            </div>
-          </Link>
-        );
-      })}
-      <div className="pt-4 mt-4 border-t">
+    <div className="py-3 space-y-1">
+      {isSuperAdmin ? (
+        <div className="space-y-1 px-0">
+          {adminLinks.map(renderLink)}
+        </div>
+      ) : (
+        ownerGroups.map((group) => (
+          <div key={group.label} className="mb-1">
+            <p className="px-3 pt-3 pb-1 text-[10px] font-semibold tracking-widest text-muted-foreground/60 uppercase">
+              {group.label}
+            </p>
+            {group.links.map(renderLink)}
+          </div>
+        ))
+      )}
+      <div className="pt-3 mt-2 border-t mx-3">
         <button
           onClick={handleLogout}
           disabled={logoutMutation.isPending}
@@ -136,10 +171,8 @@ export function Layout({ children }: { children: ReactNode }) {
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 p-4 md:p-8 overflow-auto">
-          <div className="max-w-6xl mx-auto">
-            {children}
-          </div>
+        <div className="flex-1 p-4 md:p-6 overflow-auto">
+          {children}
         </div>
       </main>
     </div>
