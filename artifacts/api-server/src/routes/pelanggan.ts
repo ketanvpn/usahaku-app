@@ -12,6 +12,10 @@ import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
+function toTitleCase(str: string): string {
+  return str.trim().split(/\s+/).map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
+}
+
 function formatPelanggan(p: typeof pelangganTable.$inferSelect) {
   return {
     id: p.id,
@@ -81,7 +85,7 @@ router.post("/pelanggan", requireAuth, async (req, res): Promise<void> => {
 
   const [pelanggan] = await db.insert(pelangganTable).values({
     usahaId,
-    nama: parsed.data.nama,
+    nama: toTitleCase(parsed.data.nama),
     telepon: parsed.data.telepon ?? null,
     alamat: parsed.data.alamat ?? null,
     catatan: parsed.data.catatan ?? null,
@@ -154,7 +158,7 @@ router.put("/pelanggan/:id", requireAuth, async (req, res): Promise<void> => {
 
   const [pelanggan] = await db.update(pelangganTable)
     .set({
-      nama: parsed.data.nama,
+      nama: toTitleCase(parsed.data.nama),
       telepon: parsed.data.telepon ?? null,
       alamat: parsed.data.alamat ?? null,
       catatan: parsed.data.catatan ?? null,
