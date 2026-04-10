@@ -1,6 +1,6 @@
-appId: com.bukuhutang.app
-productName: Buku Hutang
-copyright: Copyright © 2025 Buku Hutang
+appId: com.ketantech.usahaku
+productName: Usahaku
+copyright: Copyright © 2025 KetanTech
 buildVersion: "1.0.0"
 
 directories:
@@ -39,7 +39,7 @@ win:
       arch:
         - x64
   requestedExecutionLevel: asInvoker
-  artifactName: "BukuHutang-Setup-${version}.exe"
+  artifactName: "Usahaku-Setup-${version}.exe"
 
 nsis:
   oneClick: false
@@ -47,7 +47,7 @@ nsis:
   allowToChangeInstallationDirectory: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Buku Hutang
+  shortcutName: Usahaku
   deleteAppDataOnUninstall: false
   license: null
   installerLanguages:
