@@ -1,8 +1,10 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useGetMe, User, getGetMeQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 interface AuthContextType {
   user: User | null;
@@ -16,18 +18,33 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  
-  const { data: user, isLoading, isError } = useGetMe({
-    query: {
-      retry: false,
-    }
+
+  const { data: setupStatus, isLoading: isSetupLoading } = useQuery<{ needsSetup: boolean }>({
+    queryKey: ["setup-status"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/setup/status`);
+      return r.json();
+    },
+    retry: false,
+    staleTime: 1000 * 60,
   });
 
+  const { data: user, isLoading: isAuthLoading, isError } = useGetMe({
+    query: { retry: false }
+  });
+
+  const isLoading = isSetupLoading || isAuthLoading;
   const isAuthenticated = !!user && !isError;
   const isSuperAdmin = user?.role === "super_admin";
   const isOwner = user?.role === "owner";
+
+  useEffect(() => {
+    if (!isSetupLoading && setupStatus?.needsSetup && location !== "/setup") {
+      setLocation("/setup");
+    }
+  }, [isSetupLoading, setupStatus, location, setLocation]);
 
   const logout = () => {
     queryClient.setQueryData(getGetMeQueryKey(), null);

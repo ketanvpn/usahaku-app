@@ -12,9 +12,11 @@ import backupRouter from "./backup";
 import lisensiRouter from "./lisensi";
 import keuanganRouter from "./keuangan";
 import stokRouter from "./stok";
+import setupRouter from "./setup";
 
 const router: IRouter = Router();
 
+router.use(setupRouter);
 router.use(healthRouter);
 router.use(authRouter);
 router.use(usahaRouter);

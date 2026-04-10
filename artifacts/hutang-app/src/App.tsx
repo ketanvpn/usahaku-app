@@ -9,6 +9,7 @@ import { Layout } from "@/components/layout/Layout";
 
 // Pages
 import LoginPage from "@/pages/login";
+import SetupPage from "@/pages/setup";
 import DashboardPage from "@/pages/dashboard";
 import PelangganPage from "@/pages/pelanggan";
 import PelangganDetail from "@/pages/pelanggan-detail";
@@ -31,6 +32,7 @@ const queryClient = new QueryClient();
 function Router() {
   return (
     <Switch>
+      <Route path="/setup" component={SetupPage} />
       <Route path="/login" component={LoginPage} />
       
       {/* Protected Owner Routes */}
