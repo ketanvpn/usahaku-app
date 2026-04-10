@@ -88,6 +88,19 @@ sqlite.exec(`
 
 try { sqlite.exec(`ALTER TABLE usaha ADD COLUMN license_expires_at TEXT`); } catch { /* column already exists */ }
 
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS keuangan (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usaha_id INTEGER NOT NULL REFERENCES usaha(id),
+    tanggal TEXT NOT NULL,
+    tipe TEXT NOT NULL,
+    kategori TEXT,
+    keterangan TEXT NOT NULL,
+    jumlah TEXT NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (CAST((julianday('now') - 2440587.5)*86400000 AS INTEGER))
+  );
+`);
+
 
 export const db = drizzle(sqlite, { schema });
 

@@ -12,7 +12,8 @@ import {
   LogOut,
   Menu,
   KeyRound,
-  ShieldCheck
+  ShieldCheck,
+  BookOpen
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ export function Layout({ children }: { children: ReactNode }) {
     { href: "/pelanggan", label: "Pelanggan", icon: Users },
     { href: "/hutang", label: "Hutang", icon: WalletCards },
     { href: "/pembayaran", label: "Pembayaran", icon: CreditCard },
+    { href: "/keuangan", label: "Keuangan", icon: BookOpen },
     { href: "/laporan", label: "Laporan", icon: FileText },
     { href: "/backup", label: "Backup & Restore", icon: DatabaseBackup },
     { href: "/lisensi", label: "Lisensi", icon: ShieldCheck },

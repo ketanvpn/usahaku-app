@@ -10,6 +10,7 @@ import dashboardRouter from "./dashboard";
 import laporanRouter from "./laporan";
 import backupRouter from "./backup";
 import lisensiRouter from "./lisensi";
+import keuanganRouter from "./keuangan";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(dashboardRouter);
 router.use(laporanRouter);
 router.use(backupRouter);
 router.use(lisensiRouter);
+router.use(keuanganRouter);
 
 export default router;
