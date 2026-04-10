@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project is a pnpm workspace monorepo using TypeScript, designed to be an Aplikasi Manajemen Hutang (Debt Management App) for Indonesian small businesses. It aims to provide a comprehensive solution for managing customer debts and payments, with both web and desktop (Electron) interfaces. The application supports various roles, including Super Admin for global management and Owners for business-specific operations. Key features include CRUD for customers, debts, and payments, reporting, backup/restore functionalities, and user profile management.
+This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations. Key features include CRUD for customers, debts, payments, keuangan (income/expense), stok barang with auto-keuangan integration, reporting, backup/restore, and an offline license key system.
 
 ## User Preferences
 

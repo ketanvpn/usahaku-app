@@ -4,7 +4,7 @@ import * as path from "path";
 import * as http from "http";
 import * as fs from "fs";
 
-const APP_NAME = "Buku Hutang";
+const APP_NAME = "Usahaku";
 const APP_ID = "com.bukuhutang.app";
 const BACKEND_PORT = 8080;
 const FRONTEND_DEV_PORT = process.env.VITE_PORT || "5173";
@@ -59,7 +59,7 @@ const LOADING_HTML = `<!DOCTYPE html>
   <div class="container">
     <div class="icon">📒</div>
     <h1>${APP_NAME}</h1>
-    <div class="subtitle">Manajemen Hutang Usaha</div>
+    <div class="subtitle">by KetanTech</div>
     <div class="spinner"></div>
     <div class="status">Memuat aplikasi, harap tunggu...</div>
   </div>
@@ -75,7 +75,7 @@ function initLogFile(): void {
   logFilePath = path.join(userDataDir, "buku-hutang.log");
   try {
     const timestamp = new Date().toISOString();
-    fs.appendFileSync(logFilePath, `\n=== Buku Hutang started at ${timestamp} ===\n`);
+    fs.appendFileSync(logFilePath, `\n=== Usahaku started at ${timestamp} ===\n`);
   } catch {
     logFilePath = "";
   }
@@ -379,7 +379,7 @@ app.whenReady().then(async () => {
     const logInfo = logFilePath ? `\n\nLog: ${logFilePath}` : "";
 
     dialog.showErrorBox(
-      "Gagal Memulai Buku Hutang",
+      "Gagal Memulai Usahaku",
       `${message}${stderrDetail}${logInfo}`
     );
     app.quit();

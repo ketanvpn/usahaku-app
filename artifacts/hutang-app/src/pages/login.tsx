@@ -90,10 +90,10 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm shadow-lg border-primary/10">
         <CardHeader className="space-y-1 text-center bg-primary/5 pb-8 pt-8 rounded-t-lg">
           <CardTitle className="text-2xl font-bold text-primary tracking-tight">
-            Buku Hutang
+            Usahaku
           </CardTitle>
           <CardDescription>
-            Masuk ke akun Anda untuk mengelola data
+            by KetanTech — Masuk ke akun Anda
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">

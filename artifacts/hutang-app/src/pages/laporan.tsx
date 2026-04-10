@@ -323,7 +323,7 @@ export default function LaporanPage() {
     tanggal_sampai: dateTo || undefined,
   });
 
-  const namaUsaha = usahaData?.nama_usaha ?? "Buku Hutang";
+  const namaUsaha = usahaData?.nama_usaha ?? "Usahaku";
   const selectedPelanggan = filterPelanggan
     ? pelangganList?.find((p) => p.id === filterPelanggan)
     : undefined;
@@ -331,7 +331,7 @@ export default function LaporanPage() {
 
   const judulLaporan = isSinglePelanggan
     ? `Riwayat Hutang Pelanggan: ${selectedPelanggan.nama}`
-    : "Laporan Buku Hutang";
+    : "Laporan Usahaku";
 
   const totalHutang = laporanData?.reduce((s, r) => s + r.nominal_hutang, 0) ?? 0;
   const totalDibayar = laporanData?.reduce((s, r) => s + r.total_dibayar, 0) ?? 0;
