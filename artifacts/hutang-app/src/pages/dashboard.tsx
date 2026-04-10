@@ -1,14 +1,33 @@
 import { useGetOwnerDashboard } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { formatRupiah, formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, TrendingDown, TrendingUp, Users, Wallet, CreditCard, Activity } from "lucide-react";
+import { Loader2, TrendingDown, TrendingUp, Users, Wallet, CreditCard, Activity, AlertTriangle, Package } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+interface BarangPeringatan {
+  id: number;
+  nama: string;
+  satuan: string;
+  stok: number;
+  stok_minimum: number;
+}
+
 export default function OwnerDashboard() {
   const { data, isLoading } = useGetOwnerDashboard();
+  const { data: peringatanStok = [] } = useQuery<BarangPeringatan[]>({
+    queryKey: ["barang-peringatan"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/barang/peringatan`, { credentials: "include" });
+      if (!r.ok) return [];
+      return r.json();
+    },
+  });
 
   if (isLoading) {
     return (
@@ -36,6 +55,25 @@ export default function OwnerDashboard() {
           </Link>
         </div>
       </div>
+
+      {peringatanStok.length > 0 && (
+        <Card className="border-orange-300 bg-orange-50 dark:bg-orange-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-orange-700 dark:text-orange-400 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" /> {peringatanStok.length} Barang Stok Hampir Habis
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            {peringatanStok.map(b => (
+              <Link key={b.id} href="/stok">
+                <Badge variant="outline" className="border-orange-400 text-orange-700 bg-orange-100 cursor-pointer hover:bg-orange-200">
+                  <Package className="h-3 w-3 mr-1" />{b.nama} — sisa {b.stok} {b.satuan}
+                </Badge>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-l-4 border-l-orange-500 shadow-sm">
