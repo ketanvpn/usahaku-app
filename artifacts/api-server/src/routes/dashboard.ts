@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, hutangTable, pelangganTable, pembayaranTable, usahaTable, usersTable } from "@workspace/db";
-import { eq, and, count, sum, desc } from "drizzle-orm";
+import { eq, and, count, sum, desc, sql } from "drizzle-orm";
 import { requireAuth, requireSuperAdmin } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -39,7 +39,7 @@ router.get("/dashboard/owner", requireAuth, async (req, res): Promise<void> => {
     .from(hutangTable)
     .leftJoin(pelangganTable, eq(hutangTable.pelangganId, pelangganTable.id))
     .where(and(eq(hutangTable.usahaId, usahaId), eq(hutangTable.status, "aktif")))
-    .orderBy(desc(hutangTable.sisaHutang))
+    .orderBy(desc(sql`CAST(${hutangTable.sisaHutang} AS REAL)`))
     .limit(5);
 
   res.json({
