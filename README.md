@@ -359,6 +359,18 @@ Perintah `dist:win` akan otomatis:
 
 **Jangan** copy manual file `better-sqlite3` dari folder lain — harus melalui proses build ini.
 
+### Error: "Cannot find module 'bindings'"
+
+**Penyebab**: `bindings` adalah transitive dependency dari `better-sqlite3` yang tidak ikut dalam package manager (pnpm virtual store).
+
+**Sudah diperbaiki secara otomatis**: Proyek ini sudah menyertakan `bindings-stub` (pengganti minimal tanpa dependency tambahan) di `electron-app/assets/bindings-stub/`. Pastikan build dilakukan dari source code terbaru, bukan dari versi lama.
+
+Jika masih error setelah rebuild ulang, cek log file:
+```
+C:\Users\{nama}\AppData\Roaming\Buku Hutang\buku-hutang.log
+```
+Cari baris `[native]` untuk status setiap komponen native.
+
 ### Dialog error muncul saat pertama buka
 
 **Kemungkinan penyebab dan solusi**:

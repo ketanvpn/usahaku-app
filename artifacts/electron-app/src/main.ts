@@ -188,9 +188,27 @@ function startBackend(): void {
   writeLog(`Starting backend: ${scriptPath}`);
   writeLog(`Database path: ${dbPath}`);
   writeLog(`Frontend path: ${frontendPath}`);
-  writeLog(`better-sqlite3 path: ${betterSqlite3Path}`);
-  writeLog(`better-sqlite3 exists: ${fs.existsSync(betterSqlite3Path)}`);
   writeLog(`isDev: ${isDev}`);
+
+  writeLog(`[native] better-sqlite3 path: ${betterSqlite3Path}`);
+  writeLog(`[native] better-sqlite3 exists: ${fs.existsSync(betterSqlite3Path)}`);
+
+  if (!isDev) {
+    const bindingsStubPath = path.join(process.resourcesPath, "backend", "node_modules", "bindings");
+    const nodeBinaryPath = path.join(betterSqlite3Path, "build", "Release", "better_sqlite3.node");
+    const prebuildPath = path.join(betterSqlite3Path, "prebuilds");
+    writeLog(`[native] bindings stub exists: ${fs.existsSync(bindingsStubPath)}`);
+    writeLog(`[native] better_sqlite3.node exists: ${fs.existsSync(nodeBinaryPath)}`);
+    writeLog(`[native] prebuilds dir exists: ${fs.existsSync(prebuildPath)}`);
+    if (fs.existsSync(path.join(betterSqlite3Path, "build", "Release"))) {
+      try {
+        const releaseFiles = fs.readdirSync(path.join(betterSqlite3Path, "build", "Release"));
+        writeLog(`[native] build/Release files: ${releaseFiles.join(", ")}`);
+      } catch {
+        writeLog(`[native] could not list build/Release dir`);
+      }
+    }
+  }
 
   if (!fs.existsSync(scriptPath)) {
     const hint = isDev

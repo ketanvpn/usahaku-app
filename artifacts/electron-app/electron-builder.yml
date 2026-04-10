@@ -21,6 +21,10 @@ extraResources:
     to: backend/node_modules/better-sqlite3
     filter:
       - "**/*"
+  - from: ./assets/bindings-stub
+    to: backend/node_modules/bindings
+    filter:
+      - "**/*"
   - from: ../hutang-app/dist/public
     to: frontend
     filter:
