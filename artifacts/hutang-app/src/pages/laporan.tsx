@@ -102,7 +102,9 @@ tr { page-break-inside: avoid; }
 
 function printHead(judul: string) {
   return `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/><title>${judul}</title>
-<style>${PRINT_CSS}</style></head><body>`;
+<style>${PRINT_CSS}</style>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},600);});<\/script>
+</head><body>`;
 }
 function printFoot() {
   return `</body></html>`;
