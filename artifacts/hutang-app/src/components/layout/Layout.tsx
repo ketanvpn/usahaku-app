@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { UpdateBanner } from "./UpdateBanner";
 import { Link, useLocation } from "wouter";
 import { 
   LayoutDashboard, 
@@ -146,6 +147,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col md:pl-64 min-w-0">
+        <UpdateBanner />
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between p-4 border-b bg-card no-print h-16 sticky top-0 z-10">
           <div>

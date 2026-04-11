@@ -426,15 +426,35 @@ pnpm --filter @workspace/electron-app run dist:win
 
 Output: `artifacts/electron-app/release/Usahaku-Setup-1.0.0.exe`
 
-### Update Versi Aplikasi
+### Update Versi Aplikasi (Rilis ke Pengguna)
 
-Edit file `artifacts/electron-app/package.json`:
+Fitur **auto-update** sudah aktif — aplikasi yang terinstall di komputer pengguna akan otomatis mendeteksi versi baru dan menampilkan notifikasi untuk download + install tanpa harus rebuild manual.
+
+**Langkah rilis versi baru:**
+
+1. Naikkan versi di `artifacts/electron-app/package.json`:
 ```json
 {
   "version": "1.0.1"
 }
 ```
-Lalu build ulang dengan `dist:win`.
+
+2. Build installer baru di Windows:
+```
+pnpm --filter @workspace/electron-app run dist:win
+```
+
+3. Buat **GitHub Release** baru di https://github.com/ketanvpn/usahaku-app/releases :
+   - Tag: `v1.0.1`
+   - Judul: `Usahaku v1.0.1`
+   - Upload file-file berikut dari folder `artifacts/electron-app/release/`:
+     - `Usahaku-Setup-1.0.1.exe`
+     - `Usahaku-Setup-1.0.1.exe.blockmap`
+     - `latest.yml`
+
+4. Publish release → semua pengguna aktif akan otomatis dapat notifikasi pembaruan di dalam aplikasi.
+
+> **Catatan**: File `latest.yml` wajib di-upload — electron-updater membaca file ini untuk mengetahui versi terbaru.
 
 ### Icon Aplikasi
 

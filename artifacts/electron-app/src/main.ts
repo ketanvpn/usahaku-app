@@ -4,6 +4,7 @@ import * as path from "path";
 import * as http from "http";
 import * as fs from "fs";
 import * as os from "os";
+import { autoUpdater } from "electron-updater";
 
 const APP_NAME = "Usahaku";
 const APP_ID = "com.bukuhutang.app";
@@ -284,7 +285,69 @@ function startBackend(): void {
   });
 }
 
-// IPC: write HTML to temp file and open in default browser for print/PDF
+// ── Auto-update setup ────────────────────────────────────────────────────────
+function sendUpdateStatus(status: string, payload?: object) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("update:status", { status, ...payload });
+  }
+}
+
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on("checking-for-update", () => {
+    writeLog("[updater] Checking for update...");
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    writeLog(`[updater] Update available: ${info.version}`);
+    sendUpdateStatus("available", { version: info.version });
+  });
+
+  autoUpdater.on("update-not-available", () => {
+    writeLog("[updater] No update available.");
+    sendUpdateStatus("not-available");
+  });
+
+  autoUpdater.on("download-progress", (progress) => {
+    const pct = Math.round(progress.percent);
+    writeLog(`[updater] Downloading: ${pct}%`);
+    sendUpdateStatus("downloading", { percent: pct });
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    writeLog(`[updater] Update downloaded: ${info.version}`);
+    sendUpdateStatus("downloaded", { version: info.version });
+  });
+
+  autoUpdater.on("error", (err) => {
+    writeLog(`[updater] Error: ${err.message}`);
+    sendUpdateStatus("error", { message: err.message });
+  });
+
+  // Check for updates 10 seconds after app starts, then every 6 hours
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch((e) => writeLog(`[updater] check failed: ${e}`));
+  }, 10_000);
+  setInterval(() => {
+    autoUpdater.checkForUpdates().catch((e) => writeLog(`[updater] check failed: ${e}`));
+  }, 6 * 60 * 60 * 1000);
+}
+
+ipcMain.handle("update:download", async () => {
+  try {
+    await autoUpdater.downloadUpdate();
+  } catch (e: unknown) {
+    writeLog(`[updater] download error: ${e}`);
+  }
+});
+
+ipcMain.handle("update:install", () => {
+  autoUpdater.quitAndInstall(false, true);
+});
+
+// ── IPC: write HTML to temp file and open in default browser for print/PDF ──
 ipcMain.handle("open-in-browser", async (_event, html: string) => {
   try {
     const tempPath = path.join(os.tmpdir(), "usahaku-laporan.html");
@@ -386,6 +449,7 @@ app.whenReady().then(async () => {
       writeLog("Production mode: waiting for backend...");
       await waitForBackend(BACKEND_PORT, 30000);
       await loadApp(`http://localhost:${BACKEND_PORT}`);
+      setupAutoUpdater();
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

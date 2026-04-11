@@ -18,7 +18,8 @@
     "dist:win": "node scripts/generate-icon.js && pnpm run build:desktop && pnpm run rebuild:native && electron-builder --win"
   },
   "dependencies": {
-    "better-sqlite3": "^12.8.0"
+    "better-sqlite3": "^12.8.0",
+    "electron-updater": "^6.8.3"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.6.0",

@@ -5,4 +5,13 @@ contextBridge.exposeInMainWorld("electronApp", {
   isElectron: true,
   openInBrowser: (html: string): Promise<string> =>
     ipcRenderer.invoke("open-in-browser", html),
+  update: {
+    onStatus: (cb: (payload: Record<string, unknown>) => void) => {
+      const handler = (_: unknown, payload: Record<string, unknown>) => cb(payload);
+      ipcRenderer.on("update:status", handler);
+      return () => ipcRenderer.removeListener("update:status", handler);
+    },
+    download: () => ipcRenderer.invoke("update:download"),
+    install: () => ipcRenderer.invoke("update:install"),
+  },
 });
