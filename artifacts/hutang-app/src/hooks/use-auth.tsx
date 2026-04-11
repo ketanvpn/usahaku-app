@@ -21,14 +21,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
-  const { data: setupStatus, isLoading: isSetupLoading } = useQuery<{ needsSetup: boolean }>({
+  const { data: setupStatus, isLoading: isSetupLoading, isFetching: isSetupFetching } = useQuery<{ needsSetup: boolean }>({
     queryKey: ["setup-status"],
     queryFn: async () => {
       const r = await fetch(`${BASE}/api/setup/status`);
       return r.json();
     },
     retry: false,
-    staleTime: 1000 * 60,
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: user, isLoading: isAuthLoading, isError } = useGetMe({
@@ -41,10 +41,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isOwner = user?.role === "owner";
 
   useEffect(() => {
-    if (!isSetupLoading && setupStatus?.needsSetup && location !== "/setup" && location !== "/login") {
+    if (!isSetupLoading && !isSetupFetching && setupStatus?.needsSetup && location !== "/setup" && location !== "/login") {
       setLocation("/setup");
     }
-  }, [isSetupLoading, setupStatus, location, setLocation]);
+  }, [isSetupLoading, isSetupFetching, setupStatus, location, setLocation]);
 
   const logout = () => {
     queryClient.setQueryData(getGetMeQueryKey(), null);

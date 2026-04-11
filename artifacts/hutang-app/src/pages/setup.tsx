@@ -73,7 +73,7 @@ export default function SetupPage() {
       }
       setLisensiInfo({ tipe: data.tipe, sisa_hari: data.sisa_hari });
       setDone(true);
-      queryClient.invalidateQueries({ queryKey: ["setup-status"] });
+      queryClient.setQueryData(["setup-status"], { needsSetup: false });
     } catch {
       form.setError("root", { message: "Terjadi kesalahan. Coba lagi." });
     }
