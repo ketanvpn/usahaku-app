@@ -19,7 +19,7 @@
     "lightningcss-linux-x64-gnu": "*",
     "@tailwindcss/oxide-win32-x64-msvc": "*",
     "@tailwindcss/oxide-linux-x64-gnu": "*",
-    "@esbuild/win32-x64": "*",
-    "@esbuild/linux-x64": "*"
+    "@esbuild/win32-x64": "0.27.3",
+    "@esbuild/linux-x64": "0.27.3"
   }
 }

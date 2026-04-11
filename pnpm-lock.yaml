@@ -165,11 +165,11 @@ importers:
         version: 5.9.3
     optionalDependencies:
       '@esbuild/linux-x64':
-        specifier: '*'
+        specifier: 0.27.3
         version: 0.27.3
       '@esbuild/win32-x64':
-        specifier: '*'
-        version: 0.28.0
+        specifier: 0.27.3
+        version: 0.27.3
       '@rollup/rollup-linux-x64-gnu':
         specifier: ^4.0.0
         version: 4.59.0
@@ -867,8 +867,8 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@esbuild/win32-x64@0.28.0':
-    resolution: {integrity: sha512-pEl1bO9mfAmIC+tW5btTmrKaujg3zGtUmWNdCw/xs70FBjwAL3o9OEKNHvNmnyylD6ubxUERiEhdsL0xBQ9efw==}
+  '@esbuild/win32-x64@0.27.3':
+    resolution: {integrity: sha512-4uJGhsxuptu3OcpVAzli+/gWusVGwZZHTlS63hh++ehExkVT8SgiEf7/uC/PclrPPkLhZqGgCTjd0VWLo6xMqA==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
@@ -4624,7 +4624,7 @@ snapshots:
   '@esbuild/linux-x64@0.27.3':
     optional: true
 
-  '@esbuild/win32-x64@0.28.0':
+  '@esbuild/win32-x64@0.27.3':
     optional: true
 
   '@floating-ui/core@1.7.5':
