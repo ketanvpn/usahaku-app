@@ -353,15 +353,19 @@ Cari file bernama **`Usahaku-Setup-1.0.0.exe`** — inilah file yang bisa dibagi
 
 ### Cara Update ke Versi Baru
 
-Saat ada pembaruan kode di GitHub, cukup jalankan:
+Saat ada pembaruan kode di GitHub, cukup jalankan urutan ini:
 
 ```
 git pull
 pnpm install
+pnpm approve-builds
 pnpm --filter @workspace/electron-app run dist:win
 ```
 
-Tiga perintah ini sudah cukup — tidak perlu install ulang Node.js, pnpm, atau Git.
+Perintah-perintah ini sudah cukup — tidak perlu install ulang Node.js, pnpm, atau Git.
+
+> **Catatan**: Saat `pnpm approve-builds` muncul daftar package, pilih semua dengan tekan `A` lalu `Enter`.
+> Kalau tidak ada daftar yang muncul, lewati saja dan lanjut ke `dist:win`.
 
 ---
 
