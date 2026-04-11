@@ -1,0 +1,130 @@
+C:\Users\Administrator\Downloads\usahaku-app-main\usahaku-app>git checkout -- package.json pnpm-lock.yaml
+
+C:\Users\Administrator\Downloads\usahaku-app-main\usahaku-app>git pull
+remote: Enumerating objects: 42, done.
+remote: Counting objects: 100% (42/42), done.
+remote: Compressing objects: 100% (12/12), done.
+remote: Total 26 (delta 16), reused 23 (delta 13), pack-reused 0 (from 0)
+Unpacking objects: 100% (26/26), 8.47 KiB | 89.00 KiB/s, done.
+From https://github.com/ketanvpn/usahaku-app
+   a3a54ed..50efcb1  main       -> origin/main
+Updating a3a54ed..50efcb1
+Fast-forward
+ README.md                                          |  53 +++++++++--
+ artifacts/electron-app/electron-builder.yml        |   6 +-
+ artifacts/electron-app/package.json                |   3 +-
+ artifacts/electron-app/src/main.ts                 |  66 ++++++++++++-
+ artifacts/electron-app/src/preload.ts              |   9 ++
+ .../hutang-app/src/components/layout/Layout.tsx    |   2 +
+ .../src/components/layout/UpdateBanner.tsx         |  97 +++++++++++++++++++
+ artifacts/hutang-app/src/types/electron.d.ts       |  21 +++++
+ ...loads-usahaku-app-main-usahak_1775891977888.txt | 105 +++++++++++++++++++++
+ pnpm-lock.yaml                                     |  46 +++++++++
+ 10 files changed, 397 insertions(+), 11 deletions(-)
+ create mode 100644 artifacts/hutang-app/src/components/layout/UpdateBanner.tsx
+ create mode 100644 artifacts/hutang-app/src/types/electron.d.ts
+ create mode 100644 attached_assets/Pasted-C-Users-Administrator-Downloads-usahaku-app-main-usahak_1775891977888.txt
+
+C:\Users\Administrator\Downloads\usahaku-app-main\usahaku-app>pnpm --filter @workspace/electron-app run dist:win
+
+> @workspace/electron-app@1.0.0 dist:win C:\Users\Administrator\Downloads\usahaku-app-main\usahaku-app\artifacts\electron-app
+> node scripts/generate-icon.js && pnpm run build:desktop && pnpm run rebuild:native && electron-builder --win
+
+icon.ico generated (66857 bytes) at C:\Users\Administrator\Downloads\usahaku-app-main\usahaku-app\artifacts\electron-app\assets\icon.ico
+
+> @workspace/electron-app@1.0.0 build:desktop C:\Users\Administrator\Downloads\usahaku-app-main\usahaku-app\artifacts\electron-app
+> pnpm run build:backend && pnpm run build:frontend && pnpm run build:main
+
+
+> @workspace/electron-app@1.0.0 build:backend C:\Users\Administrator\Downloads\usahaku-app-main\usahaku-app\artifacts\electron-app
+> pnpm --filter @workspace/api-server run build
+
+
+> @workspace/api-server@0.0.0 build C:\Users\Administrator\Downloads\usahaku-app-main\usahaku-app\artifacts\api-server
+> node ./build.mjs
+
+
+  dist\index.mjs                       2.1mb
+  dist\pino-worker.mjs               153.5kb
+  dist\pino-file.mjs                 142.1kb
+  dist\pino-pretty.mjs               114.6kb
+  dist\thread-stream-worker.mjs        7.3kb
+  dist\index.mjs.map                   3.7mb
+  dist\pino-worker.mjs.map           256.9kb
+  dist\pino-file.mjs.map             229.1kb
+  dist\pino-pretty.mjs.map           203.9kb
+  dist\thread-stream-worker.mjs.map   12.0kb
+
+Done in 852ms
+
+> @workspace/electron-app@1.0.0 build:frontend C:\Users\Administrator\Downloads\usahaku-app-main\usahaku-app\artifacts\electron-app
+> pnpm --filter @workspace/hutang-app run build:electron
+
+
+> @workspace/hutang-app@0.0.0 build:electron C:\Users\Administrator\Downloads\usahaku-app-main\usahaku-app\artifacts\hutang-app
+> cross-env PORT=8080 BASE_PATH=/ vite build --config vite.config.ts
+
+vite v7.3.1 building client environment for production...
+src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/select.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/sheet.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/label.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+✓ 2487 modules transformed.
+dist/public/index.html                     0.76 kB │ gzip:   0.43 kB
+dist/public/assets/index-b8KdGxNE.css    111.31 kB │ gzip:  18.52 kB
+dist/public/assets/index-IQAB32DT.js   1,050.90 kB │ gzip: 296.34 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 12.24s
+
+> @workspace/electron-app@1.0.0 build:main C:\Users\Administrator\Downloads\usahaku-app-main\usahaku-app\artifacts\electron-app
+> tsc -p tsconfig.json
+
+src/main.ts:7:29 - error TS2307: Cannot find module 'electron-updater' or its corresponding type declarations.
+
+7 import { autoUpdater } from "electron-updater";
+                              ~~~~~~~~~~~~~~~~~~
+
+src/main.ts:303:39 - error TS7006: Parameter 'info' implicitly has an 'any' type.
+
+303   autoUpdater.on("update-available", (info) => {
+                                          ~~~~
+
+src/main.ts:313:40 - error TS7006: Parameter 'progress' implicitly has an 'any' type.
+
+313   autoUpdater.on("download-progress", (progress) => {
+                                           ~~~~~~~~
+
+src/main.ts:319:40 - error TS7006: Parameter 'info' implicitly has an 'any' type.
+
+319   autoUpdater.on("update-downloaded", (info) => {
+                                           ~~~~
+
+src/main.ts:324:28 - error TS7006: Parameter 'err' implicitly has an 'any' type.
+
+324   autoUpdater.on("error", (err) => {
+                               ~~~
+
+src/main.ts:331:42 - error TS7006: Parameter 'e' implicitly has an 'any' type.
+
+331     autoUpdater.checkForUpdates().catch((e) => writeLog(`[updater] check failed: ${e}`));
+                                             ~
+
+src/main.ts:334:42 - error TS7006: Parameter 'e' implicitly has an 'any' type.
+
+334     autoUpdater.checkForUpdates().catch((e) => writeLog(`[updater] check failed: ${e}`));
+                                             ~
+
+
+Found 7 errors in the same file, starting at: src/main.ts:7
+
+ ELIFECYCLE  Command failed with exit code 2.
+ ELIFECYCLE  Command failed with exit code 2.
+C:\Users\Administrator\Downloads\usahaku-app-main\usahaku-app\artifacts\electron-app:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/electron-app@1.0.0 dist:win: `node scripts/generate-icon.js && pnpm run build:desktop && pnpm run rebuild:native && electron-builder --win`
+Exit status 2
+
+C:\Users\Administrator\Downloads\usahaku-app-main\usahaku-app>

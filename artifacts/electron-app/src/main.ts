@@ -300,7 +300,7 @@ function setupAutoUpdater() {
     writeLog("[updater] Checking for update...");
   });
 
-  autoUpdater.on("update-available", (info) => {
+  autoUpdater.on("update-available", (info: { version: string }) => {
     writeLog(`[updater] Update available: ${info.version}`);
     sendUpdateStatus("available", { version: info.version });
   });
@@ -310,28 +310,28 @@ function setupAutoUpdater() {
     sendUpdateStatus("not-available");
   });
 
-  autoUpdater.on("download-progress", (progress) => {
+  autoUpdater.on("download-progress", (progress: { percent: number }) => {
     const pct = Math.round(progress.percent);
     writeLog(`[updater] Downloading: ${pct}%`);
     sendUpdateStatus("downloading", { percent: pct });
   });
 
-  autoUpdater.on("update-downloaded", (info) => {
+  autoUpdater.on("update-downloaded", (info: { version: string }) => {
     writeLog(`[updater] Update downloaded: ${info.version}`);
     sendUpdateStatus("downloaded", { version: info.version });
   });
 
-  autoUpdater.on("error", (err) => {
+  autoUpdater.on("error", (err: Error) => {
     writeLog(`[updater] Error: ${err.message}`);
     sendUpdateStatus("error", { message: err.message });
   });
 
   // Check for updates 10 seconds after app starts, then every 6 hours
   setTimeout(() => {
-    autoUpdater.checkForUpdates().catch((e) => writeLog(`[updater] check failed: ${e}`));
+    autoUpdater.checkForUpdates().catch((e: unknown) => writeLog(`[updater] check failed: ${e}`));
   }, 10_000);
   setInterval(() => {
-    autoUpdater.checkForUpdates().catch((e) => writeLog(`[updater] check failed: ${e}`));
+    autoUpdater.checkForUpdates().catch((e: unknown) => writeLog(`[updater] check failed: ${e}`));
   }, 6 * 60 * 60 * 1000);
 }
 
