@@ -348,6 +348,7 @@ Cari file bernama **`Usahaku-Setup-1.0.0.exe`** — inilah file yang bisa dibagi
 | Build terhenti tiba-tiba | Jalankan ulang perintah `dist:win` — biasanya langsung lanjut |
 | File `.exe` tidak muncul | Cek apakah ada pesan `Error` di terminal, kirimkan ke pengembang |
 | Antivirus memblokir proses | Sementara matikan antivirus, build ulang, lalu aktifkan kembali |
+| `git pull` gagal: "local changes would be overwritten" | Jalankan: `git checkout -- package.json pnpm-lock.yaml` lalu `git pull` |
 
 ---
 
@@ -366,6 +367,18 @@ Perintah-perintah ini sudah cukup — tidak perlu install ulang Node.js, pnpm, a
 
 > **Catatan**: Saat `pnpm approve-builds` muncul daftar package, pilih semua dengan tekan `A` lalu `Enter`.
 > Kalau tidak ada daftar yang muncul, lewati saja dan lanjut ke `dist:win`.
+
+**Jika `git pull` gagal dengan pesan "local changes would be overwritten":**
+
+```
+git checkout -- package.json pnpm-lock.yaml
+git pull
+pnpm install
+pnpm approve-builds
+pnpm --filter @workspace/electron-app run dist:win
+```
+
+Perintah `git checkout -- package.json pnpm-lock.yaml` membuang perubahan lokal di kedua file tersebut sehingga pull bisa berjalan.
 
 ---
 
@@ -423,12 +436,16 @@ Edit file `artifacts/electron-app/package.json`:
 ```
 Lalu build ulang dengan `dist:win`.
 
-### Menambah Icon Aplikasi
+### Icon Aplikasi
 
-1. Siapkan file gambar PNG ukuran **512x512 piksel** (atau lebih besar)
-2. Konversi ke format ICO di: https://cloudconvert.com/png-to-ico (pilih ukuran 16, 32, 48, 128, 256)
-3. Taruh file sebagai: `artifacts/electron-app/assets/icon.ico`
-4. Rebuild: `pnpm --filter @workspace/electron-app run build:desktop`
+Icon aplikasi (logo hijau emerald bertuliskan "U") sudah di-embed langsung di dalam script build di `artifacts/electron-app/scripts/generate-icon.js`. Icon di-generate **otomatis setiap kali** `dist:win` dijalankan — tidak perlu menyiapkan file ICO secara manual.
+
+Jika ingin mengganti icon:
+1. Siapkan file PNG baru ukuran **512x512 piksel** (atau lebih besar)
+2. Konversi ke format ICO di: https://cloudconvert.com/png-to-ico (pilih ukuran 16, 32, 48, 64, 128, 256)
+3. Hapus file script lama: `artifacts/electron-app/scripts/generate-icon.js`
+4. Taruh ICO hasil konversi sebagai: `artifacts/electron-app/assets/icon.ico`
+5. Rebuild: `pnpm --filter @workspace/electron-app run dist:win`
 
 ### Struktur Project
 
