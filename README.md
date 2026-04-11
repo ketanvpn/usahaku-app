@@ -1,8 +1,8 @@
-# 📒 Buku Hutang
+# Usahaku by KetanTech
 
-**Aplikasi Manajemen Hutang Desktop untuk Usaha Kecil**
+**Aplikasi Manajemen Bisnis Desktop untuk Usaha Kecil**
 
-Buku Hutang membantu Anda mencatat hutang pelanggan, pembayaran, dan laporan secara rapi — langsung di komputer Windows, tanpa internet, tanpa server, tanpa biaya langganan.
+Usahaku membantu Anda mencatat hutang pelanggan, keuangan masuk/keluar, stok barang, dan laporan secara rapi — langsung di komputer Windows, tanpa internet, tanpa server, tanpa biaya langganan.
 
 ---
 
@@ -14,6 +14,7 @@ Buku Hutang membantu Anda mencatat hutang pelanggan, pembayaran, dan laporan sec
 - [Panduan Developer](#panduan-developer)
 - [Lokasi File Penting](#lokasi-file-penting)
 - [Checklist Pengujian Final](#checklist-pengujian-final)
+- [Troubleshooting](#troubleshooting-masalah-umum)
 
 ---
 
@@ -24,12 +25,17 @@ Buku Hutang membantu Anda mencatat hutang pelanggan, pembayaran, dan laporan sec
 | Catat Pelanggan | Tambah, edit, hapus data pelanggan |
 | Catat Hutang | Nominal, tanggal, keterangan per pelanggan |
 | Catat Pembayaran | Pembayaran sebagian maupun lunas |
+| Kwitansi Otomatis | Kwitansi A5 bernomor urut tercetak saat pembayaran dicatat |
 | Status Otomatis | Status Aktif / Lunas dihitung otomatis |
-| Laporan | Filter tanggal, pelanggan, status |
+| Keuangan | Catatan pemasukan & pengeluaran, rekap bulanan, grafik |
+| Auto-Keuangan | Pembayaran hutang otomatis tercatat sebagai pemasukan di Keuangan |
+| Stok Barang | Kelola barang, harga beli/jual, stok minimum, transaksi masuk/keluar |
+| Laporan | Filter tanggal, pelanggan, status — cetak atau unduh CSV |
 | Export CSV | Unduh data ke Excel/spreadsheet |
-| Cetak PDF | Print laporan langsung dari aplikasi |
-| Backup Data | Export semua data ke file JSON |
-| Restore Data | Pulihkan data dari file backup |
+| Cetak PDF | Cetak laporan & kwitansi via browser default |
+| Backup Data | Export semua data (hutang, keuangan, stok) ke file JSON |
+| Restore Data | Pulihkan data dari file backup (kompatibel antar versi) |
+| License Key | Sistem lisensi untuk aktivasi aplikasi |
 | Multi Usaha | Super Admin kelola banyak toko/usaha |
 | Offline 100% | Tidak butuh internet sama sekali |
 
@@ -42,7 +48,7 @@ Buku Hutang membantu Anda mencatat hutang pelanggan, pembayaran, dan laporan sec
 | Super Admin | `admin` | `admin123` | Kelola semua usaha & pengguna |
 | Owner | `owner1` | `owner123` | Kelola usaha sendiri |
 
-> Ganti password setelah login pertama kali melalui menu **Profil**.
+> **Penting**: Ganti password segera setelah login pertama kali melalui menu **Profil**.
 
 ---
 
@@ -50,7 +56,7 @@ Buku Hutang membantu Anda mencatat hutang pelanggan, pembayaran, dan laporan sec
 
 ### Instalasi Aplikasi
 
-1. Jalankan file **BukuHutang-Setup-1.0.0.exe**
+1. Jalankan file **Usahaku-Setup-1.0.0.exe**
 2. Klik **Next** / **Lanjut** di setiap langkah
 3. Pilih lokasi instalasi (default sudah tepat)
 4. Centang **Create Desktop Shortcut** agar ada ikon di Desktop
@@ -59,14 +65,15 @@ Buku Hutang membantu Anda mencatat hutang pelanggan, pembayaran, dan laporan sec
 
 ### Membuka Aplikasi
 
-- Klik dua kali ikon **Buku Hutang** di Desktop
-- Atau cari "Buku Hutang" di Start Menu Windows
+- Klik dua kali ikon **Usahaku** di Desktop
+- Atau cari "Usahaku" di Start Menu Windows
 
 ### Pertama Kali Buka
 
-1. Layar biru dengan tulisan **"Memuat aplikasi, harap tunggu..."** akan muncul sebentar — ini normal
-2. Tunggu sampai halaman login muncul (biasanya 3-10 detik)
-3. Login dengan akun Owner atau Super Admin
+1. Layar loading akan muncul sebentar — ini normal
+2. Tunggu sampai halaman **Setup Awal** muncul
+3. Isi nama usaha dan data awal, klik **Mulai**
+4. Login dengan akun Owner atau Super Admin
 
 ### Mengelola Pelanggan
 
@@ -89,9 +96,36 @@ Buku Hutang membantu Anda mencatat hutang pelanggan, pembayaran, dan laporan sec
 2. Klik **Tambah Pembayaran**
 3. Pilih hutang yang dibayar, isi jumlah pembayaran dan tanggal
 4. Klik **Simpan**
-5. Status hutang berubah otomatis menjadi **Lunas** jika sudah terbayar penuh
+5. Kwitansi A5 otomatis muncul dan bisa dicetak
+6. Status hutang berubah otomatis menjadi **Lunas** jika sudah terbayar penuh
+7. Pembayaran otomatis tercatat sebagai **Pemasukan** di menu Keuangan
 
-### Melihat Laporan
+### Mencetak Kwitansi
+
+- Kwitansi muncul otomatis setelah pembayaran disimpan
+- Klik **Cetak Kwitansi** untuk membuka di browser default → lalu `Ctrl+P`
+- Kwitansi bernomor urut format `KWT-YYYY-NNNN` (tidak pernah duplikat)
+
+### Keuangan (Pemasukan & Pengeluaran)
+
+1. Klik menu **Keuangan** di sidebar
+2. Pilih bulan dan tahun yang ingin dilihat
+3. Lihat rekap **Total Masuk**, **Total Keluar**, dan **Saldo**
+4. Klik **Tambah Transaksi** untuk catat pemasukan/pengeluaran manual
+5. Klik **Cetak** untuk mencetak laporan keuangan bulan tersebut
+6. Klik **Unduh CSV** untuk export ke Excel
+
+> Pembayaran hutang otomatis muncul di sini sebagai "Pelunasan Hutang" — tidak perlu catat manual.
+
+### Stok Barang
+
+1. Klik menu **Stok** di sidebar
+2. Klik **Tambah Barang** untuk mendaftarkan barang baru (nama, satuan, harga beli/jual, stok minimum)
+3. Klik barang untuk melihat riwayat transaksi stok
+4. Klik **Tambah Transaksi** untuk catat barang masuk atau keluar
+5. Barang yang stoknya di bawah minimum akan ditandai otomatis
+
+### Melihat Laporan Hutang
 
 1. Klik menu **Laporan**
 2. Gunakan filter di atas tabel untuk menyaring berdasarkan:
@@ -99,24 +133,15 @@ Buku Hutang membantu Anda mencatat hutang pelanggan, pembayaran, dan laporan sec
    - Status (Aktif / Lunas / Semua)
    - Periode tanggal
 3. Klik **Reset Filter** untuk kembali ke tampilan semua data
+4. Klik **Cetak** untuk mencetak laporan via browser default
 
 ### Export CSV (ke Excel)
 
-1. Buka menu **Laporan**
+1. Buka menu **Laporan** atau **Keuangan**
 2. Atur filter sesuai kebutuhan (opsional)
 3. Klik tombol **Unduh CSV**
 4. File akan tersimpan di folder **Unduhan** komputer Anda
 5. Buka file tersebut di Excel atau Google Sheets
-
-### Cetak Laporan (PDF)
-
-1. Buka menu **Laporan**
-2. Klik tombol **Cetak / PDF**
-3. Jendela cetak akan terbuka
-4. Pilih printer atau **Save as PDF**
-5. Klik **Print / Cetak**
-
-> Pastikan pop-up blocker browser tidak aktif (tidak berlaku di mode desktop).
 
 ### Backup Data
 
@@ -127,6 +152,7 @@ Buku Hutang membantu Anda mencatat hutang pelanggan, pembayaran, dan laporan sec
 5. Beri nama file yang mudah diingat, misalnya: `backup_januari_2025.json`
 
 > **Disarankan**: Backup data secara rutin, misalnya setiap minggu.
+> File backup mencakup seluruh data: pelanggan, hutang, pembayaran, keuangan, dan stok.
 
 ### Restore Data dari Backup
 
@@ -137,6 +163,8 @@ Buku Hutang membantu Anda mencatat hutang pelanggan, pembayaran, dan laporan sec
 5. Klik **Mulai Restore**
 6. Konfirmasi di dialog yang muncul
 7. **Perhatian**: Restore akan menggantikan seluruh data saat ini
+
+> File backup versi lama (v1.0) tetap bisa di-restore di versi aplikasi terbaru.
 
 ### Ganti Password
 
@@ -196,7 +224,17 @@ pnpm --filter @workspace/electron-app run electron:prod
 pnpm --filter @workspace/electron-app run dist:win
 ```
 
-Output: `artifacts/electron-app/release/BukuHutang-Setup-1.0.0.exe`
+Output: `artifacts/electron-app/release/Usahaku-Setup-1.0.0.exe`
+
+### Update Versi Aplikasi
+
+Edit file `artifacts/electron-app/package.json`:
+```json
+{
+  "version": "1.0.1"
+}
+```
+Lalu build ulang dengan `dist:win`.
 
 ### Menambah Icon Aplikasi
 
@@ -204,8 +242,6 @@ Output: `artifacts/electron-app/release/BukuHutang-Setup-1.0.0.exe`
 2. Konversi ke format ICO di: https://cloudconvert.com/png-to-ico (pilih ukuran 16, 32, 48, 128, 256)
 3. Taruh file sebagai: `artifacts/electron-app/assets/icon.ico`
 4. Rebuild: `pnpm --filter @workspace/electron-app run build:desktop`
-
-File SVG placeholder sudah tersedia di: `artifacts/electron-app/assets/icon.svg`
 
 ### Struktur Project
 
@@ -226,6 +262,7 @@ artifacts/
     electron-builder.yml
 lib/
   db/                  ← Schema database (Drizzle ORM)
+    src/schema/        ← Schema per tabel
   api-zod/             ← Tipe API (auto-generated)
 ```
 
@@ -243,7 +280,8 @@ Database akan dibuat ulang dengan data seed otomatis.
 
 | File / Folder | Lokasi | Keterangan |
 |---------------|--------|-----------|
-| Database (desktop) | `C:\Users\{nama}\AppData\Roaming\Buku Hutang\app.db` | Data utama |
+| Database (desktop) | `C:\Users\{nama}\AppData\Roaming\Usahaku\app.db` | Data utama |
+| Log aplikasi | `C:\Users\{nama}\AppData\Roaming\Usahaku\buku-hutang.log` | Log error & info |
 | Database (dev) | `artifacts/api-server/data/app.db` | Data development |
 | File Backup | Folder Unduhan | Setelah klik "Unduh Backup" |
 | Export CSV | Folder Unduhan | Setelah klik "Unduh CSV" |
@@ -255,10 +293,11 @@ Database akan dibuat ulang dengan data seed otomatis.
 Saat aplikasi dijalankan sebagai installer, database tersimpan di:
 
 ```
-C:\Users\{nama_pengguna}\AppData\Roaming\Buku Hutang\app.db
+C:\Users\{nama_pengguna}\AppData\Roaming\Usahaku\app.db
 ```
 
 Folder ini **tidak ikut terhapus** saat uninstall, sehingga data tetap aman.
+Saat install ulang atau update versi, data lama otomatis digunakan kembali.
 
 ---
 
@@ -269,26 +308,45 @@ Gunakan checklist ini sebelum mendistribusikan ke pengguna:
 ### Instalasi & Startup
 - [ ] Installer berjalan tanpa error
 - [ ] Ikon muncul di Desktop dan Start Menu
-- [ ] Aplikasi terbuka — muncul layar loading biru
-- [ ] Layar login muncul dalam 10 detik
+- [ ] Aplikasi terbuka — halaman setup atau login muncul
 - [ ] Tidak ada blank screen yang lama
 
-### Login & Autentikasi
+### Setup Awal & Login
+- [ ] Setup wizard muncul saat pertama buka (fresh install)
+- [ ] Isi nama usaha → berhasil masuk ke halaman login
 - [ ] Login Super Admin: `admin` / `admin123` → masuk ke dashboard admin
 - [ ] Login Owner: `owner1` / `owner123` → masuk ke dashboard owner
 - [ ] Logout berfungsi — kembali ke halaman login
 - [ ] Login ulang berfungsi
 
-### Manajemen Data (Owner)
+### Hutang & Pembayaran
 - [ ] Tambah pelanggan baru → muncul di daftar
 - [ ] Edit nama/telepon pelanggan → tersimpan
 - [ ] Tambah hutang untuk pelanggan → status "Aktif"
 - [ ] Tambah pembayaran sebagian → sisa hutang berkurang
+- [ ] Kwitansi A5 muncul otomatis setelah pembayaran disimpan
+- [ ] Nomor kwitansi format `KWT-YYYY-NNNN` dan tidak duplikat
 - [ ] Tambah pembayaran penuh → status berubah "Lunas"
 - [ ] Hapus pembayaran → sisa hutang kembali
-- [ ] Coba hapus pelanggan yang masih punya hutang → muncul pesan error (tidak bisa dihapus)
+- [ ] Coba hapus pelanggan yang masih punya hutang → muncul pesan error
 - [ ] Hapus hutang → berhasil
 - [ ] Hapus pelanggan yang tidak punya hutang → berhasil
+
+### Keuangan
+- [ ] Pembayaran hutang otomatis muncul di Keuangan sebagai "Pelunasan Hutang"
+- [ ] Hapus pembayaran → entri keuangan terkait ikut terhapus
+- [ ] Tambah transaksi keuangan manual (masuk & keluar) → muncul di daftar
+- [ ] Rekap Total Masuk / Keluar / Saldo terhitung benar
+- [ ] Filter bulan & tahun bekerja
+- [ ] Klik Cetak → terbuka di browser default
+- [ ] Unduh CSV → file terunduh dan terbaca di Excel
+
+### Stok Barang
+- [ ] Tambah barang baru → muncul di daftar
+- [ ] Edit barang → tersimpan
+- [ ] Tambah transaksi stok masuk → stok bertambah
+- [ ] Tambah transaksi stok keluar → stok berkurang
+- [ ] Barang stok di bawah minimum → ditandai
 
 ### Laporan & Export
 - [ ] Laporan menampilkan semua data hutang
@@ -297,16 +355,16 @@ Gunakan checklist ini sebelum mendistribusikan ke pengguna:
 - [ ] Filter berdasarkan pelanggan bekerja
 - [ ] Filter berdasarkan tanggal bekerja
 - [ ] Reset filter mengembalikan semua data
-- [ ] Klik "Unduh CSV" → file terunduh
-- [ ] Buka CSV di Excel → data terbaca dengan benar
-- [ ] Klik "Cetak / PDF" → jendela print terbuka
+- [ ] Klik "Unduh CSV" → file terunduh dan terbaca di Excel
+- [ ] Klik "Cetak" → terbuka di browser default
 
 ### Backup & Restore
 - [ ] Klik "Unduh File Backup" → file JSON terunduh
-- [ ] Buka kembali menu Backup
+- [ ] Buka file JSON — pastikan berisi data pelanggan, hutang, keuangan, dan stok
 - [ ] Upload file JSON → preview data muncul
 - [ ] Klik "Mulai Restore" + konfirmasi → data terganti
 - [ ] Data setelah restore sesuai dengan isi backup
+- [ ] Restore file backup versi lama (v1.0) → tetap berhasil
 
 ### Persistensi Data
 - [ ] Tutup aplikasi
@@ -332,7 +390,7 @@ Gunakan checklist ini sebelum mendistribusikan ke pengguna:
 **Penyebab**: Backend gagal start saat pertama buka.
 
 **Langkah diagnosis**:
-1. Lihat file log di: `C:\Users\{nama}\AppData\Roaming\Buku Hutang\buku-hutang.log`
+1. Lihat file log di: `C:\Users\{nama}\AppData\Roaming\Usahaku\buku-hutang.log`
 2. Cari baris `[backend:err]` atau `FATAL` di log tersebut
 3. Kirim isi log tersebut ke pengembang untuk analisis lebih lanjut
 
@@ -348,45 +406,37 @@ Gunakan checklist ini sebelum mendistribusikan ke pengguna:
 
 **Solusi**: Pastikan build dilakukan dengan langkah yang benar:
 ```powershell
-# Di folder proyek:
-pnpm install              # Install semua dependency (termasuk electron-app/package.json)
-pnpm run dist:win         # Build dan package untuk Windows
+pnpm install
+pnpm run dist:win
 ```
 
-Perintah `dist:win` akan otomatis:
-1. Rebuild `better-sqlite3` untuk Electron ABI (`npmRebuild: true`)
-2. Copy binary yang benar ke dalam installer
+Perintah `dist:win` akan otomatis rebuild `better-sqlite3` untuk Electron ABI (`npmRebuild: true`).
 
 **Jangan** copy manual file `better-sqlite3` dari folder lain — harus melalui proses build ini.
 
 ### Error: "Cannot find module 'bindings'"
 
-**Penyebab**: `bindings` adalah transitive dependency dari `better-sqlite3` yang tidak ikut dalam package manager (pnpm virtual store).
+**Sudah diperbaiki secara otomatis**: Proyek ini sudah menyertakan `bindings-stub` di `electron-app/assets/bindings-stub/`. Pastikan build dilakukan dari source code terbaru.
 
-**Sudah diperbaiki secara otomatis**: Proyek ini sudah menyertakan `bindings-stub` (pengganti minimal tanpa dependency tambahan) di `electron-app/assets/bindings-stub/`. Pastikan build dilakukan dari source code terbaru, bukan dari versi lama.
-
-Jika masih error setelah rebuild ulang, cek log file:
+Jika masih error, cek log file:
 ```
-C:\Users\{nama}\AppData\Roaming\Buku Hutang\buku-hutang.log
+C:\Users\{nama}\AppData\Roaming\Usahaku\buku-hutang.log
 ```
-Cari baris `[native]` untuk status setiap komponen native.
 
 ### Dialog error muncul saat pertama buka
-
-**Kemungkinan penyebab dan solusi**:
 
 | Error | Solusi |
 |-------|--------|
 | "File Aplikasi Tidak Ditemukan" | Uninstall dan install ulang |
-| "Gagal Membuat Folder Data" | Periksa izin folder AppData (biasanya izin administrator) |
+| "Gagal Membuat Folder Data" | Periksa izin folder AppData |
 | "Server tidak merespons setelah 30 detik" | Port 8080 mungkin dipakai app lain; coba restart PC |
-| "Layanan Aplikasi Berhenti" (saat sudah jalan) | Lihat log di AppData, kirim ke pengembang |
+| "Layanan Aplikasi Berhenti" | Lihat log di AppData, kirim ke pengembang |
 
 ### Data hilang setelah uninstall lalu install ulang
 
 Data **tidak** dihapus saat uninstall. Data tersimpan di:
 ```
-C:\Users\{nama}\AppData\Roaming\Buku Hutang\app.db
+C:\Users\{nama}\AppData\Roaming\Usahaku\app.db
 ```
 Saat install ulang, data lama otomatis digunakan kembali.
 
@@ -394,14 +444,12 @@ Saat install ulang, data lama otomatis digunakan kembali.
 
 Hubungi Super Admin untuk melakukan reset password melalui menu **Admin → Kelola User**.
 
-Super Admin bisa reset password di: *Admin → Users → Edit User → Reset Password*
-
 ---
 
 ## Catatan Keamanan
 
 - Tidak ada data yang dikirim ke internet — semua tersimpan lokal
-- Database SQLite terenkripsi di folder AppData pengguna
+- Database SQLite tersimpan di folder AppData pengguna
 - Session cookie hanya berlaku di localhost
 - Ganti password default sebelum digunakan di lingkungan produksi
 
@@ -418,3 +466,12 @@ Super Admin bisa reset password di: *Admin → Users → Edit User → Reset Pas
 | Auth | express-session + bcrypt |
 | Installer | electron-builder (NSIS) |
 | Monorepo | pnpm workspaces |
+
+---
+
+## Versi
+
+| Versi | Keterangan |
+|-------|-----------|
+| 1.0.0 | Rilis awal — hutang, pembayaran, laporan, stok, keuangan |
+| — | Format backup v1.1 — mencakup keuangan & stok |
