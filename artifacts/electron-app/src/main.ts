@@ -7,7 +7,7 @@ import * as os from "os";
 import { autoUpdater } from "electron-updater";
 
 const APP_NAME = "Usahaku";
-const APP_ID = "com.bukuhutang.app";
+const APP_ID = "com.ketantech.usahaku";
 const BACKEND_PORT = 8080;
 const FRONTEND_DEV_PORT = process.env.VITE_PORT || "5173";
 
@@ -36,7 +36,7 @@ const LOADING_HTML = `<!DOCTYPE html>
     body {
       display: flex; align-items: center; justify-content: center;
       height: 100vh;
-      background: #1d4ed8;
+      background: #0d3526;
       color: white;
       font-family: 'Segoe UI', system-ui, sans-serif;
       user-select: none;
@@ -74,7 +74,7 @@ function getDbPath(): string {
 
 function initLogFile(): void {
   const userDataDir = app.getPath("userData");
-  logFilePath = path.join(userDataDir, "buku-hutang.log");
+  logFilePath = path.join(userDataDir, "usahaku.log");
   try {
     const timestamp = new Date().toISOString();
     fs.appendFileSync(logFilePath, `\n=== Usahaku started at ${timestamp} ===\n`);
@@ -230,7 +230,7 @@ function startBackend(): void {
 
   const sessionSecret =
     process.env.SESSION_SECRET ||
-    `buku-hutang-${Buffer.from(app.getPath("userData")).toString("base64").slice(0, 20)}`;
+    `usahaku-${Buffer.from(app.getPath("userData")).toString("base64").slice(0, 20)}`;
 
   backendStderrBuffer = "";
 
@@ -373,7 +373,7 @@ function createLoadingWindow(): void {
     minHeight: 640,
     title: APP_NAME,
     icon: iconPath,
-    backgroundColor: "#1d4ed8",
+    backgroundColor: "#0d3526",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

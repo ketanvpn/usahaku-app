@@ -48,6 +48,9 @@ Thumbs.db
 .cache/
 .local/
 
+# Chat attachments (tidak perlu masuk repo)
+attached_assets/
+
 # SQLite database files (use JSON backup for sharing data)
 data/*.db
 data/*.db-shm
