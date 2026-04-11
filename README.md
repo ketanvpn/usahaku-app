@@ -11,6 +11,7 @@ Usahaku membantu Anda mencatat hutang pelanggan, keuangan masuk/keluar, stok bar
 - [Fitur Utama](#fitur-utama)
 - [Akun Default](#akun-default)
 - [Panduan Pengguna Windows](#panduan-pengguna-windows)
+- [Panduan Build Windows (Langkah per Langkah)](#panduan-build-windows-langkah-per-langkah)
 - [Panduan Developer](#panduan-developer)
 - [Lokasi File Penting](#lokasi-file-penting)
 - [Checklist Pengujian Final](#checklist-pengujian-final)
@@ -182,7 +183,169 @@ Usahaku membantu Anda mencatat hutang pelanggan, keuangan masuk/keluar, stok bar
 
 ## Panduan Developer
 
-### Prasyarat
+---
+
+## Panduan Build Windows (Langkah per Langkah)
+
+> Panduan ini untuk siapapun yang ingin menghasilkan file installer `.exe` dari kode sumber, **termasuk yang belum pernah pakai terminal sebelumnya**. Ikuti urutan ini dari awal sampai selesai.
+
+---
+
+### Langkah 1 — Install Node.js
+
+Node.js adalah program yang dibutuhkan untuk menjalankan kode aplikasi ini.
+
+1. Buka browser, kunjungi: **https://nodejs.org**
+2. Klik tombol **"LTS"** (bukan "Current") untuk download versi stabil
+3. Jalankan file yang terunduh (contoh: `node-v20.x.x-x64.msi`)
+4. Klik **Next** terus sampai selesai — semua pilihan default sudah benar
+5. **Restart komputer** setelah instalasi selesai
+
+**Cek apakah berhasil:**
+- Tekan `Windows + R`, ketik `cmd`, tekan Enter
+- Di jendela hitam yang muncul, ketik:
+  ```
+  node --version
+  ```
+- Harus muncul angka versi, contoh: `v20.11.0`
+- Kalau muncul versi, Node.js sudah terpasang dengan benar ✅
+
+---
+
+### Langkah 2 — Install pnpm
+
+pnpm adalah alat untuk mengunduh semua komponen yang dibutuhkan aplikasi.
+
+1. Masih di jendela Command Prompt tadi (atau buka yang baru)
+2. Ketik perintah berikut lalu tekan Enter:
+   ```
+   npm install -g pnpm
+   ```
+3. Tunggu sampai selesai (biasanya 1-2 menit)
+
+**Cek apakah berhasil:**
+```
+pnpm --version
+```
+Harus muncul angka versi, contoh: `9.x.x` ✅
+
+> Jika muncul error `pnpm : File ... cannot be loaded`, buka **PowerShell sebagai Administrator** lalu ketik:
+> ```
+> Set-ExecutionPolicy RemoteSigned
+> ```
+> Ketik `Y` lalu Enter, lalu coba install ulang pnpm.
+
+---
+
+### Langkah 3 — Install Git
+
+Git digunakan untuk mengunduh kode dari GitHub.
+
+1. Buka browser, kunjungi: **https://git-scm.com/download/win**
+2. Download otomatis dimulai — jalankan file installer-nya
+3. Klik **Next** terus, semua pilihan default sudah benar
+4. Klik **Install**, tunggu sampai selesai, klik **Finish**
+
+**Cek apakah berhasil** (buka Command Prompt baru):
+```
+git --version
+```
+Harus muncul angka versi, contoh: `git version 2.x.x` ✅
+
+---
+
+### Langkah 4 — Download Kode dari GitHub
+
+1. Buka Command Prompt (tekan `Windows + R`, ketik `cmd`, Enter)
+2. Pilih folder tempat menyimpan kode. Contoh, ke Desktop:
+   ```
+   cd Desktop
+   ```
+3. Download kode dengan perintah berikut:
+   ```
+   git clone https://github.com/ketanvpn/usahaku-app.git
+   ```
+4. Tunggu sampai selesai — akan muncul folder baru bernama `usahaku-app` di Desktop
+5. Masuk ke dalam folder tersebut:
+   ```
+   cd usahaku-app
+   ```
+
+---
+
+### Langkah 5 — Install Semua Komponen
+
+Perintah ini mengunduh semua komponen yang dibutuhkan aplikasi (hanya perlu dilakukan sekali):
+
+```
+pnpm install
+```
+
+Tunggu sampai selesai — bisa memakan waktu **3-10 menit** tergantung kecepatan internet. Ini normal.
+
+Kalau muncul tulisan `Done` atau kembali ke prompt `>`, berarti berhasil ✅
+
+---
+
+### Langkah 6 — Build Installer
+
+Perintah ini menghasilkan file `.exe` yang bisa diinstall di komputer Windows manapun:
+
+```
+pnpm --filter @workspace/electron-app run dist:win
+```
+
+Proses ini memakan waktu **5-15 menit**. Selama proses berjalan akan muncul banyak tulisan — ini normal, biarkan sampai selesai.
+
+Tanda berhasil: muncul tulisan seperti `target=nsis` atau `built` di bagian akhir ✅
+
+---
+
+### Langkah 7 — Ambil File Installer
+
+Setelah build selesai, file installer ada di:
+
+```
+usahaku-app\artifacts\electron-app\release\
+```
+
+Cari file bernama **`Usahaku-Setup-1.0.0.exe`** — inilah file yang bisa dibagikan dan diinstall.
+
+**Cara buka folder tersebut:**
+1. Buka File Explorer
+2. Navigasi ke: `Desktop → usahaku-app → artifacts → electron-app → release`
+3. File `.exe` ada di sana
+
+---
+
+### Masalah Umum Saat Build
+
+| Masalah | Solusi |
+|---------|--------|
+| `pnpm: command not found` | Tutup dan buka ulang Command Prompt setelah install pnpm |
+| `git: command not found` | Tutup dan buka ulang Command Prompt setelah install Git |
+| `Error: EACCES permission denied` | Buka Command Prompt **sebagai Administrator** (klik kanan → Run as administrator) |
+| Build terhenti tiba-tiba | Jalankan ulang perintah `dist:win` — biasanya langsung lanjut |
+| File `.exe` tidak muncul | Cek apakah ada pesan `Error` di terminal, kirimkan ke pengembang |
+| Antivirus memblokir proses | Sementara matikan antivirus, build ulang, lalu aktifkan kembali |
+
+---
+
+### Cara Update ke Versi Baru
+
+Saat ada pembaruan kode di GitHub, cukup jalankan:
+
+```
+git pull
+pnpm install
+pnpm --filter @workspace/electron-app run dist:win
+```
+
+Tiga perintah ini sudah cukup — tidak perlu install ulang Node.js, pnpm, atau Git.
+
+---
+
+### Prasyarat (Ringkasan untuk Developer)
 
 - Node.js 18+
 - pnpm 8+
