@@ -41,10 +41,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isOwner = user?.role === "owner";
 
   useEffect(() => {
-    if (!isSetupLoading && !isSetupFetching && setupStatus?.needsSetup && location !== "/setup" && location !== "/login") {
+    if (
+      !isSetupLoading &&
+      !isSetupFetching &&
+      !isAuthLoading &&
+      setupStatus?.needsSetup &&
+      !isAuthenticated &&
+      location !== "/setup" &&
+      location !== "/login"
+    ) {
       setLocation("/setup");
     }
-  }, [isSetupLoading, isSetupFetching, setupStatus, location, setLocation]);
+  }, [isSetupLoading, isSetupFetching, isAuthLoading, isAuthenticated, setupStatus, location, setLocation]);
 
   const logout = () => {
     queryClient.setQueryData(getGetMeQueryKey(), null);
