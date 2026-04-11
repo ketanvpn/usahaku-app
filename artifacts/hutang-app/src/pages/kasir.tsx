@@ -92,6 +92,16 @@ export default function KasirPage() {
     }));
   }
 
+  function setJumlahLangsung(barangId: number, nilai: string) {
+    const angka = parseInt(nilai, 10);
+    setCart(prev => prev.map(i => {
+      if (i.barang.id !== barangId) return i;
+      if (isNaN(angka) || angka < 1) return { ...i, jumlah: 1 };
+      if (angka > i.barang.stok) return { ...i, jumlah: i.barang.stok };
+      return { ...i, jumlah: angka };
+    }));
+  }
+
   function hapusDariCart(barangId: number) {
     setCart(prev => prev.filter(i => i.barang.id !== barangId));
   }
@@ -223,7 +233,15 @@ export default function KasirPage() {
                   >
                     <Minus className="h-3 w-3" />
                   </button>
-                  <span className="w-7 text-center text-sm font-medium">{item.jumlah}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={item.barang.stok}
+                    value={item.jumlah}
+                    onChange={e => setJumlahLangsung(item.barang.id, e.target.value)}
+                    onFocus={e => e.target.select()}
+                    className="w-14 text-center text-sm font-medium border rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
                   <button
                     onClick={() => ubahJumlah(item.barang.id, 1)}
                     disabled={item.jumlah >= item.barang.stok}
