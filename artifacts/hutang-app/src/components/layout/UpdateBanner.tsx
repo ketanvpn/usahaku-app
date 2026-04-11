@@ -10,6 +10,15 @@ export function UpdateBanner() {
   useEffect(() => {
     const update = window.electronApp?.update;
     if (!update) return;
+
+    // Ambil status terakhir yang mungkin sudah terjadi sebelum komponen ini mount
+    update.getStatus().then((payload) => {
+      if (payload && payload.status !== "not-available") {
+        setStatus(payload);
+      }
+    }).catch(() => {});
+
+    // Dengarkan status baru ke depannya
     const unsubscribe = update.onStatus((payload) => {
       setStatus(payload);
       setDismissed(false);

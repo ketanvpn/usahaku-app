@@ -6,6 +6,7 @@ declare global {
       openInBrowser: (html: string) => Promise<string>;
       update?: {
         onStatus: (cb: (payload: UpdateStatusPayload) => void) => () => void;
+        getStatus: () => Promise<UpdateStatusPayload | null>;
         download: () => Promise<void>;
         install: () => Promise<void>;
       };

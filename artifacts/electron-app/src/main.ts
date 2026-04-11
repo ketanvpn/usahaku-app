@@ -286,11 +286,17 @@ function startBackend(): void {
 }
 
 // ── Auto-update setup ────────────────────────────────────────────────────────
+let lastUpdateStatus: object | null = null;
+
 function sendUpdateStatus(status: string, payload?: object) {
+  const data = { status, ...payload };
+  lastUpdateStatus = data;
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("update:status", { status, ...payload });
+    mainWindow.webContents.send("update:status", data);
   }
 }
+
+ipcMain.handle("update:getStatus", () => lastUpdateStatus);
 
 function setupAutoUpdater() {
   autoUpdater.autoDownload = false;

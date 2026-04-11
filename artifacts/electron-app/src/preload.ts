@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld("electronApp", {
       ipcRenderer.on("update:status", handler);
       return () => ipcRenderer.removeListener("update:status", handler);
     },
+    getStatus: (): Promise<Record<string, unknown> | null> =>
+      ipcRenderer.invoke("update:getStatus"),
     download: () => ipcRenderer.invoke("update:download"),
     install: () => ipcRenderer.invoke("update:install"),
   },
