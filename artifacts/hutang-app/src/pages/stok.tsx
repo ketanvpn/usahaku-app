@@ -84,6 +84,7 @@ export default function StokPage() {
   const [transaksiDialog, setTransaksiDialog] = useState<"masuk" | "keluar" | null>(null);
   const [filterBulan, setFilterBulan] = useState(String(now.getMonth() + 1));
   const [filterTahun, setFilterTahun] = useState(String(now.getFullYear()));
+  const [filterNama, setFilterNama] = useState("");
 
   const { data: barangList = [], isLoading: loadingBarang } = useQuery<Barang[]>({
     queryKey: ["barang"],
@@ -97,6 +98,14 @@ export default function StokPage() {
 
   const peringatan = barangList.filter(b => b.peringatan);
   const tahunOptions = Array.from({ length: 5 }, (_, i) => String(now.getFullYear() - i));
+
+  const transaksiFiltered = filterNama.trim()
+    ? transaksiList.filter(t => t.nama_barang.toLowerCase().includes(filterNama.toLowerCase()))
+    : transaksiList;
+
+  const totalMasukJumlah = transaksiFiltered.filter(t => t.tipe === "masuk").reduce((s, t) => s + t.jumlah, 0);
+  const totalKeluarJumlah = transaksiFiltered.filter(t => t.tipe === "keluar").reduce((s, t) => s + t.jumlah, 0);
+  const totalNilai = transaksiFiltered.reduce((s, t) => s + t.total, 0);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["barang"] });
@@ -319,7 +328,13 @@ export default function StokPage() {
             <CardHeader className="pb-3">
               <div className="flex flex-wrap gap-3 items-center">
                 <CardTitle className="text-base flex items-center gap-2"><RefreshCw className="h-4 w-4" /> Riwayat Transaksi</CardTitle>
-                <div className="flex gap-2 ml-auto">
+                <div className="flex flex-wrap gap-2 ml-auto items-center">
+                  <Input
+                    placeholder="Cari nama barang..."
+                    value={filterNama}
+                    onChange={e => setFilterNama(e.target.value)}
+                    className="w-44 h-9 text-sm"
+                  />
                   <Select value={filterBulan} onValueChange={setFilterBulan}>
                     <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -352,10 +367,10 @@ export default function StokPage() {
                   </TableHeader>
                   <TableSkeleton cols={8} />
                 </Table>
-              ) : transaksiList.length === 0 ? (
+              ) : transaksiFiltered.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Package className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p>Belum ada transaksi pada periode ini</p>
+                  <p>{transaksiList.length === 0 ? "Belum ada transaksi pada periode ini" : "Tidak ada hasil untuk pencarian ini"}</p>
                 </div>
               ) : (
                 <Table>
@@ -372,7 +387,7 @@ export default function StokPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {transaksiList.map(t => (
+                    {transaksiFiltered.map(t => (
                       <TableRow key={t.id}>
                         <TableCell className="text-sm">{formatDate(t.tanggal)}</TableCell>
                         <TableCell className="font-medium">{t.nama_barang}</TableCell>
@@ -402,6 +417,21 @@ export default function StokPage() {
                       </TableRow>
                     ))}
                   </TableBody>
+                  <tfoot>
+                    <TableRow className="bg-muted/50 font-semibold border-t-2">
+                      <TableCell colSpan={3} className="text-sm text-muted-foreground">
+                        Total ({transaksiFiltered.length} transaksi)
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        <span className="text-green-700">+{totalMasukJumlah}</span>
+                        {" / "}
+                        <span className="text-red-700">-{totalKeluarJumlah}</span>
+                      </TableCell>
+                      <TableCell />
+                      <TableCell className="text-right text-sm font-bold">{formatRupiah(totalNilai)}</TableCell>
+                      <TableCell colSpan={2} />
+                    </TableRow>
+                  </tfoot>
                 </Table>
               )}
             </CardContent>

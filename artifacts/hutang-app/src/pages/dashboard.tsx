@@ -125,22 +125,46 @@ export default function OwnerDashboard() {
 
       {/* Peringatan stok */}
       {peringatanStok.length > 0 && (
-        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" /> {peringatanStok.length} Barang Stok Hampir Habis
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {peringatanStok.map(b => (
-              <Link key={b.id} href="/stok">
-                <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-100 cursor-pointer hover:bg-amber-200">
-                  <Package className="h-3 w-3 mr-1" />{b.nama} — sisa {b.stok} {b.satuan}
-                </Badge>
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
+        <div className="rounded-xl border-2 border-red-300 bg-red-50 dark:bg-red-950/20 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-9 w-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+              <p className="font-bold text-red-700 dark:text-red-400">⚠️ Stok Menipis — Perlu Segera Restock!</p>
+              <p className="text-xs text-red-600/80">{peringatanStok.length} barang di bawah stok minimum</p>
+            </div>
+            <Link href="/stok" className="ml-auto">
+              <Button size="sm" variant="outline" className="border-red-400 text-red-700 hover:bg-red-100">
+                Kelola Stok
+              </Button>
+            </Link>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {peringatanStok.map(b => {
+              const pct = b.stok_minimum > 0 ? Math.min(100, Math.round((b.stok / b.stok_minimum) * 100)) : 0;
+              return (
+                <Link key={b.id} href="/stok">
+                  <div className="rounded-lg bg-white dark:bg-red-900/20 border border-red-200 p-3 hover:shadow-sm transition-shadow cursor-pointer">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-sm text-foreground truncate">{b.nama}</span>
+                      <Badge className="bg-red-100 text-red-700 hover:bg-red-100 text-xs ml-2 flex-shrink-0">Menipis</Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground mb-2">
+                      Sisa: <strong className="text-red-600">{b.stok} {b.satuan}</strong> / Min: {b.stok_minimum} {b.satuan}
+                    </div>
+                    <div className="w-full bg-red-100 rounded-full h-1.5">
+                      <div
+                        className="bg-red-500 h-1.5 rounded-full transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Summary Cards */}
