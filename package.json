@@ -16,6 +16,10 @@
     "@rollup/rollup-win32-x64-msvc": "^4.0.0",
     "@rollup/rollup-linux-x64-gnu": "^4.0.0",
     "lightningcss-win32-x64-msvc": "*",
-    "lightningcss-linux-x64-gnu": "*"
+    "lightningcss-linux-x64-gnu": "*",
+    "@tailwindcss/oxide-win32-x64-msvc": "*",
+    "@tailwindcss/oxide-linux-x64-gnu": "*",
+    "@esbuild/win32-x64": "*",
+    "@esbuild/linux-x64": "*"
   }
 }

@@ -343,6 +343,7 @@ Cari file bernama **`Usahaku-Setup-1.0.0.exe`** — inilah file yang bisa dibagi
 | `Error: EACCES permission denied` | Buka Command Prompt **sebagai Administrator** (klik kanan → Run as administrator) |
 | `Cannot find module @rollup/rollup-win32-x64-msvc` | Jalankan: `pnpm add @rollup/rollup-win32-x64-msvc -w` lalu build ulang |
 | `Cannot find module lightningcss.win32-x64-msvc` | Jalankan: `pnpm add lightningcss-win32-x64-msvc -w` lalu build ulang |
+| `Cannot find native binding` dari `@tailwindcss/oxide` | Jalankan: `pnpm add @tailwindcss/oxide-win32-x64-msvc -w` lalu build ulang |
 | `Ignored build scripts: bcrypt, electron` (pesan kuning) | Ini **normal**, bukan error — lanjutkan saja ke langkah berikutnya |
 | Build terhenti tiba-tiba | Jalankan ulang perintah `dist:win` — biasanya langsung lanjut |
 | File `.exe` tidak muncul | Cek apakah ada pesan `Error` di terminal, kirimkan ke pengembang |

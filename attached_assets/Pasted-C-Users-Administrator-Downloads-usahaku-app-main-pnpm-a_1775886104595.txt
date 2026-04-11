@@ -1,0 +1,69 @@
+C:\Users\Administrator\Downloads\usahaku-app-main>pnpm approve-builds
+√ Choose which packages to build (Press <space> to select, <a> to toggle all, <i> to invert selection) · bcrypt, electron
+
+√ The next packages will now be built: bcrypt, electron.
+Do you approve? (y/N) · true
+node_modules/.pnpm/bcrypt@6.0.0/node_modules/bcrypt: Running install script, done in 386ms
+node_modules/.pnpm/electron@33.4.11/node_modules/electron: Running postinstall script, done in 5.9s
+
+C:\Users\Administrator\Downloads\usahaku-app-main>pnpm --filter @workspace/electron-app run dist:win
+
+> @workspace/electron-app@1.0.0 dist:win C:\Users\Administrator\Downloads\usahaku-app-main\artifacts\electron-app
+> pnpm run build:desktop && pnpm run rebuild:native && electron-builder --win
+
+
+> @workspace/electron-app@1.0.0 build:desktop C:\Users\Administrator\Downloads\usahaku-app-main\artifacts\electron-app
+> pnpm run build:backend && pnpm run build:frontend && pnpm run build:main
+
+
+> @workspace/electron-app@1.0.0 build:backend C:\Users\Administrator\Downloads\usahaku-app-main\artifacts\electron-app
+> pnpm --filter @workspace/api-server run build
+
+
+> @workspace/api-server@0.0.0 build C:\Users\Administrator\Downloads\usahaku-app-main\artifacts\api-server
+> node ./build.mjs
+
+
+  dist\index.mjs                       2.1mb
+  dist\pino-worker.mjs               153.5kb
+  dist\pino-file.mjs                 142.1kb
+  dist\pino-pretty.mjs               114.6kb
+  dist\thread-stream-worker.mjs        7.3kb
+  dist\index.mjs.map                   3.6mb
+  dist\pino-worker.mjs.map           256.9kb
+  dist\pino-file.mjs.map             229.1kb
+  dist\pino-pretty.mjs.map           203.9kb
+  dist\thread-stream-worker.mjs.map   12.0kb
+
+Done in 922ms
+
+> @workspace/electron-app@1.0.0 build:frontend C:\Users\Administrator\Downloads\usahaku-app-main\artifacts\electron-app
+> pnpm --filter @workspace/hutang-app run build:electron
+
+
+> @workspace/hutang-app@0.0.0 build:electron C:\Users\Administrator\Downloads\usahaku-app-main\artifacts\hutang-app
+> cross-env PORT=8080 BASE_PATH=/ vite build --config vite.config.ts
+
+failed to load config from C:\Users\Administrator\Downloads\usahaku-app-main\artifacts\hutang-app\vite.config.ts
+error during build:
+Error: Cannot find native binding. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at Object.<anonymous> (C:\Users\Administrator\Downloads\usahaku-app-main\node_modules\.pnpm\@tailwindcss+oxide@4.2.1\node_modules\@tailwindcss\oxide\index.js:559:11)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1481:32)
+    at Module._load (node:internal/modules/cjs/loader:1300:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at loadCJSModuleWithModuleLoad (node:internal/modules/esm/translators:336:3)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:239:7)
+    at ModuleJob.run (node:internal/modules/esm/module_job:377:25)
+C:\Users\Administrator\Downloads\usahaku-app-main\artifacts\hutang-app:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/hutang-app@0.0.0 build:electron: `cross-env PORT=8080 BASE_PATH=/ vite build --config vite.config.ts`
+Exit status 1
+ ELIFECYCLE  Command failed with exit code 1.
+ ELIFECYCLE  Command failed with exit code 1.
+C:\Users\Administrator\Downloads\usahaku-app-main\artifacts\electron-app:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/electron-app@1.0.0 dist:win: `pnpm run build:desktop && pnpm run rebuild:native && electron-builder --win`
+Exit status 1
+
+C:\Users\Administrator\Downloads\usahaku-app-main>
