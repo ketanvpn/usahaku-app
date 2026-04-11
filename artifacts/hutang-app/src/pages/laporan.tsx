@@ -480,7 +480,7 @@ export default function LaporanPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight text-primary">Laporan</h2>
-        <p className="text-muted-foreground">Laporan lengkap hutang, keuangan, dan stok barang.</p>
+        <p className="text-muted-foreground">Laporan lengkap penjualan kasir, hutang, keuangan, dan stok barang.</p>
       </div>
 
       <Tabs defaultValue="kasir">

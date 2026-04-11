@@ -6,8 +6,61 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, Loader2, Receipt } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, Loader2, Receipt, Printer } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
+
+function openPrintStruk(hasil: HasilTransaksi, namaUsaha?: string) {
+  const tgl = new Date(hasil.tanggal + "T00:00:00").toLocaleDateString("id-ID", {
+    day: "numeric", month: "long", year: "numeric",
+  });
+  const rows = hasil.items.map(i =>
+    `<tr><td>${i.nama_barang}</td><td class="right">${i.jumlah} ${i.satuan}</td><td class="right">${fmt(i.harga_satuan)}</td><td class="right">${fmt(i.subtotal)}</td></tr>`
+  ).join("");
+  const html = `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
+<style>
+@page{size:80mm auto;margin:4mm 4mm}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:monospace;font-size:11pt;color:#000;width:72mm}
+.center{text-align:center}.right{text-align:right}
+.bold{font-weight:bold}.sep{border-top:1px dashed #000;margin:4px 0}
+table{width:100%;border-collapse:collapse}
+td{padding:1px 2px;font-size:10pt}
+.total td{font-weight:bold;font-size:11pt;border-top:1px solid #000;padding-top:3px}
+</style>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);})<\/script>
+</head><body>
+<div class="center bold" style="font-size:13pt">${namaUsaha || "Usahaku"}</div>
+<div class="center" style="font-size:9pt;margin-bottom:4px">by KetanTech</div>
+<div class="sep"></div>
+<div style="font-size:9pt">Tanggal : ${tgl}</div>
+<div style="font-size:9pt">No      : #${String(hasil.id).padStart(4,"0")}</div>
+<div class="sep"></div>
+<table>
+<thead><tr><td class="bold">Barang</td><td class="bold right">Qty</td><td class="bold right">Harga</td><td class="bold right">Sub</td></tr></thead>
+<tbody>${rows}</tbody>
+</table>
+<div class="sep"></div>
+<table>
+<tr><td class="bold">TOTAL</td><td class="right bold" colspan="3">${fmt(hasil.total)}</td></tr>
+<tr><td>Bayar</td><td class="right" colspan="3">${fmt(hasil.uang_bayar)}</td></tr>
+<tr class="total"><td>Kembali</td><td class="right" colspan="3">${fmt(hasil.kembalian)}</td></tr>
+</table>
+<div class="sep"></div>
+<div class="center" style="font-size:9pt;margin-top:4px">Terima kasih!</div>
+</body></html>`;
+
+  if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
+    window.electronApp.openInBrowser(html);
+  } else {
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  }
+}
+
+function fmt(n: number) {
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+}
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -44,6 +97,7 @@ export default function KasirPage() {
 
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [qtyInputs, setQtyInputs] = useState<Record<number, string>>({});
   const [uangBayar, setUangBayar] = useState("");
   const [catatan, setCatatan] = useState("");
   const [hasil, setHasil] = useState<HasilTransaksi | null>(null);
@@ -93,9 +147,26 @@ export default function KasirPage() {
   }
 
   function setJumlahLangsung(barangId: number, nilai: string) {
+    setQtyInputs(prev => ({ ...prev, [barangId]: nilai }));
     const angka = parseInt(nilai, 10);
+    if (isNaN(angka)) return;
     setCart(prev => prev.map(i => {
       if (i.barang.id !== barangId) return i;
+      if (angka < 1) return i;
+      if (angka > i.barang.stok) return { ...i, jumlah: i.barang.stok };
+      return { ...i, jumlah: angka };
+    }));
+  }
+
+  function commitQtyInput(barangId: number) {
+    setQtyInputs(prev => {
+      const { [barangId]: _, ...rest } = prev;
+      return rest;
+    });
+    setCart(prev => prev.map(i => {
+      if (i.barang.id !== barangId) return i;
+      const raw = qtyInputs[barangId];
+      const angka = parseInt(raw ?? "", 10);
       if (isNaN(angka) || angka < 1) return { ...i, jumlah: 1 };
       if (angka > i.barang.stok) return { ...i, jumlah: i.barang.stok };
       return { ...i, jumlah: angka };
@@ -104,10 +175,12 @@ export default function KasirPage() {
 
   function hapusDariCart(barangId: number) {
     setCart(prev => prev.filter(i => i.barang.id !== barangId));
+    setQtyInputs(prev => { const { [barangId]: _, ...rest } = prev; return rest; });
   }
 
   function resetKasir() {
     setCart([]);
+    setQtyInputs({});
     setUangBayar("");
     setCatatan("");
     setHasil(null);
@@ -237,9 +310,10 @@ export default function KasirPage() {
                     type="number"
                     min={1}
                     max={item.barang.stok}
-                    value={item.jumlah}
+                    value={qtyInputs[item.barang.id] ?? item.jumlah}
                     onChange={e => setJumlahLangsung(item.barang.id, e.target.value)}
                     onFocus={e => e.target.select()}
+                    onBlur={() => commitQtyInput(item.barang.id)}
                     className="w-14 text-center text-sm font-medium border rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <button
@@ -311,6 +385,11 @@ export default function KasirPage() {
               <><CheckCircle className="h-4 w-4 mr-2" />Selesaikan Transaksi</>
             )}
           </Button>
+          {cart.length > 0 && total > 0 && uangBayarNum > 0 && uangBayarNum < total && (
+            <p className="text-xs text-red-600 text-center -mt-1">
+              Uang bayar kurang {formatRupiah(total - uangBayarNum)}
+            </p>
+          )}
 
           {cart.length > 0 && (
             <button
@@ -360,9 +439,19 @@ export default function KasirPage() {
                 <Receipt className="h-3 w-3" />
                 Stok dan keuangan otomatis terupdate
               </p>
-              <Button className="w-full" onClick={() => { setShowHasil(false); resetKasir(); }}>
-                Transaksi Baru
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => openPrintStruk(hasil)}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Cetak Struk
+                </Button>
+                <Button className="flex-1" onClick={() => { setShowHasil(false); resetKasir(); }}>
+                  Transaksi Baru
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
