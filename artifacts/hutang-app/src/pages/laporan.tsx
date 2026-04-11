@@ -621,7 +621,7 @@ export default function LaporanPage() {
                           <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(215 15% 48%)" }} tickLine={false} axisLine={{ stroke: "hsl(38 18% 87%)" }} />
                           <YAxis tickFormatter={(v) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(0)}jt` : v >= 1_000 ? `${(v/1_000).toFixed(0)}rb` : String(v)} tick={{ fontSize: 11, fill: "hsl(215 15% 48%)" }} tickLine={false} axisLine={false} width={52} />
                           <Tooltip formatter={(v: number) => [formatRupiah(v), "Total Penjualan"]} labelFormatter={(l) => `Tgl ${l}`} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                          <Bar dataKey="total" fill="hsl(158 55% 28%)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="total" fill="hsl(158 55% 28%)" radius={[4, 4, 0, 0]} maxBarSize={56} />
                         </BarChart>
                       </ResponsiveContainer>
                 ) : (
@@ -636,7 +636,7 @@ export default function LaporanPage() {
                           <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(215 15% 48%)" }} tickLine={false} axisLine={{ stroke: "hsl(38 18% 87%)" }} />
                           <YAxis tickFormatter={(v) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(0)}jt` : v >= 1_000 ? `${(v/1_000).toFixed(0)}rb` : String(v)} tick={{ fontSize: 11, fill: "hsl(215 15% 48%)" }} tickLine={false} axisLine={false} width={52} />
                           <Tooltip formatter={(v: number) => [formatRupiah(v), "Total Penjualan"]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                          <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                          <Bar dataKey="total" radius={[4, 4, 0, 0]} maxBarSize={56}>
                             {kasirBulanan.map((_, i) => <Cell key={i} fill={i === kasirBulan - 1 ? "hsl(158 55% 28%)" : "hsl(158 45% 55%)"} />)}
                           </Bar>
                         </BarChart>

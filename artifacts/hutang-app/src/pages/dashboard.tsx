@@ -304,8 +304,8 @@ export default function OwnerDashboard() {
                   formatter={(value) => value === "masuk" ? "Pemasukan" : "Pengeluaran"}
                   wrapperStyle={{ fontSize: 12 }}
                 />
-                <Bar dataKey="masuk" fill="hsl(158 55% 38%)" radius={[4, 4, 0, 0]} name="masuk" />
-                <Bar dataKey="keluar" fill="hsl(0 65% 58%)" radius={[4, 4, 0, 0]} name="keluar" />
+                <Bar dataKey="masuk" fill="hsl(158 55% 38%)" radius={[4, 4, 0, 0]} name="masuk" maxBarSize={56} />
+                <Bar dataKey="keluar" fill="hsl(0 65% 58%)" radius={[4, 4, 0, 0]} name="keluar" maxBarSize={56} />
               </BarChart>
             </ResponsiveContainer>
           )}
