@@ -237,6 +237,9 @@ importers:
         specifier: ^12.8.0
         version: 12.8.0
     devDependencies:
+      '@electron/rebuild':
+        specifier: ^3.6.0
+        version: 3.6.1
       '@types/better-sqlite3':
         specifier: ^7.6.0
         version: 7.6.13
