@@ -9,7 +9,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { formatRupiah, formatDate } from "@/lib/format";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from "@/components/ui/table";
@@ -23,7 +23,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Download, Printer, Filter, X, TrendingUp, TrendingDown, Wallet, Package,
+  ShoppingBag, BarChart2, Receipt,
 } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+} from "recharts";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -243,6 +247,63 @@ ${filterTableHtml([
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+const NAMA_BULAN = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+interface KasirRingkasan { total_penjualan: number; jumlah_transaksi: number; rata_rata: number; }
+interface KasirHarian { tanggal: string; total: number; jumlah: number; }
+interface KasirBulanan { bulan: number; total: number; jumlah: number; }
+interface KasirTopProduk { nama_barang: string; satuan: string; total_qty: number; total_omset: number; }
+
+function buildPrintKasir(opts: {
+  namaUsaha: string; tanggalCetak: string; bulanNama: string; tahun: number;
+  ringkasan: KasirRingkasan; harian: KasirHarian[]; topProduk: KasirTopProduk[];
+}): string {
+  const { namaUsaha, tanggalCetak, bulanNama, tahun, ringkasan, harian, topProduk } = opts;
+  const judul = `Laporan Penjualan Kasir — ${bulanNama} ${tahun}`;
+  const harianRows = harian.length === 0
+    ? `<tr><td colspan="3" style="text-align:center;padding:16px;color:#666">Tidak ada data.</td></tr>`
+    : harian.map(r => `<tr>
+        <td class="nowrap">${fmtDate(r.tanggal)}</td>
+        <td class="right">${r.jumlah} transaksi</td>
+        <td class="right green bold">${fmtRupiah(r.total)}</td>
+      </tr>`).join("");
+  const topRows = topProduk.length === 0
+    ? `<tr><td colspan="3" style="text-align:center;padding:16px;color:#666">Tidak ada data.</td></tr>`
+    : topProduk.map((r, i) => `<tr>
+        <td>${i + 1}. ${r.nama_barang}</td>
+        <td class="right">${r.total_qty} ${r.satuan}</td>
+        <td class="right green bold">${fmtRupiah(r.total_omset)}</td>
+      </tr>`).join("");
+
+  return printHead(judul) + `
+<div class="header"><div class="header-usaha">${namaUsaha}</div><div class="header-judul">${judul}</div></div>
+${filterTableHtml([
+  { label: "Tanggal Cetak", value: tanggalCetak },
+  { label: "Periode", value: `${bulanNama} ${tahun}` },
+])}
+<div class="summary-box">
+  <div class="summary-title">Ringkasan Penjualan</div>
+  <table class="sum-tbl">
+    <tr><td>Total Penjualan</td><td>:</td><td class="green bold">${fmtRupiah(ringkasan.total_penjualan)}</td></tr>
+    <tr><td>Jumlah Transaksi</td><td>:</td><td>${ringkasan.jumlah_transaksi} transaksi</td></tr>
+    <tr><td>Rata-rata/Transaksi</td><td>:</td><td>${fmtRupiah(ringkasan.rata_rata)}</td></tr>
+  </table>
+</div>
+<p style="font-weight:bold;margin:12px 0 4px">Detail Penjualan Harian</p>
+<table class="data-table" style="width:60%">
+<colgroup><col style="width:40%"/><col style="width:30%"/><col style="width:30%"/></colgroup>
+<thead><tr><th>Tanggal</th><th class="right">Transaksi</th><th class="right">Total Penjualan</th></tr></thead>
+<tbody>${harianRows}</tbody>
+</table>
+<p style="font-weight:bold;margin:14px 0 4px">Top Produk Terlaris</p>
+<table class="data-table" style="width:60%">
+<colgroup><col style="width:50%"/><col style="width:25%"/><col style="width:25%"/></colgroup>
+<thead><tr><th>Nama Produk</th><th class="right">Qty Terjual</th><th class="right">Total Omset</th></tr></thead>
+<tbody>${topRows}</tbody>
+</table>` + printFoot();
+}
+
 export default function LaporanPage() {
   const { user } = useAuth();
 
@@ -254,6 +315,11 @@ export default function LaporanPage() {
   const [keuDari, setKeuDari] = useState("");
   const [keuSampai, setKeuSampai] = useState("");
   const [keuTipe, setKeuTipe] = useState<"semua" | "masuk" | "keluar">("semua");
+
+  const now = new Date();
+  const [kasirBulan, setKasirBulan] = useState(now.getMonth() + 1);
+  const [kasirTahun, setKasirTahun] = useState(now.getFullYear());
+  const [kasirView, setKasirView] = useState<"harian" | "bulanan">("harian");
 
   const { data: pelangganList } = useGetPelangganList();
   const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, {
@@ -278,6 +344,35 @@ export default function LaporanPage() {
     queryKey: ["laporan-barang"],
     queryFn: async () => {
       const r = await fetch(`${BASE}/api/barang`, { credentials: "include" });
+      return r.ok ? r.json() : [];
+    },
+  });
+
+  const { data: kasirRingkasan, isLoading: kasirRingkasanLoading } = useQuery<KasirRingkasan>({
+    queryKey: ["laporan-kasir-ringkasan", kasirBulan, kasirTahun],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/laporan/kasir/ringkasan?bulan=${kasirBulan}&tahun=${kasirTahun}`, { credentials: "include" });
+      return r.ok ? r.json() : { total_penjualan: 0, jumlah_transaksi: 0, rata_rata: 0 };
+    },
+  });
+  const { data: kasirHarian = [], isLoading: kasirHarianLoading } = useQuery<KasirHarian[]>({
+    queryKey: ["laporan-kasir-harian", kasirBulan, kasirTahun],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/laporan/kasir/harian?bulan=${kasirBulan}&tahun=${kasirTahun}`, { credentials: "include" });
+      return r.ok ? r.json() : [];
+    },
+  });
+  const { data: kasirBulanan = [], isLoading: kasirBulananLoading } = useQuery<KasirBulanan[]>({
+    queryKey: ["laporan-kasir-bulanan", kasirTahun],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/laporan/kasir/bulanan?tahun=${kasirTahun}`, { credentials: "include" });
+      return r.ok ? r.json() : [];
+    },
+  });
+  const { data: kasirTopProduk = [], isLoading: kasirTopLoading } = useQuery<KasirTopProduk[]>({
+    queryKey: ["laporan-kasir-top", kasirBulan, kasirTahun],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/laporan/kasir/top-produk?bulan=${kasirBulan}&tahun=${kasirTahun}`, { credentials: "include" });
       return r.ok ? r.json() : [];
     },
   });
@@ -330,6 +425,13 @@ export default function LaporanPage() {
     if (!barangData.length) return;
     openPrintWindow(buildPrintStok({ namaUsaha, tanggalCetak, rows: barangData }));
   };
+  const handlePrintKasir = () => {
+    if (!kasirRingkasan) return;
+    openPrintWindow(buildPrintKasir({
+      namaUsaha, tanggalCetak, bulanNama: NAMA_BULAN[kasirBulan], tahun: kasirTahun,
+      ringkasan: kasirRingkasan, harian: kasirHarian, topProduk: kasirTopProduk,
+    }));
+  };
 
   // ── CSV handlers ──
   function downloadCsv(content: string, filename: string) {
@@ -365,6 +467,13 @@ export default function LaporanPage() {
     downloadCsv([h.join(","), ...rows.map(r => r.join(","))].join("\n"),
       `laporan_stok_${new Date().toISOString().split("T")[0]}.csv`);
   };
+  const handleExportKasirCsv = () => {
+    if (!kasirHarian.length) return;
+    const h = ["Tanggal","Jumlah Transaksi","Total Penjualan"];
+    const rows = kasirHarian.map(r => [r.tanggal, r.jumlah, r.total]);
+    downloadCsv([h.join(","), ...rows.map(r => r.join(","))].join("\n"),
+      `laporan_kasir_${kasirTahun}_${String(kasirBulan).padStart(2,"0")}.csv`);
+  };
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -374,12 +483,207 @@ export default function LaporanPage() {
         <p className="text-muted-foreground">Laporan lengkap hutang, keuangan, dan stok barang.</p>
       </div>
 
-      <Tabs defaultValue="hutang">
+      <Tabs defaultValue="kasir">
         <TabsList className="w-full md:w-auto">
+          <TabsTrigger value="kasir" className="gap-1.5"><ShoppingBag className="h-3.5 w-3.5" />Penjualan Kasir</TabsTrigger>
           <TabsTrigger value="hutang">Hutang & Pembayaran</TabsTrigger>
           <TabsTrigger value="keuangan">Keuangan</TabsTrigger>
           <TabsTrigger value="stok">Stok Barang</TabsTrigger>
         </TabsList>
+
+        {/* ── Tab Penjualan Kasir ─────────────────────────────────────────────── */}
+        <TabsContent value="kasir" className="space-y-4 mt-4">
+          {/* Header + actions */}
+          <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+            <p className="text-sm text-muted-foreground">Rekap penjualan kasir per bulan dengan grafik dan top produk.</p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleExportKasirCsv} disabled={!kasirHarian.length}>
+                <Download className="mr-2 h-4 w-4" /> Export CSV
+              </Button>
+              <Button onClick={handlePrintKasir} disabled={!kasirRingkasan || !kasirHarian.length}>
+                <Printer className="mr-2 h-4 w-4" /> Cetak / PDF
+              </Button>
+            </div>
+          </div>
+
+          {/* Filter bulan & tahun */}
+          <Card className="bg-muted/30 border-primary/20 shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary mb-4">
+                <Filter className="h-4 w-4" /> Filter Periode
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label>Bulan</Label>
+                  <Select value={String(kasirBulan)} onValueChange={v => setKasirBulan(parseInt(v))}>
+                    <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {NAMA_BULAN.slice(1).map((nama, i) => (
+                        <SelectItem key={i + 1} value={String(i + 1)}>{nama}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Tahun</Label>
+                  <Select value={String(kasirTahun)} onValueChange={v => setKasirTahun(parseInt(v))}>
+                    <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[kasirTahun - 1, kasirTahun, kasirTahun + 1].map(y => (
+                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Summary cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="border-l-4 border-l-emerald-500 shadow-sm">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Penjualan</CardTitle>
+                <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <ShoppingBag className="h-4 w-4 text-emerald-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {kasirRingkasanLoading
+                  ? <div className="h-8 bg-muted animate-pulse rounded" />
+                  : <p className="text-2xl font-bold text-emerald-600">{formatRupiah(kasirRingkasan?.total_penjualan ?? 0)}</p>}
+                <p className="text-xs text-muted-foreground mt-1">{NAMA_BULAN[kasirBulan]} {kasirTahun}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-blue-500 shadow-sm">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Jumlah Transaksi</CardTitle>
+                <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Receipt className="h-4 w-4 text-blue-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {kasirRingkasanLoading
+                  ? <div className="h-8 bg-muted animate-pulse rounded" />
+                  : <p className="text-2xl font-bold text-blue-600">{kasirRingkasan?.jumlah_transaksi ?? 0}</p>}
+                <p className="text-xs text-muted-foreground mt-1">transaksi tercatat</p>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-primary shadow-sm">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Rata-rata/Transaksi</CardTitle>
+                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {kasirRingkasanLoading
+                  ? <div className="h-8 bg-muted animate-pulse rounded" />
+                  : <p className="text-2xl font-bold text-primary">{formatRupiah(kasirRingkasan?.rata_rata ?? 0)}</p>}
+                <p className="text-xs text-muted-foreground mt-1">per transaksi</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Chart */}
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart2 className="h-5 w-5 text-primary" />
+                    Grafik Penjualan
+                  </CardTitle>
+                  <CardDescription>
+                    {kasirView === "harian"
+                      ? `Penjualan harian — ${NAMA_BULAN[kasirBulan]} ${kasirTahun}`
+                      : `Penjualan bulanan — ${kasirTahun}`}
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                  <Button size="sm" variant={kasirView === "harian" ? "default" : "ghost"} className="h-7 text-xs px-3" onClick={() => setKasirView("harian")}>Harian</Button>
+                  <Button size="sm" variant={kasirView === "bulanan" ? "default" : "ghost"} className="h-7 text-xs px-3" onClick={() => setKasirView("bulanan")}>Bulanan</Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(kasirView === "harian" ? kasirHarianLoading : kasirBulananLoading)
+                ? <div className="flex justify-center items-center h-48"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+                : kasirView === "harian" ? (
+                  kasirHarian.length === 0
+                    ? <div className="flex flex-col items-center justify-center h-48 text-muted-foreground gap-2">
+                        <BarChart2 className="h-10 w-10 opacity-30" />
+                        <p className="text-sm">Belum ada penjualan di {NAMA_BULAN[kasirBulan]} {kasirTahun}.</p>
+                      </div>
+                    : <ResponsiveContainer width="100%" height={240}>
+                        <BarChart data={kasirHarian.map(d => ({ label: d.tanggal.slice(8), total: d.total, jumlah: d.jumlah }))} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(38 18% 87%)" />
+                          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(215 15% 48%)" }} tickLine={false} axisLine={{ stroke: "hsl(38 18% 87%)" }} />
+                          <YAxis tickFormatter={(v) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(0)}jt` : v >= 1_000 ? `${(v/1_000).toFixed(0)}rb` : String(v)} tick={{ fontSize: 11, fill: "hsl(215 15% 48%)" }} tickLine={false} axisLine={false} width={52} />
+                          <Tooltip formatter={(v: number) => [formatRupiah(v), "Total Penjualan"]} labelFormatter={(l) => `Tgl ${l}`} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                          <Bar dataKey="total" fill="hsl(158 55% 28%)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                ) : (
+                  kasirBulanan.length === 0
+                    ? <div className="flex flex-col items-center justify-center h-48 text-muted-foreground gap-2">
+                        <BarChart2 className="h-10 w-10 opacity-30" />
+                        <p className="text-sm">Belum ada penjualan di tahun {kasirTahun}.</p>
+                      </div>
+                    : <ResponsiveContainer width="100%" height={240}>
+                        <BarChart data={kasirBulanan.map(d => ({ label: NAMA_BULAN[d.bulan].slice(0, 3), total: d.total }))} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(38 18% 87%)" />
+                          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(215 15% 48%)" }} tickLine={false} axisLine={{ stroke: "hsl(38 18% 87%)" }} />
+                          <YAxis tickFormatter={(v) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(0)}jt` : v >= 1_000 ? `${(v/1_000).toFixed(0)}rb` : String(v)} tick={{ fontSize: 11, fill: "hsl(215 15% 48%)" }} tickLine={false} axisLine={false} width={52} />
+                          <Tooltip formatter={(v: number) => [formatRupiah(v), "Total Penjualan"]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                          <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                            {kasirBulanan.map((_, i) => <Cell key={i} fill={i === kasirBulan - 1 ? "hsl(158 55% 28%)" : "hsl(158 45% 55%)"} />)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                )}
+            </CardContent>
+          </Card>
+
+          {/* Top Produk */}
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Package className="h-4 w-4 text-primary" />
+                Top Produk Terlaris — {NAMA_BULAN[kasirBulan]} {kasirTahun}
+              </CardTitle>
+              <CardDescription>Diurutkan berdasarkan total omset tertinggi</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {kasirTopLoading
+                ? <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+                : <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-8">#</TableHead>
+                          <TableHead>Nama Produk</TableHead>
+                          <TableHead className="text-right">Qty Terjual</TableHead>
+                          <TableHead className="text-right">Total Omset</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {kasirTopProduk.length === 0
+                          ? <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Belum ada data penjualan.</TableCell></TableRow>
+                          : kasirTopProduk.map((p, i) => (
+                            <TableRow key={i}>
+                              <TableCell className="text-muted-foreground font-medium">{i + 1}</TableCell>
+                              <TableCell className="font-medium">{p.nama_barang}</TableCell>
+                              <TableCell className="text-right">{p.total_qty} {p.satuan}</TableCell>
+                              <TableCell className="text-right font-bold text-emerald-600">{formatRupiah(p.total_omset)}</TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </div>}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* ── Tab Hutang ─────────────────────────────────────────────────────── */}
         <TabsContent value="hutang" className="space-y-4 mt-4">

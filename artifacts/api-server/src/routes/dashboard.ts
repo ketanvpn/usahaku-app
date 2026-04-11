@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, hutangTable, pelangganTable, pembayaranTable, usahaTable, usersTable, keuanganTable } from "@workspace/db";
-import { eq, and, count, sum, desc, sql, gte } from "drizzle-orm";
+import { db, hutangTable, pelangganTable, pembayaranTable, usahaTable, usersTable, keuanganTable, transaksiKasirTable } from "@workspace/db";
+import { eq, and, count, sum, desc, sql, gte, lte } from "drizzle-orm";
 import { requireAuth, requireSuperAdmin } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -104,6 +104,34 @@ router.get("/dashboard/tren-keuangan", requireAuth, async (req, res): Promise<vo
 
   const result = Array.from(map.entries()).map(([tanggal, v]) => ({ tanggal, ...v }));
   res.json(result);
+});
+
+router.get("/dashboard/kasir-ringkasan", requireAuth, async (req, res): Promise<void> => {
+  const usahaId = req.session.usahaId;
+  if (!usahaId) { res.status(403).json({ error: "Akses ditolak." }); return; }
+
+  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const bulanStr = String(now.getMonth() + 1).padStart(2, "0");
+  const tahun = now.getFullYear();
+  const bulanPrefix = `${tahun}-${bulanStr}`;
+
+  const hariIni = await db.select().from(transaksiKasirTable)
+    .where(and(eq(transaksiKasirTable.usahaId, usahaId), eq(transaksiKasirTable.tanggal, today)));
+
+  const bulanIni = await db.select().from(transaksiKasirTable)
+    .where(and(
+      eq(transaksiKasirTable.usahaId, usahaId),
+      gte(transaksiKasirTable.tanggal, `${bulanPrefix}-01`),
+      lte(transaksiKasirTable.tanggal, `${bulanPrefix}-31`)
+    ));
+
+  const penjualanHariIni = hariIni.reduce((s, r) => s + parseFloat(r.total), 0);
+  const transaksiHariIni = hariIni.length;
+  const penjualanBulanIni = bulanIni.reduce((s, r) => s + parseFloat(r.total), 0);
+  const transaksiBulanIni = bulanIni.length;
+
+  res.json({ penjualan_hari_ini: penjualanHariIni, transaksi_hari_ini: transaksiHariIni, penjualan_bulan_ini: penjualanBulanIni, transaksi_bulan_ini: transaksiBulanIni });
 });
 
 router.get("/dashboard/admin", requireSuperAdmin, async (_req, res): Promise<void> => {

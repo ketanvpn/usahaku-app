@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingDown, TrendingUp, Users, Wallet, CreditCard, Activity, AlertTriangle, Package, BarChart2 } from "lucide-react";
+import { Loader2, TrendingDown, TrendingUp, Users, Wallet, CreditCard, Activity, AlertTriangle, Package, BarChart2, ShoppingBag, Receipt } from "lucide-react";
 import { Link } from "wouter";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -71,6 +71,18 @@ export default function OwnerDashboard() {
     queryFn: async () => {
       const r = await fetch(`${BASE}/api/dashboard/tren-keuangan?hari=${trenHari}`, { credentials: "include" });
       if (!r.ok) return [];
+      return r.json();
+    },
+  });
+
+  const { data: kasirStats } = useQuery<{
+    penjualan_hari_ini: number; transaksi_hari_ini: number;
+    penjualan_bulan_ini: number; transaksi_bulan_ini: number;
+  }>({
+    queryKey: ["dashboard-kasir-ringkasan"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/dashboard/kasir-ringkasan`, { credentials: "include" });
+      if (!r.ok) return { penjualan_hari_ini: 0, transaksi_hari_ini: 0, penjualan_bulan_ini: 0, transaksi_bulan_ini: 0 };
       return r.json();
     },
   });
@@ -186,6 +198,38 @@ export default function OwnerDashboard() {
           <CardContent>
             <div className="text-2xl font-bold text-primary">{data.jumlah_pelanggan_berhutang}</div>
             <p className="text-xs text-muted-foreground mt-1">Pelanggan aktif</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Kasir Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Penjualan Kasir Hari Ini</CardTitle>
+            <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center">
+              <ShoppingBag className="h-4 w-4 text-emerald-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">{formatRupiah(kasirStats?.penjualan_hari_ini ?? 0)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              <span className="font-semibold">{kasirStats?.transaksi_hari_ini ?? 0}</span> transaksi hari ini
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-teal-500 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Penjualan Kasir Bulan Ini</CardTitle>
+            <div className="h-9 w-9 rounded-full bg-teal-100 flex items-center justify-center">
+              <Receipt className="h-4 w-4 text-teal-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-teal-600">{formatRupiah(kasirStats?.penjualan_bulan_ini ?? 0)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              <span className="font-semibold">{kasirStats?.transaksi_bulan_ini ?? 0}</span> transaksi bulan ini
+            </p>
           </CardContent>
         </Card>
       </div>

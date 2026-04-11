@@ -2,7 +2,20 @@
 
 ## Overview
 
-This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations. Key features include CRUD for customers, debts, payments, keuangan (income/expense), stok barang with auto-keuangan integration, reporting, backup/restore, and an offline license key system.
+This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
+
+**Current version: 1.0.4**
+
+Key features:
+- CRUD for customers, debts, payments
+- Keuangan (income/expense) with auto-integration
+- Stok barang with low-stock alerts and auto-keuangan
+- Kasir (POS) with multi-item cart, receipt modal, auto-stok decrement
+- Laporan: tab Penjualan Kasir (harian/bulanan chart, top produk, export CSV/PDF), Hutang, Keuangan, Stok
+- Dashboard: kasir summary cards (hari ini & bulan ini), tren keuangan chart
+- Backup/restore (v1.2 format includes kasir tables)
+- Offline license key system
+- Auto-update (electron-updater, GitHub releases) + manual check button + version display in sidebar
 
 ## User Preferences
 
