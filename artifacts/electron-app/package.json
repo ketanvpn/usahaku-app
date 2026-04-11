@@ -8,8 +8,8 @@
   "main": "build/main.js",
   "scripts": {
     "build:main": "tsc -p tsconfig.json",
-    "electron": "NODE_ENV=development electron .",
-    "electron:prod": "NODE_ENV=production electron .",
+    "electron": "cross-env NODE_ENV=development electron .",
+    "electron:prod": "cross-env NODE_ENV=production electron .",
     "build:desktop": "pnpm run build:backend && pnpm run build:frontend && pnpm run build:main",
     "build:backend": "pnpm --filter @workspace/api-server run build",
     "build:frontend": "pnpm --filter @workspace/hutang-app run build:electron",
@@ -24,6 +24,7 @@
     "@electron/rebuild": "^3.6.0",
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^20.0.0",
+    "cross-env": "^7.0.3",
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0",
     "typescript": "^5.0.0"
