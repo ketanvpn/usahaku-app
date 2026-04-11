@@ -89,6 +89,7 @@ sqlite.exec(`
 try { sqlite.exec(`ALTER TABLE usaha ADD COLUMN license_expires_at TEXT`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE pembayaran ADD COLUMN nomor_kwitansi TEXT`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE pembayaran ADD COLUMN sisa_hutang_setelah TEXT`); } catch { /* column already exists */ }
+try { sqlite.exec(`ALTER TABLE pembayaran ADD COLUMN keuangan_id INTEGER`); } catch { /* column already exists */ }
 
 sqlite.exec(`
   CREATE TABLE IF NOT EXISTS barang (

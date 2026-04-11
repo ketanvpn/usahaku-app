@@ -42,6 +42,8 @@ export default function HutangDetail() {
           queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetPembayaranListQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetOwnerDashboardQueryKey() });
+          queryClient.invalidateQueries({ queryKey: ["keuangan"] });
+          queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
           setIsDeletePayDialogOpen(false);
         },
         onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })

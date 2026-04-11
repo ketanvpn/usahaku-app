@@ -197,6 +197,8 @@ export default function PembayaranPage() {
           toast({ title: "Pembayaran berhasil dicatat" });
           queryClient.invalidateQueries({ queryKey: getGetPembayaranListQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
+          queryClient.invalidateQueries({ queryKey: ["keuangan"] });
+          queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
           setIsDialogOpen(false);
           setKwitansiSetelahBayar(data as unknown as Pembayaran);
         },
@@ -215,6 +217,8 @@ export default function PembayaranPage() {
           toast({ title: "Pembayaran berhasil dibatalkan/dihapus" });
           queryClient.invalidateQueries({ queryKey: getGetPembayaranListQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
+          queryClient.invalidateQueries({ queryKey: ["keuangan"] });
+          queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
           setIsDeleteDialogOpen(false);
         },
         onError: (err: any) =>

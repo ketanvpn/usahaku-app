@@ -15,6 +15,7 @@ export const pembayaranTable = sqliteTable("pembayaran", {
   catatan: text("catatan"),
   nomorKwitansi: text("nomor_kwitansi"),
   sisaHutangSetelah: text("sisa_hutang_setelah"),
+  keuanganId: integer("keuangan_id"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 
