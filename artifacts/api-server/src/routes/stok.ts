@@ -269,4 +269,41 @@ router.post("/stok/keluar", requireAuth, requireLicense, async (req, res): Promi
   });
 });
 
+// DELETE /api/stok/transaksi/:id — hapus riwayat, balik stok, hapus keuangan terkait
+router.delete("/stok/transaksi/:id", requireAuth, requireLicense, async (req, res): Promise<void> => {
+  const usahaId = req.session.usahaId;
+  if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "ID tidak valid" }); return; }
+
+  const [transaksi] = await db.select().from(transaksiStokTable)
+    .where(and(eq(transaksiStokTable.id, id), eq(transaksiStokTable.usahaId, usahaId)));
+  if (!transaksi) { res.status(404).json({ error: "Riwayat transaksi tidak ditemukan" }); return; }
+
+  const [barang] = await db.select().from(barangTable)
+    .where(and(eq(barangTable.id, transaksi.barangId), eq(barangTable.usahaId, usahaId)));
+  if (!barang) { res.status(404).json({ error: "Barang tidak ditemukan" }); return; }
+
+  const jumlah = parseFloat(transaksi.jumlah);
+  const stokSaat = parseFloat(barang.stok);
+
+  // Balik stok: jika transaksi masuk → kurangi stok, jika keluar → tambah stok
+  const stokBaru = transaksi.tipe === "masuk" ? stokSaat - jumlah : stokSaat + jumlah;
+
+  // Hapus keuangan terkait (jika ada)
+  if (transaksi.keuanganId) {
+    await db.delete(keuanganTable).where(eq(keuanganTable.id, transaksi.keuanganId));
+  }
+
+  // Hapus transaksi stok
+  await db.delete(transaksiStokTable)
+    .where(and(eq(transaksiStokTable.id, id), eq(transaksiStokTable.usahaId, usahaId)));
+
+  // Update stok barang
+  await db.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id));
+
+  res.json({ message: "Riwayat transaksi berhasil dihapus", stok_baru: stokBaru });
+});
+
 export default router;

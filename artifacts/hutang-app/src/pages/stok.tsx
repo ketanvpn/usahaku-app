@@ -80,6 +80,7 @@ export default function StokPage() {
   const [barangDialog, setBarangDialog] = useState(false);
   const [editBarang, setEditBarang] = useState<Barang | null>(null);
   const [deleteBarangId, setDeleteBarangId] = useState<number | null>(null);
+  const [deleteTransaksiId, setDeleteTransaksiId] = useState<number | null>(null);
   const [transaksiDialog, setTransaksiDialog] = useState<"masuk" | "keluar" | null>(null);
   const [filterBulan, setFilterBulan] = useState(String(now.getMonth() + 1));
   const [filterTahun, setFilterTahun] = useState(String(now.getFullYear()));
@@ -137,6 +138,16 @@ export default function StokPage() {
     mutationFn: (id: number) => apiFetch(`/api/barang/${id}`, { method: "DELETE" }),
     onSuccess: () => { toast({ title: "Barang dihapus" }); setDeleteBarangId(null); invalidate(); },
     onError: (e: Error) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
+  });
+
+  const hapusTransaksiMutation = useMutation({
+    mutationFn: (id: number) => apiFetch(`/api/stok/transaksi/${id}`, { method: "DELETE" }),
+    onSuccess: (data) => {
+      toast({ title: "Riwayat dihapus", description: `Stok diperbarui menjadi ${data.stok_baru}` });
+      setDeleteTransaksiId(null);
+      invalidate();
+    },
+    onError: (e: Error) => toast({ title: "Gagal menghapus", description: e.message, variant: "destructive" }),
   });
 
   // Form transaksi
@@ -336,9 +347,10 @@ export default function StokPage() {
                       <TableHead className="text-right">Harga Satuan</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                       <TableHead>Keterangan</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableSkeleton cols={7} />
+                  <TableSkeleton cols={8} />
                 </Table>
               ) : transaksiList.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
@@ -356,6 +368,7 @@ export default function StokPage() {
                       <TableHead className="text-right">Harga Satuan</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                       <TableHead>Keterangan</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -376,6 +389,16 @@ export default function StokPage() {
                           {formatRupiah(t.total)}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{t.keterangan ?? "-"}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-red-600"
+                            onClick={() => setDeleteTransaksiId(t.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -520,7 +543,7 @@ export default function StokPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Konfirmasi Hapus */}
+      {/* Konfirmasi Hapus Barang */}
       <AlertDialog open={deleteBarangId !== null} onOpenChange={(open) => { if (!open) setDeleteBarangId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -534,6 +557,28 @@ export default function StokPage() {
               disabled={hapusBarangMutation.isPending}>
               {hapusBarangMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Konfirmasi Hapus Riwayat Transaksi */}
+      <AlertDialog open={deleteTransaksiId !== null} onOpenChange={(open) => { if (!open) setDeleteTransaksiId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Riwayat Transaksi?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Riwayat ini akan dihapus secara permanen. Stok barang akan dibalik secara otomatis, dan catatan keuangan terkait juga akan ikut dihapus.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={() => deleteTransaksiId !== null && hapusTransaksiMutation.mutate(deleteTransaksiId)}
+              disabled={hapusTransaksiMutation.isPending}>
+              {hapusTransaksiMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Ya, Hapus
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
