@@ -26,6 +26,7 @@ import AdminLisensiPage from "@/pages/admin/lisensi";
 import LisensiPage from "@/pages/lisensi";
 import KeuanganPage from "@/pages/keuangan";
 import StokPage from "@/pages/stok";
+import KasirPage from "@/pages/kasir";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,11 @@ function Router() {
       <Route path="/stok">
         <ProtectedRoute allowedRoles={["owner"]}>
           <Layout><StokPage /></Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/kasir">
+        <ProtectedRoute allowedRoles={["owner"]}>
+          <Layout><KasirPage /></Layout>
         </ProtectedRoute>
       </Route>
       <Route path="/keuangan">

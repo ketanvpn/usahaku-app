@@ -132,6 +132,30 @@ sqlite.exec(`
 `);
 
 
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS transaksi_kasir (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usaha_id INTEGER NOT NULL REFERENCES usaha(id),
+    tanggal TEXT NOT NULL,
+    total TEXT NOT NULL DEFAULT '0',
+    uang_bayar TEXT NOT NULL DEFAULT '0',
+    kembalian TEXT NOT NULL DEFAULT '0',
+    catatan TEXT,
+    created_at INTEGER NOT NULL DEFAULT (CAST((julianday('now') - 2440587.5)*86400000 AS INTEGER))
+  );
+
+  CREATE TABLE IF NOT EXISTS transaksi_kasir_item (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    transaksi_kasir_id INTEGER NOT NULL REFERENCES transaksi_kasir(id),
+    barang_id INTEGER NOT NULL,
+    nama_barang TEXT NOT NULL,
+    satuan TEXT NOT NULL,
+    jumlah TEXT NOT NULL,
+    harga_satuan TEXT NOT NULL,
+    subtotal TEXT NOT NULL
+  );
+`);
+
 export const db = drizzle(sqlite, { schema });
 
 export * from "./schema";

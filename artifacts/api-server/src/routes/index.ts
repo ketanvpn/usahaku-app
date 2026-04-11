@@ -12,6 +12,7 @@ import backupRouter from "./backup";
 import lisensiRouter from "./lisensi";
 import keuanganRouter from "./keuangan";
 import stokRouter from "./stok";
+import kasirRouter from "./kasir";
 import setupRouter from "./setup";
 
 const router: IRouter = Router();
@@ -30,5 +31,6 @@ router.use(backupRouter);
 router.use(lisensiRouter);
 router.use(keuanganRouter);
 router.use(stokRouter);
+router.use(kasirRouter);
 
 export default router;

@@ -6,3 +6,4 @@ export * from "./pembayaran";
 export * from "./lisensi";
 export * from "./keuangan";
 export * from "./stok";
+export * from "./kasir";

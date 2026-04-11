@@ -15,7 +15,8 @@ import {
   KeyRound,
   ShieldCheck,
   BookOpen,
-  Package
+  Package,
+  ShoppingBag
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ export function Layout({ children }: { children: ReactNode }) {
     {
       label: "BISNIS",
       links: [
+        { href: "/kasir", label: "Kasir", icon: ShoppingBag },
         { href: "/stok", label: "Stok Barang", icon: Package },
         { href: "/keuangan", label: "Keuangan", icon: BookOpen },
       ],
