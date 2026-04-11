@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "NCWKAr0kdN0kyeyc8Kw8c"
+uri = "file://artifacts/electron-app/assets/icon_preview.png"
+type = "image"
+title = "Icon Usahaku - Preview 256x256"
