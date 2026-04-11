@@ -25,6 +25,29 @@ import {
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+declare global {
+  interface Window {
+    electronApp?: {
+      platform: string;
+      isElectron: boolean;
+      openInBrowser: (html: string) => Promise<string>;
+    };
+  }
+}
+
+function openPrintWindow(html: string) {
+  if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
+    window.electronApp.openInBrowser(html);
+  } else {
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const tab = window.open(url, "_blank");
+    if (tab) {
+      tab.addEventListener("load", () => setTimeout(() => URL.revokeObjectURL(url), 2000));
+    }
+  }
+}
+
 interface KeuanganItem {
   id: number;
   tanggal: string;
@@ -182,11 +205,7 @@ function handlePrint(items: KeuanganItem[], rekap: Rekap | undefined, bulan: str
   </table>
   </body></html>`;
 
-  const win = window.open("", "_blank", "width=900,height=650");
-  if (!win) return;
-  win.document.write(html);
-  win.document.close();
-  setTimeout(() => { win.focus(); win.print(); }, 600);
+  openPrintWindow(html);
 }
 
 export default function KeuanganPage() {
