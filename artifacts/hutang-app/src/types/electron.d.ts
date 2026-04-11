@@ -4,9 +4,11 @@ declare global {
       platform: string;
       isElectron: boolean;
       openInBrowser: (html: string) => Promise<string>;
+      getVersion: () => Promise<string>;
       update?: {
         onStatus: (cb: (payload: UpdateStatusPayload) => void) => () => void;
         getStatus: () => Promise<UpdateStatusPayload | null>;
+        checkNow: () => Promise<void>;
         download: () => Promise<void>;
         install: () => Promise<void>;
       };

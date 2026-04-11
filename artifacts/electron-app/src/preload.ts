@@ -13,7 +13,10 @@ contextBridge.exposeInMainWorld("electronApp", {
     },
     getStatus: (): Promise<Record<string, unknown> | null> =>
       ipcRenderer.invoke("update:getStatus"),
+    checkNow: (): Promise<void> =>
+      ipcRenderer.invoke("update:checkNow"),
     download: () => ipcRenderer.invoke("update:download"),
     install: () => ipcRenderer.invoke("update:install"),
   },
+  getVersion: (): Promise<string> => ipcRenderer.invoke("app:getVersion"),
 });

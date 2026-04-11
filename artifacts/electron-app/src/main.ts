@@ -297,6 +297,14 @@ function sendUpdateStatus(status: string, payload?: object) {
 }
 
 ipcMain.handle("update:getStatus", () => lastUpdateStatus);
+ipcMain.handle("update:checkNow", async () => {
+  try {
+    await autoUpdater.checkForUpdates();
+  } catch (e: unknown) {
+    writeLog(`[updater] manual check failed: ${e}`);
+  }
+});
+ipcMain.handle("app:getVersion", () => app.getVersion());
 
 function setupAutoUpdater() {
   autoUpdater.autoDownload = false;

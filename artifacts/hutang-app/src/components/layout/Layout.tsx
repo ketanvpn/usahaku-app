@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { UpdateBanner } from "./UpdateBanner";
 import { Link, useLocation } from "wouter";
 import { 
@@ -16,7 +16,8 @@ import {
   ShieldCheck,
   BookOpen,
   Package,
-  ShoppingBag
+  ShoppingBag,
+  RefreshCw
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,33 @@ export function Layout({ children }: { children: ReactNode }) {
   const { isSuperAdmin, logout } = useAuth();
   const [location] = useLocation();
   const logoutMutation = useLogout();
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    window.electronApp?.getVersion().then(setAppVersion).catch(() => {});
+  }, []);
+
+  const handleCheckUpdate = async () => {
+    if (!window.electronApp?.update?.checkNow) return;
+    setChecking(true);
+    setCheckResult(null);
+    try {
+      await window.electronApp.update.checkNow();
+      // Tunggu sebentar lalu cek status terbaru
+      setTimeout(async () => {
+        const status = await window.electronApp?.update?.getStatus();
+        if (status?.status === "not-available") {
+          setCheckResult("Aplikasi sudah versi terbaru");
+        }
+        setChecking(false);
+      }, 3000);
+    } catch {
+      setChecking(false);
+      setCheckResult("Gagal cek pembaruan");
+    }
+  };
 
   const handleLogout = () => {
     logoutMutation.mutate(undefined, { onSuccess: () => logout() });
@@ -119,7 +147,27 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         ))
       )}
-      <div className="pt-3 mt-2 border-t mx-3">
+      <div className="pt-3 mt-2 border-t mx-3 space-y-1">
+        {window.electronApp && (
+          <div className="px-3 py-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground">
+                Versi {appVersion ?? "..."}
+              </span>
+            </div>
+            <button
+              onClick={handleCheckUpdate}
+              disabled={checking}
+              className="flex w-full items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
+              <span>{checking ? "Memeriksa..." : "Cek Pembaruan"}</span>
+            </button>
+            {checkResult && (
+              <p className="text-xs text-muted-foreground/70 mt-1 pl-5">{checkResult}</p>
+            )}
+          </div>
+        )}
         <button
           onClick={handleLogout}
           disabled={logoutMutation.isPending}
