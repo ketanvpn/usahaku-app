@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, usahaTable, pelangganTable, hutangTable, pembayaranTable, keuanganTable, barangTable, transaksiStokTable } from "@workspace/db";
+import { db, usahaTable, pelangganTable, hutangTable, pembayaranTable, keuanganTable, barangTable, transaksiStokTable, transaksiKasirTable, transaksiKasirItemTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
@@ -18,15 +18,24 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const pelangganList     = await db.select().from(pelangganTable).where(eq(pelangganTable.usahaId, usahaId));
-  const hutangList        = await db.select().from(hutangTable).where(eq(hutangTable.usahaId, usahaId));
-  const pembayaranList    = await db.select().from(pembayaranTable).where(eq(pembayaranTable.usahaId, usahaId));
-  const keuanganList      = await db.select().from(keuanganTable).where(eq(keuanganTable.usahaId, usahaId));
-  const barangList        = await db.select().from(barangTable).where(eq(barangTable.usahaId, usahaId));
-  const transaksiStokList = await db.select().from(transaksiStokTable).where(eq(transaksiStokTable.usahaId, usahaId));
+  const pelangganList       = await db.select().from(pelangganTable).where(eq(pelangganTable.usahaId, usahaId));
+  const hutangList          = await db.select().from(hutangTable).where(eq(hutangTable.usahaId, usahaId));
+  const pembayaranList      = await db.select().from(pembayaranTable).where(eq(pembayaranTable.usahaId, usahaId));
+  const keuanganList        = await db.select().from(keuanganTable).where(eq(keuanganTable.usahaId, usahaId));
+  const barangList          = await db.select().from(barangTable).where(eq(barangTable.usahaId, usahaId));
+  const transaksiStokList   = await db.select().from(transaksiStokTable).where(eq(transaksiStokTable.usahaId, usahaId));
+  const transaksiKasirList  = await db.select().from(transaksiKasirTable).where(eq(transaksiKasirTable.usahaId, usahaId));
+
+  // Ambil semua item kasir sekaligus
+  const allKasirItems = transaksiKasirList.length > 0
+    ? await Promise.all(transaksiKasirList.map(k =>
+        db.select().from(transaksiKasirItemTable).where(eq(transaksiKasirItemTable.transaksiKasirId, k.id))
+      ))
+    : [];
+  const transaksiKasirItemList = allKasirItems.flat();
 
   const backup = {
-    version: "1.1",
+    version: "1.2",
     exported_at: new Date().toISOString(),
     usaha_id: usahaId,
     usaha: {
@@ -105,6 +114,26 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       keuangan_id: t.keuanganId ?? null,
       created_at: t.createdAt.toISOString(),
     })),
+    transaksi_kasir: transaksiKasirList.map((k) => ({
+      id: k.id,
+      usaha_id: k.usahaId,
+      tanggal: k.tanggal,
+      total: parseFloat(k.total),
+      uang_bayar: parseFloat(k.uangBayar),
+      kembalian: parseFloat(k.kembalian),
+      catatan: k.catatan ?? null,
+      created_at: k.createdAt instanceof Date ? k.createdAt.toISOString() : new Date(k.createdAt).toISOString(),
+    })),
+    transaksi_kasir_item: transaksiKasirItemList.map((i) => ({
+      id: i.id,
+      transaksi_kasir_id: i.transaksiKasirId,
+      barang_id: i.barangId,
+      nama_barang: i.namaBarang,
+      satuan: i.satuan,
+      jumlah: parseFloat(i.jumlah),
+      harga_satuan: parseFloat(i.hargaSatuan),
+      subtotal: parseFloat(i.subtotal),
+    })),
   };
 
   res.json(backup);
@@ -130,6 +159,13 @@ router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
   }
 
   // Hapus semua data lama (urutan penting karena foreign key)
+  // Kasir item harus dihapus dulu sebelum header kasir
+  const kasirHeaders = await db.select({ id: transaksiKasirTable.id }).from(transaksiKasirTable).where(eq(transaksiKasirTable.usahaId, usahaId));
+  for (const kh of kasirHeaders) {
+    await db.delete(transaksiKasirItemTable).where(eq(transaksiKasirItemTable.transaksiKasirId, kh.id));
+  }
+  await db.delete(transaksiKasirTable).where(eq(transaksiKasirTable.usahaId, usahaId));
+
   await db.delete(transaksiStokTable).where(eq(transaksiStokTable.usahaId, usahaId));
   await db.delete(pembayaranTable).where(eq(pembayaranTable.usahaId, usahaId));
   await db.delete(hutangTable).where(eq(hutangTable.usahaId, usahaId));
@@ -232,6 +268,39 @@ router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
         hargaSatuan: t.harga_satuan.toString(),
         keterangan: t.keterangan ?? null,
         keuanganId: newKeuanganId,
+      });
+    }
+  }
+
+  // 7. Restore transaksi kasir — bangun peta ID lama → baru
+  const kasirIdMap = new Map<number, number>();
+  if (Array.isArray(backup.transaksi_kasir)) {
+    for (const k of backup.transaksi_kasir) {
+      const [inserted] = await db.insert(transaksiKasirTable).values({
+        usahaId,
+        tanggal: k.tanggal,
+        total: k.total.toString(),
+        uangBayar: k.uang_bayar.toString(),
+        kembalian: k.kembalian.toString(),
+        catatan: k.catatan ?? null,
+      }).returning();
+      kasirIdMap.set(k.id, inserted.id);
+    }
+  }
+
+  // 8. Restore item kasir (dengan link ke kasir baru & barang baru)
+  if (Array.isArray(backup.transaksi_kasir_item)) {
+    for (const i of backup.transaksi_kasir_item) {
+      const newKasirId = kasirIdMap.get(i.transaksi_kasir_id) ?? i.transaksi_kasir_id;
+      const newBarangId = barangIdMap.get(i.barang_id) ?? i.barang_id;
+      await db.insert(transaksiKasirItemTable).values({
+        transaksiKasirId: newKasirId,
+        barangId: newBarangId,
+        namaBarang: i.nama_barang,
+        satuan: i.satuan,
+        jumlah: i.jumlah.toString(),
+        hargaSatuan: i.harga_satuan.toString(),
+        subtotal: i.subtotal.toString(),
       });
     }
   }
