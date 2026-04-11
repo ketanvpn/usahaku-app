@@ -1,12 +1,16 @@
+import { useState } from "react";
 import { useGetOwnerDashboard } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
 import { formatRupiah, formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, TrendingDown, TrendingUp, Users, Wallet, CreditCard, Activity, AlertTriangle, Package } from "lucide-react";
-import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Loader2, TrendingDown, TrendingUp, Users, Wallet, CreditCard, Activity, AlertTriangle, Package, BarChart2 } from "lucide-react";
+import { Link } from "wouter";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from "recharts";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -18,8 +22,41 @@ interface BarangPeringatan {
   stok_minimum: number;
 }
 
+interface TrenItem {
+  tanggal: string;
+  masuk: number;
+  keluar: number;
+}
+
+function fmtRupiahSingkat(value: number) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(".0", "")}jt`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}rb`;
+  return String(value);
+}
+
+function fmtTanggalPendek(iso: string) {
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+}
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white border border-border rounded-lg shadow-lg p-3 text-sm">
+      <p className="font-semibold text-foreground mb-1">{label}</p>
+      {payload.map((p: any) => (
+        <p key={p.name} style={{ color: p.color }}>
+          {p.name === "masuk" ? "▲ Masuk" : "▼ Keluar"}: {formatRupiah(p.value)}
+        </p>
+      ))}
+    </div>
+  );
+};
+
 export default function OwnerDashboard() {
+  const [trenHari, setTrenHari] = useState<7 | 30>(30);
   const { data, isLoading } = useGetOwnerDashboard();
+
   const { data: peringatanStok = [] } = useQuery<BarangPeringatan[]>({
     queryKey: ["barang-peringatan"],
     queryFn: async () => {
@@ -28,6 +65,23 @@ export default function OwnerDashboard() {
       return r.json();
     },
   });
+
+  const { data: trenData = [], isLoading: trenLoading } = useQuery<TrenItem[]>({
+    queryKey: ["tren-keuangan", trenHari],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/dashboard/tren-keuangan?hari=${trenHari}`, { credentials: "include" });
+      if (!r.ok) return [];
+      return r.json();
+    },
+  });
+
+  const chartData = trenData.map(d => ({
+    ...d,
+    label: fmtTanggalPendek(d.tanggal),
+  }));
+
+  const totalMasuk = trenData.reduce((s, d) => s + (d.masuk || 0), 0);
+  const totalKeluar = trenData.reduce((s, d) => s + (d.keluar || 0), 0);
 
   if (isLoading) {
     return (
@@ -41,10 +95,11 @@ export default function OwnerDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h2>
-          <p className="text-muted-foreground">Ringkasan hutang dan pembayaran pelanggan Anda.</p>
+          <p className="text-muted-foreground">Ringkasan bisnis Anda hari ini.</p>
         </div>
         <div className="flex gap-2">
           <Link href="/hutang" className="block">
@@ -56,17 +111,18 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
+      {/* Peringatan stok */}
       {peringatanStok.length > 0 && (
-        <Card className="border-orange-300 bg-orange-50 dark:bg-orange-950/20">
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-orange-700 dark:text-orange-400 flex items-center gap-2">
+            <CardTitle className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" /> {peringatanStok.length} Barang Stok Hampir Habis
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             {peringatanStok.map(b => (
               <Link key={b.id} href="/stok">
-                <Badge variant="outline" className="border-orange-400 text-orange-700 bg-orange-100 cursor-pointer hover:bg-orange-200">
+                <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-100 cursor-pointer hover:bg-amber-200">
                   <Package className="h-3 w-3 mr-1" />{b.nama} — sisa {b.stok} {b.satuan}
                 </Badge>
               </Link>
@@ -75,65 +131,149 @@ export default function OwnerDashboard() {
         </Card>
       )}
 
+      {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-orange-500 shadow-sm">
+        <Card className="border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sisa Hutang</CardTitle>
-            <TrendingDown className="h-4 w-4 text-orange-500" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Sisa Hutang</CardTitle>
+            <div className="h-9 w-9 rounded-full bg-amber-100 flex items-center justify-center">
+              <TrendingDown className="h-4 w-4 text-amber-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{formatRupiah(data.sisa_hutang)}</div>
+            <div className="text-2xl font-bold text-amber-600">{formatRupiah(data.sisa_hutang)}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Dari {data.jumlah_hutang_aktif} hutang aktif
+              Dari <span className="font-semibold">{data.jumlah_hutang_aktif}</span> hutang aktif
             </p>
           </CardContent>
         </Card>
-        
-        <Card className="border-l-4 border-l-emerald-500 shadow-sm">
+
+        <Card className="border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Dibayar</CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Dibayar</CardTitle>
+            <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-emerald-600" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-600">{formatRupiah(data.total_dibayar)}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {data.jumlah_hutang_lunas} hutang telah lunas
+              <span className="font-semibold">{data.jumlah_hutang_lunas}</span> hutang telah lunas
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-blue-500 shadow-sm">
+        <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Hutang</CardTitle>
-            <Wallet className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Hutang</CardTitle>
+            <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center">
+              <Wallet className="h-4 w-4 text-blue-600" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{formatRupiah(data.total_hutang)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Keseluruhan tercatat
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">Keseluruhan tercatat</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-indigo-500 shadow-sm">
+        <Card className="border-l-4 border-l-primary shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pelanggan Berhutang</CardTitle>
-            <Users className="h-4 w-4 text-indigo-500" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pelanggan Berhutang</CardTitle>
+            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+              <Users className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">{data.jumlah_pelanggan_berhutang}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Pelanggan aktif
-            </p>
+            <div className="text-2xl font-bold text-primary">{data.jumlah_pelanggan_berhutang}</div>
+            <p className="text-xs text-muted-foreground mt-1">Pelanggan aktif</p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Chart Tren Keuangan */}
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart2 className="h-5 w-5 text-primary" />
+                Tren Keuangan
+              </CardTitle>
+              <CardDescription>
+                Pemasukan vs pengeluaran {trenHari} hari terakhir
+                {trenData.length > 0 && (
+                  <span className="ml-2">
+                    · <span className="text-emerald-600 font-medium">{formatRupiah(totalMasuk)} masuk</span>
+                    {" · "}
+                    <span className="text-red-500 font-medium">{formatRupiah(totalKeluar)} keluar</span>
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+              <Button
+                size="sm" variant={trenHari === 7 ? "default" : "ghost"}
+                className="h-7 text-xs px-3"
+                onClick={() => setTrenHari(7)}
+              >7 Hari</Button>
+              <Button
+                size="sm" variant={trenHari === 30 ? "default" : "ghost"}
+                className="h-7 text-xs px-3"
+                onClick={() => setTrenHari(30)}
+              >30 Hari</Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {trenLoading ? (
+            <div className="flex justify-center items-center h-48">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : chartData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground gap-2">
+              <BarChart2 className="h-10 w-10 opacity-30" />
+              <p className="text-sm">Belum ada data keuangan dalam {trenHari} hari terakhir.</p>
+              <Link href="/keuangan">
+                <Button variant="outline" size="sm">Catat Keuangan</Button>
+              </Link>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(38 18% 87%)" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: "hsl(215 15% 48%)" }}
+                  tickLine={false}
+                  axisLine={{ stroke: "hsl(38 18% 87%)" }}
+                  interval={trenHari === 30 ? 4 : 0}
+                />
+                <YAxis
+                  tickFormatter={fmtRupiahSingkat}
+                  tick={{ fontSize: 11, fill: "hsl(215 15% 48%)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={48}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend
+                  formatter={(value) => value === "masuk" ? "Pemasukan" : "Pengeluaran"}
+                  wrapperStyle={{ fontSize: 12 }}
+                />
+                <Bar dataKey="masuk" fill="hsl(158 55% 38%)" radius={[4, 4, 0, 0]} name="masuk" />
+                <Bar dataKey="keluar" fill="hsl(0 65% 58%)" radius={[4, 4, 0, 0]} name="keluar" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Tabel bawah */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-emerald-500" />
+              <CreditCard className="h-5 w-5 text-emerald-600" />
               Pembayaran Terbaru
             </CardTitle>
             <CardDescription>5 transaksi pembayaran terakhir</CardDescription>
@@ -151,8 +291,11 @@ export default function OwnerDashboard() {
                 <TableBody>
                   {data.pembayaran_terbaru.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground py-6">
-                        Belum ada pembayaran.
+                      <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                        <div className="flex flex-col items-center gap-1">
+                          <CreditCard className="h-7 w-7 opacity-25 mb-1" />
+                          Belum ada pembayaran.
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -163,7 +306,7 @@ export default function OwnerDashboard() {
                             {p.pelanggan_nama}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{formatDate(p.tanggal_bayar)}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{formatDate(p.tanggal_bayar)}</TableCell>
                         <TableCell className="text-right font-semibold text-emerald-600">
                           +{formatRupiah(p.nominal_bayar)}
                         </TableCell>
@@ -179,7 +322,7 @@ export default function OwnerDashboard() {
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-orange-500" />
+              <Activity className="h-5 w-5 text-amber-600" />
               Hutang Terbesar
             </CardTitle>
             <CardDescription>5 sisa hutang aktif terbesar</CardDescription>
@@ -191,14 +334,17 @@ export default function OwnerDashboard() {
                   <TableRow>
                     <TableHead>Pelanggan</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Sisa Hutang</TableHead>
+                    <TableHead className="text-right">Sisa</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.hutang_terbesar.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground py-6">
-                        Tidak ada hutang aktif.
+                      <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                        <div className="flex flex-col items-center gap-1">
+                          <Activity className="h-7 w-7 opacity-25 mb-1" />
+                          Tidak ada hutang aktif.
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -210,12 +356,14 @@ export default function OwnerDashboard() {
                           </Link>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={h.status === "lunas" ? "outline" : "default"} 
-                                className={h.status === "aktif" ? "bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-200" : "bg-emerald-100 text-emerald-800 border-emerald-200"}>
+                          <Badge variant="outline"
+                            className={h.status === "aktif"
+                              ? "border-amber-300 bg-amber-50 text-amber-700"
+                              : "border-emerald-300 bg-emerald-50 text-emerald-700"}>
                             {h.status === "aktif" ? "Aktif" : "Lunas"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right font-semibold text-orange-600">
+                        <TableCell className="text-right font-semibold text-amber-600">
                           {formatRupiah(h.sisa_hutang)}
                         </TableCell>
                       </TableRow>

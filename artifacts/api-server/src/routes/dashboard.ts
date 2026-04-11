@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, hutangTable, pelangganTable, pembayaranTable, usahaTable, usersTable } from "@workspace/db";
-import { eq, and, count, sum, desc, sql } from "drizzle-orm";
+import { db, hutangTable, pelangganTable, pembayaranTable, usahaTable, usersTable, keuanganTable } from "@workspace/db";
+import { eq, and, count, sum, desc, sql, gte } from "drizzle-orm";
 import { requireAuth, requireSuperAdmin } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -75,6 +75,35 @@ router.get("/dashboard/owner", requireAuth, async (req, res): Promise<void> => {
       updated_at: h.updatedAt.toISOString(),
     })),
   });
+});
+
+router.get("/dashboard/tren-keuangan", requireAuth, async (req, res): Promise<void> => {
+  const usahaId = req.session.usahaId;
+  if (!usahaId) { res.status(403).json({ error: "Akses ditolak." }); return; }
+
+  const hari = parseInt((req.query.hari as string) || "30", 10);
+  const hariValid = [7, 30].includes(hari) ? hari : 30;
+
+  const rows = await db
+    .select({ tanggal: keuanganTable.tanggal, tipe: keuanganTable.tipe, total: sql<string>`SUM(CAST(${keuanganTable.jumlah} AS REAL))` })
+    .from(keuanganTable)
+    .where(and(
+      eq(keuanganTable.usahaId, usahaId),
+      gte(keuanganTable.tanggal, sql`date('now', ${`-${hariValid - 1} days`})`)
+    ))
+    .groupBy(keuanganTable.tanggal, keuanganTable.tipe)
+    .orderBy(keuanganTable.tanggal);
+
+  const map = new Map<string, { masuk: number; keluar: number }>();
+  for (const r of rows) {
+    const entry = map.get(r.tanggal) ?? { masuk: 0, keluar: 0 };
+    if (r.tipe === "masuk") entry.masuk = parseFloat(r.total ?? "0");
+    else entry.keluar = parseFloat(r.total ?? "0");
+    map.set(r.tanggal, entry);
+  }
+
+  const result = Array.from(map.entries()).map(([tanggal, v]) => ({ tanggal, ...v }));
+  res.json(result);
 });
 
 router.get("/dashboard/admin", requireSuperAdmin, async (_req, res): Promise<void> => {
