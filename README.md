@@ -281,13 +281,29 @@ Perintah ini mengunduh semua komponen yang dibutuhkan aplikasi (hanya perlu dila
 pnpm install
 ```
 
-Tunggu sampai selesai — bisa memakan waktu **3-10 menit** tergantung kecepatan internet. Ini normal.
+Tunggu sampai selesai — bisa memakan waktu **5-15 menit** tergantung kecepatan internet. Ini normal.
 
 Kalau muncul tulisan `Done` atau kembali ke prompt `>`, berarti berhasil ✅
 
+> **Normal**: Kalau muncul pesan kuning `Ignored build scripts: bcrypt, electron` — itu **bukan error**, abaikan saja dan lanjutkan ke langkah berikutnya.
+
 ---
 
-### Langkah 6 — Build Installer
+### Langkah 6 — Izinkan Build Scripts
+
+Karena pnpm versi terbaru memerlukan izin eksplisit untuk menjalankan script instalasi, jalankan perintah ini:
+
+```
+pnpm approve-builds
+```
+
+Akan muncul daftar package — pilih **semua** dengan menekan `Space` di setiap baris, lalu `Enter` untuk konfirmasi.
+
+Jika perintah ini tidak tersedia atau tidak ada daftar yang muncul, lewati saja ke langkah berikutnya.
+
+---
+
+### Langkah 7 — Build Installer
 
 Perintah ini menghasilkan file `.exe` yang bisa diinstall di komputer Windows manapun:
 
@@ -301,7 +317,7 @@ Tanda berhasil: muncul tulisan seperti `target=nsis` atau `built` di bagian akhi
 
 ---
 
-### Langkah 7 — Ambil File Installer
+### Langkah 8 — Ambil File Installer
 
 Setelah build selesai, file installer ada di:
 
@@ -325,6 +341,9 @@ Cari file bernama **`Usahaku-Setup-1.0.0.exe`** — inilah file yang bisa dibagi
 | `pnpm: command not found` | Tutup dan buka ulang Command Prompt setelah install pnpm |
 | `git: command not found` | Tutup dan buka ulang Command Prompt setelah install Git |
 | `Error: EACCES permission denied` | Buka Command Prompt **sebagai Administrator** (klik kanan → Run as administrator) |
+| `Cannot find module @rollup/rollup-win32-x64-msvc` | Jalankan: `pnpm add @rollup/rollup-win32-x64-msvc -w` lalu build ulang |
+| `Cannot find module lightningcss.win32-x64-msvc` | Jalankan: `pnpm add lightningcss-win32-x64-msvc -w` lalu build ulang |
+| `Ignored build scripts: bcrypt, electron` (pesan kuning) | Ini **normal**, bukan error — lanjutkan saja ke langkah berikutnya |
 | Build terhenti tiba-tiba | Jalankan ulang perintah `dist:win` — biasanya langsung lanjut |
 | File `.exe` tidak muncul | Cek apakah ada pesan `Error` di terminal, kirimkan ke pengembang |
 | Antivirus memblokir proses | Sementara matikan antivirus, build ulang, lalu aktifkan kembali |
