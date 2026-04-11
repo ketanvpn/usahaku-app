@@ -1,0 +1,49 @@
+name: Build & Release Windows
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install semua dependencies
+        run: pnpm install
+
+      - name: Build backend (API server)
+        run: pnpm --filter @workspace/api-server run build
+
+      - name: Build frontend (React app)
+        run: pnpm --filter @workspace/hutang-app run build:electron
+
+      - name: Compile Electron main process
+        run: pnpm --filter @workspace/electron-app run build:main
+        working-directory: artifacts/electron-app
+
+      - name: Build installer Windows (.exe)
+        run: pnpm run dist:win
+        working-directory: artifacts/electron-app
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Upload .exe ke Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/electron-app/release/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
