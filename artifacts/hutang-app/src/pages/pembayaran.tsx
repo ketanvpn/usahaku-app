@@ -20,6 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { formatRupiah, formatDate } from "@/lib/format";
 import { Loader2, Plus, Trash2, Filter, Printer } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 declare global {
   interface Window {
@@ -409,20 +410,20 @@ export default function PembayaranPage() {
       {/* Table */}
       <Card>
         <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>No. Kwitansi</TableHead>
-                  <TableHead>Tanggal Bayar</TableHead>
-                  <TableHead>Pelanggan</TableHead>
-                  <TableHead>Catatan</TableHead>
-                  <TableHead className="text-right">Nominal</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>No. Kwitansi</TableHead>
+                <TableHead>Tanggal Bayar</TableHead>
+                <TableHead>Pelanggan</TableHead>
+                <TableHead>Catatan</TableHead>
+                <TableHead className="text-right">Nominal</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            {isLoading ? (
+              <TableSkeleton cols={6} />
+            ) : (
               <TableBody>
                 {!pembayaranList || pembayaranList.length === 0 ? (
                   <TableRow>
@@ -468,8 +469,8 @@ export default function PembayaranPage() {
                   ))
                 )}
               </TableBody>
-            </Table>
-          )}
+            )}
+          </Table>
         </CardContent>
       </Card>
     </div>

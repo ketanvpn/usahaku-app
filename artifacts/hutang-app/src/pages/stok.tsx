@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Loader2, Plus, Edit, Trash2, Package, AlertTriangle, ArrowDownCircle, ArrowUpCircle, RefreshCw } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -231,7 +232,21 @@ export default function StokPage() {
           <Card>
             <CardContent className="p-0">
               {loadingBarang ? (
-                <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nama Barang</TableHead>
+                      <TableHead>Satuan</TableHead>
+                      <TableHead className="text-right">Harga Beli</TableHead>
+                      <TableHead className="text-right">Harga Jual</TableHead>
+                      <TableHead className="text-center">Stok</TableHead>
+                      <TableHead className="text-center">Min.</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-center w-24">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableSkeleton cols={8} />
+                </Table>
               ) : barangList.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Package className="h-10 w-10 mx-auto mb-3 opacity-30" />
@@ -311,7 +326,20 @@ export default function StokPage() {
             </CardHeader>
             <CardContent className="p-0">
               {loadingTransaksi ? (
-                <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Barang</TableHead>
+                      <TableHead>Tipe</TableHead>
+                      <TableHead className="text-right">Jumlah</TableHead>
+                      <TableHead className="text-right">Harga Satuan</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>Keterangan</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableSkeleton cols={7} />
+                </Table>
               ) : transaksiList.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Package className="h-10 w-10 mx-auto mb-3 opacity-30" />

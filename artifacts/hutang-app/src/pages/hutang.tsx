@@ -20,7 +20,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { formatRupiah, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Edit, Trash2, Eye, Filter } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { Loader2, Plus, Edit, Trash2, Eye, Filter, Search, FileText } from "lucide-react";
 
 const hutangSchema = z.object({
   pelanggan_id: z.coerce.number().min(1, { message: "Pilih pelanggan" }),
@@ -38,6 +39,7 @@ const updateHutangSchema = z.object({
 export default function HutangPage() {
   const [filterStatus, setFilterStatus] = useState<GetHutangListStatus | undefined>(undefined);
   const [filterPelanggan, setFilterPelanggan] = useState<number | undefined>(undefined);
+  const [search, setSearch] = useState("");
 
   const { data: hutangList, isLoading } = useGetHutangList({
     status: filterStatus,
@@ -144,6 +146,17 @@ export default function HutangPage() {
           <Plus className="mr-2 h-4 w-4" />
           Catat Hutang Baru
         </Button>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Cari nama pelanggan atau keterangan..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+        />
       </div>
 
       <Card className="bg-muted/30">
@@ -289,30 +302,46 @@ export default function HutangPage() {
 
       <Card>
         <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Pelanggan</TableHead>
-                  <TableHead>Keterangan</TableHead>
-                  <TableHead className="text-right">Nominal</TableHead>
-                  <TableHead className="text-right">Sisa Hutang</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {!hutangList || hutangList.length === 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tanggal</TableHead>
+                <TableHead>Pelanggan</TableHead>
+                <TableHead>Keterangan</TableHead>
+                <TableHead className="text-right">Nominal</TableHead>
+                <TableHead className="text-right">Sisa Hutang</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            {isLoading ? (
+              <TableSkeleton cols={7} />
+            ) : (() => {
+              const filtered = (hutangList ?? []).filter(h =>
+                h.pelanggan_nama.toLowerCase().includes(search.toLowerCase()) ||
+                (h.keterangan ?? "").toLowerCase().includes(search.toLowerCase())
+              );
+              return filtered.length === 0 ? (
+                <TableBody>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      Tidak ada data hutang sesuai filter.
+                    <TableCell colSpan={7} className="py-16">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <FileText className="h-10 w-10 opacity-25" />
+                        <p className="text-sm font-medium">
+                          {search ? `Tidak ditemukan hasil untuk "${search}"` : "Belum ada data hutang."}
+                        </p>
+                        {!search && (
+                          <Button variant="outline" size="sm" className="mt-1" onClick={() => handleOpenDialog()}>
+                            <Plus className="h-3 w-3 mr-1" /> Catat Hutang Pertama
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  hutangList.map((h) => (
+                </TableBody>
+              ) : (
+                <TableBody>
+                  {filtered.map((h) => (
                     <TableRow key={h.id}>
                       <TableCell className="whitespace-nowrap">{formatDate(h.tanggal_hutang)}</TableCell>
                       <TableCell className="font-medium">
@@ -345,11 +374,11 @@ export default function HutangPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          )}
+                  ))}
+                </TableBody>
+              );
+            })()}
+          </Table>
         </CardContent>
       </Card>
     </div>

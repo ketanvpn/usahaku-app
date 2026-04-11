@@ -15,6 +15,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, Plus, Edit, Trash2, Eye, Search } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 const pelangganSchema = z.object({
   nama: z.string().min(1, { message: "Nama wajib diisi" }),
@@ -198,18 +199,18 @@ export default function PelangganPage() {
 
       <Card>
         <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Telepon</TableHead>
-                  <TableHead>Alamat</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nama</TableHead>
+                <TableHead>Telepon</TableHead>
+                <TableHead>Alamat</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            {isLoading ? (
+              <TableSkeleton cols={4} />
+            ) : (
               <TableBody>
                 {filteredList.length === 0 ? (
                   <TableRow>
@@ -242,8 +243,8 @@ export default function PelangganPage() {
                   ))
                 )}
               </TableBody>
-            </Table>
-          )}
+            )}
+          </Table>
         </CardContent>
         {search && filteredList.length > 0 && (
           <div className="px-4 py-2 text-xs text-muted-foreground border-t">

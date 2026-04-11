@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Edit, Trash2, TrendingUp, TrendingDown, Wallet, Download, Printer, BarChart3 } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -450,9 +451,19 @@ export default function KeuanganPage() {
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Tipe</TableHead>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead>Keterangan</TableHead>
+                  <TableHead className="text-right">Jumlah</TableHead>
+                  <TableHead className="text-center w-24">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableSkeleton cols={6} />
+            </Table>
           ) : items.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Wallet className="h-10 w-10 mx-auto mb-3 opacity-30" />
