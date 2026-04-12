@@ -89,7 +89,7 @@ export default function StokPage() {
   const [filterBulan, setFilterBulan] = useState(String(now.getMonth() + 1));
   const [filterTahun, setFilterTahun] = useState(String(now.getFullYear()));
   const [filterNama, setFilterNama] = useState("");
-  const [filterKategori, setFilterKategori] = useState("");
+  const [filterKategori, setFilterKategori] = useState("__all__");
 
   const { data: barangList = [], isLoading: loadingBarang } = useQuery<Barang[]>({
     queryKey: ["barang"],
@@ -103,7 +103,7 @@ export default function StokPage() {
 
   const peringatan = barangList.filter(b => b.peringatan);
   const kategoriList = Array.from(new Set(barangList.map(b => b.kategori).filter(Boolean))).sort();
-  const barangFiltered = filterKategori
+  const barangFiltered = filterKategori !== "__all__"
     ? barangList.filter(b => b.kategori === filterKategori)
     : barangList;
   const tahunOptions = Array.from({ length: 5 }, (_, i) => String(now.getFullYear() - i));
@@ -271,12 +271,12 @@ export default function StokPage() {
                   <SelectValue placeholder="Semua Kategori" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Semua Kategori</SelectItem>
+                  <SelectItem value="__all__">Semua Kategori</SelectItem>
                   {kategoriList.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {filterKategori && (
-                <Button variant="ghost" size="sm" onClick={() => setFilterKategori("")} className="text-xs">
+              {filterKategori !== "__all__" && (
+                <Button variant="ghost" size="sm" onClick={() => setFilterKategori("__all__")} className="text-xs">
                   Reset Filter
                 </Button>
               )}
@@ -503,12 +503,15 @@ export default function StokPage() {
               )} />
               <FormField control={barangForm.control} name="kategori" render={({ field }) => (
                 <FormItem><FormLabel>Kategori <span className="text-muted-foreground text-xs">(opsional)</span></FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                  <Select
+                    onValueChange={v => field.onChange(v === "__none__" ? "" : v)}
+                    value={field.value ? field.value : "__none__"}
+                  >
                     <FormControl>
                       <SelectTrigger><SelectValue placeholder="Pilih kategori..." /></SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">— Tanpa Kategori —</SelectItem>
+                      <SelectItem value="__none__">— Tanpa Kategori —</SelectItem>
                       {KATEGORI_OPTIONS.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
                     </SelectContent>
                   </Select>
