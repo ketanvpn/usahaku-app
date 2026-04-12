@@ -1,9 +1,12 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
+import { createHmac } from "crypto";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { LoginBody } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
+
+const RESET_SECRET = process.env.LICENSE_SECRET ?? "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE";
 
 const router: IRouter = Router();
 
@@ -112,6 +115,67 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
     is_active: user.isActive,
     created_at: user.createdAt.toISOString(),
   });
+});
+
+router.post("/auth/reset-with-code", async (req, res): Promise<void> => {
+  const { username, reset_code, new_password } = req.body;
+
+  if (!username || !reset_code || !new_password) {
+    res.status(400).json({ error: "Username, kode reset, dan password baru wajib diisi." });
+    return;
+  }
+
+  if (typeof new_password !== "string" || new_password.length < 6) {
+    res.status(400).json({ error: "Password baru minimal 6 karakter." });
+    return;
+  }
+
+  const clean = String(reset_code).trim().toUpperCase().replace(/^RST-/, "").replace(/-/g, "");
+  if (clean.length !== 16) {
+    res.status(400).json({ error: "Format kode reset tidak valid." });
+    return;
+  }
+
+  let buf: Buffer;
+  try {
+    buf = Buffer.from(clean, "hex");
+  } catch {
+    res.status(400).json({ error: "Format kode reset tidak valid." });
+    return;
+  }
+
+  if (buf.length !== 8) {
+    res.status(400).json({ error: "Format kode reset tidak valid." });
+    return;
+  }
+
+  const expiryTs = buf.readUInt32BE(0);
+  const sig = buf.subarray(4, 8);
+
+  if (expiryTs < Math.floor(Date.now() / 1000)) {
+    res.status(400).json({ error: "Kode reset sudah kadaluarsa. Minta kode baru dari administrator." });
+    return;
+  }
+
+  const payload = `PWRESET:${String(username).toLowerCase().trim()}:${expiryTs}`;
+  const hmac = createHmac("sha256", RESET_SECRET).update(payload).digest();
+  const expectedSig = hmac.subarray(0, 4);
+
+  if (!sig.equals(expectedSig)) {
+    res.status(400).json({ error: "Kode reset tidak valid. Pastikan kode diketik dengan benar." });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.username, String(username).trim()));
+  if (!user) {
+    res.status(404).json({ error: "Username tidak ditemukan." });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(new_password, 10);
+  await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id));
+
+  res.json({ message: "Password berhasil direset. Silakan login dengan password baru." });
 });
 
 export default router;

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,11 +12,17 @@ import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, BookOpen, ShieldCheck, TrendingUp, Package } from "lucide-react";
+import { Loader2, BookOpen, ShieldCheck, TrendingUp, Package, KeyRound, ArrowLeft } from "lucide-react";
 
 const loginSchema = z.object({
   username: z.string().min(1, { message: "Username tidak boleh kosong" }),
   password: z.string().min(1, { message: "Password tidak boleh kosong" }),
+});
+
+const resetSchema = z.object({
+  username: z.string().min(1, { message: "Username tidak boleh kosong" }),
+  reset_code: z.string().min(1, { message: "Kode reset tidak boleh kosong" }),
+  new_password: z.string().min(6, { message: "Password baru minimal 6 karakter" }),
 });
 
 const fiturList = [
@@ -26,16 +32,25 @@ const fiturList = [
   { icon: ShieldCheck, text: "Data aman tersimpan di perangkat Anda" },
 ];
 
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 export default function LoginPage() {
   const { isAuthenticated, user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const loginMutation = useLogin();
+  const [showReset, setShowReset] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: { username: "", password: "" },
+  });
+
+  const resetForm = useForm<z.infer<typeof resetSchema>>({
+    resolver: zodResolver(resetSchema),
+    defaultValues: { username: "", reset_code: "", new_password: "" },
   });
 
   useEffect(() => {
@@ -72,6 +87,29 @@ export default function LoginPage() {
         },
       }
     );
+  };
+
+  const onResetSubmit = async (values: z.infer<typeof resetSchema>) => {
+    setIsResetting(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/reset-with-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ variant: "destructive", title: "Gagal reset", description: data.error || "Terjadi kesalahan." });
+      } else {
+        toast({ title: "Password berhasil direset!", description: "Silakan login dengan password baru." });
+        resetForm.reset();
+        setShowReset(false);
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Gagal", description: "Tidak dapat terhubung ke server." });
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   return (
@@ -129,73 +167,169 @@ export default function LoginPage() {
         </div>
 
         <div className="w-full max-w-sm">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-foreground">Masuk ke Akun Anda</h2>
-            <p className="text-muted-foreground text-sm mt-1">
-              Masukkan username dan password untuk melanjutkan.
-            </p>
-          </div>
+          {!showReset ? (
+            <>
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-foreground">Masuk ke Akun Anda</h2>
+                <p className="text-muted-foreground text-sm mt-1">
+                  Masukkan username dan password untuk melanjutkan.
+                </p>
+              </div>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-foreground font-medium">Username</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Masukkan username"
-                        autoFocus
-                        autoComplete="username"
-                        className="h-11 bg-white"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-foreground font-medium">Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Masukkan password"
-                        autoComplete="current-password"
-                        className="h-11 bg-white"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="submit"
-                className="w-full h-11 text-base font-semibold mt-2 shadow-sm"
-                disabled={loginMutation.isPending}
-              >
-                {loginMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Memproses...
-                  </>
-                ) : (
-                  "Masuk"
-                )}
-              </Button>
-            </form>
-          </Form>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                  <FormField
+                    control={form.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground font-medium">Username</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Masukkan username"
+                            autoFocus
+                            autoComplete="username"
+                            className="h-11 bg-white"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground font-medium">Password</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder="Masukkan password"
+                            autoComplete="current-password"
+                            className="h-11 bg-white"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full h-11 text-base font-semibold mt-2 shadow-sm"
+                    disabled={loginMutation.isPending}
+                  >
+                    {loginMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Memproses...
+                      </>
+                    ) : (
+                      "Masuk"
+                    )}
+                  </Button>
+                </form>
+              </Form>
 
-          <p className="text-center text-xs text-muted-foreground mt-8">
-            Hubungi administrator jika lupa password.
-          </p>
+              <div className="text-center mt-6">
+                <button
+                  type="button"
+                  onClick={() => { setShowReset(true); resetForm.reset(); }}
+                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  <KeyRound className="h-3 w-3" />
+                  Lupa password? Reset dengan kode dari administrator
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mb-8">
+                <button
+                  type="button"
+                  onClick={() => setShowReset(false)}
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Kembali ke login
+                </button>
+                <h2 className="text-2xl font-bold text-foreground">Reset Password</h2>
+                <p className="text-muted-foreground text-sm mt-1">
+                  Masukkan kode reset yang dikirim administrator via WhatsApp.
+                </p>
+              </div>
+
+              <Form {...resetForm}>
+                <form onSubmit={resetForm.handleSubmit(onResetSubmit)} className="space-y-5">
+                  <FormField
+                    control={resetForm.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground font-medium">Username Anda</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Masukkan username" className="h-11 bg-white" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={resetForm.control}
+                    name="reset_code"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground font-medium">Kode Reset</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="RST-XXXX-XXXX-XXXX-XXXX"
+                            className="h-11 bg-white font-mono tracking-wider"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        <p className="text-xs text-muted-foreground">Kode dikirim oleh administrator via WhatsApp. Berlaku 24 jam.</p>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={resetForm.control}
+                    name="new_password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground font-medium">Password Baru</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder="Minimal 6 karakter"
+                            className="h-11 bg-white"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full h-11 text-base font-semibold shadow-sm"
+                    disabled={isResetting}
+                  >
+                    {isResetting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Memproses...
+                      </>
+                    ) : (
+                      "Reset Password"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            </>
+          )}
         </div>
       </div>
     </div>
