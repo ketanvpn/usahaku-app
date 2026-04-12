@@ -18,3 +18,9 @@ id = "5PdYqd5arUtIVXPVno8Mk"
 uri = "file://PANDUAN-KERJA-USAHAKU.md"
 type = "text"
 title = "Panduan Kerja Proyek Usahaku (Updated)"
+
+[[outputs]]
+id = "NwMIj20yE4QMkaelajMQv"
+uri = "file://PROMPT-REPLIT-BARU.md"
+type = "text"
+title = "Prompt untuk Replit Baru"
