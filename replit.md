@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.7**
+**Current version: 1.0.13**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -128,6 +128,27 @@ resources/
 - `SERVE_STATIC=true` + `STATIC_PATH` — serve frontend
 - `SESSION_SECRET` — derived from userData path
 - `BETTER_SQLITE3_PATH` — absolute path to better-sqlite3 package (for logging/fallback)
+
+### Git Push ke GitHub (dari Replit)
+
+GitHub sudah tidak mendukung login pakai password biasa. Harus pakai **Personal Access Token (PAT)**.
+
+**Setup sekali (sudah dilakukan):**
+```bash
+git remote set-url origin https://TOKEN@github.com/ketanvpn/usahaku-app.git
+```
+Ganti `TOKEN` dengan PAT yang dibuat di [github.com/settings/tokens](https://github.com/settings/tokens) (centang scope `repo`).
+
+**Setelah itu, git push cukup:**
+```bash
+git add .
+git commit -m "pesan commit"
+git push
+```
+
+> Catatan: Jika token expired atau dicabut, buat token baru dan jalankan `git remote set-url` lagi.
+
+---
 
 ### Build Command (Windows)
 ```powershell
