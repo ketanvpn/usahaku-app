@@ -1,5 +1,5 @@
 import { useRoute } from "wouter";
-import { useGetPelanggan } from "@workspace/api-client-react";
+import { useGetPelanggan, getGetPelangganQueryKey } from "@workspace/api-client-react";
 import { formatRupiah, formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,7 +13,7 @@ export default function PelangganDetail() {
   const id = parseInt(params?.id || "0");
 
   const { data, isLoading } = useGetPelanggan(id, {
-    query: { enabled: !!id, queryKey: [] as readonly unknown[] },
+    query: { enabled: !!id, queryKey: getGetPelangganQueryKey(id) },
   });
 
   if (isLoading) {

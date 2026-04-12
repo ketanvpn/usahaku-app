@@ -20,7 +20,7 @@ export default function HutangDetail() {
   const id = parseInt(params?.id || "0");
 
   const { data, isLoading } = useGetHutang(id, {
-    query: { enabled: !!id, queryKey: [] as readonly unknown[] }
+    query: { enabled: !!id, queryKey: getGetHutangQueryKey(id) }
   });
 
   const [isDeletePayDialogOpen, setIsDeletePayDialogOpen] = useState(false);

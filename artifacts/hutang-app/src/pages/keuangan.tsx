@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { useGetUsaha } from "@workspace/api-client-react";
+import { useGetUsaha, getGetUsahaQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -210,7 +210,7 @@ export default function KeuanganPage() {
   const [editData, setEditData] = useState<KeuanganItem | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const { user } = useAuth();
-  const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, { query: { enabled: !!user?.usaha_id, queryKey: [] as readonly unknown[] } });
+  const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, { query: { enabled: !!user?.usaha_id, queryKey: getGetUsahaQueryKey(user?.usaha_id ?? 0) } });
   const namaUsaha = usahaData?.nama_usaha ?? "Usahaku";
 
   const filterParams = { bulan: filterBulan, tahun: filterTahun, tipe: filterTipe };

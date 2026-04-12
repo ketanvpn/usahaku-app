@@ -4,6 +4,7 @@ import {
   useGetLaporan,
   useGetPelangganList,
   useGetUsaha,
+  getGetUsahaQueryKey,
   GetLaporanStatus,
   LaporanItem,
 } from "@workspace/api-client-react";
@@ -314,7 +315,7 @@ export default function LaporanPage() {
 
   const { data: pelangganList } = useGetPelangganList();
   const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, {
-    query: { enabled: !!user?.usaha_id, queryKey: [] as readonly unknown[] },
+    query: { enabled: !!user?.usaha_id, queryKey: getGetUsahaQueryKey(user?.usaha_id ?? 0) },
   });
   const { data: laporanData, isLoading: laporanLoading } = useGetLaporan({
     pelanggan_id: filterPelanggan, status: filterStatus,

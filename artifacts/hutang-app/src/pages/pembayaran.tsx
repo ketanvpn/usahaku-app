@@ -154,7 +154,7 @@ export default function PembayaranPage() {
   const { data: pelangganList } = useGetPelangganList();
   const { data: hutangAktifList } = useGetHutangList(
     { pelanggan_id: formPelangganId || undefined, status: "aktif" },
-    { query: { enabled: !!formPelangganId, queryKey: [] as readonly unknown[] } }
+    { query: { enabled: !!formPelangganId, queryKey: getGetHutangListQueryKey({ pelanggan_id: formPelangganId || undefined, status: "aktif" }) } }
   );
 
   const { toast } = useToast();

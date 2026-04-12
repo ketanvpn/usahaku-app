@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const { data: user, isLoading: isAuthLoading, isError } = useGetMe({
-    query: { retry: false, queryKey: [] as readonly unknown[] }
+    query: { retry: false, queryKey: getGetMeQueryKey() }
   });
 
   const isLoading = isSetupLoading || isAuthLoading;
