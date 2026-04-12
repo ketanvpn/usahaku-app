@@ -148,161 +148,175 @@ router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
 
   const backup = req.body;
 
-  if (!backup.version || !backup.usaha_id || !backup.pelanggan || !backup.hutang || !backup.pembayaran) {
+  if (!backup.version || !Array.isArray(backup.pelanggan) || !Array.isArray(backup.hutang) || !Array.isArray(backup.pembayaran)) {
     res.status(400).json({ error: "Format file backup tidak valid. Pastikan file yang diunggah benar." });
     return;
   }
 
-  if (backup.usaha_id !== usahaId) {
-    res.status(400).json({ error: "File backup tidak sesuai dengan usaha Anda." });
-    return;
-  }
+  // usaha_id di dalam file backup tidak harus sama dengan usaha aktif —
+  // semua data akan di-map ke usaha yang sedang login (mendukung pindah PC / install baru)
 
-  // Hapus semua data lama (urutan penting karena foreign key)
-  // Kasir item harus dihapus dulu sebelum header kasir
-  const kasirHeaders = await db.select({ id: transaksiKasirTable.id }).from(transaksiKasirTable).where(eq(transaksiKasirTable.usahaId, usahaId));
-  for (const kh of kasirHeaders) {
-    await db.delete(transaksiKasirItemTable).where(eq(transaksiKasirItemTable.transaksiKasirId, kh.id));
-  }
-  await db.delete(transaksiKasirTable).where(eq(transaksiKasirTable.usahaId, usahaId));
+  try {
+    await db.transaction(async (tx) => {
+      // Hapus semua data lama (urutan penting karena foreign key)
+      const kasirHeaders = await tx.select({ id: transaksiKasirTable.id }).from(transaksiKasirTable).where(eq(transaksiKasirTable.usahaId, usahaId));
+      for (const kh of kasirHeaders) {
+        await tx.delete(transaksiKasirItemTable).where(eq(transaksiKasirItemTable.transaksiKasirId, kh.id));
+      }
+      await tx.delete(transaksiKasirTable).where(eq(transaksiKasirTable.usahaId, usahaId));
+      await tx.delete(transaksiStokTable).where(eq(transaksiStokTable.usahaId, usahaId));
+      await tx.delete(pembayaranTable).where(eq(pembayaranTable.usahaId, usahaId));
+      await tx.delete(hutangTable).where(eq(hutangTable.usahaId, usahaId));
+      await tx.delete(barangTable).where(eq(barangTable.usahaId, usahaId));
+      await tx.delete(pelangganTable).where(eq(pelangganTable.usahaId, usahaId));
+      await tx.delete(keuanganTable).where(eq(keuanganTable.usahaId, usahaId));
 
-  await db.delete(transaksiStokTable).where(eq(transaksiStokTable.usahaId, usahaId));
-  await db.delete(pembayaranTable).where(eq(pembayaranTable.usahaId, usahaId));
-  await db.delete(hutangTable).where(eq(hutangTable.usahaId, usahaId));
-  await db.delete(barangTable).where(eq(barangTable.usahaId, usahaId));
-  await db.delete(pelangganTable).where(eq(pelangganTable.usahaId, usahaId));
-  await db.delete(keuanganTable).where(eq(keuanganTable.usahaId, usahaId));
+      // 1. Restore keuangan — bangun peta ID lama → baru
+      const keuanganIdMap = new Map<number, number>();
+      if (Array.isArray(backup.keuangan)) {
+        for (const k of backup.keuangan) {
+          const [inserted] = await tx.insert(keuanganTable).values({
+            usahaId,
+            tanggal: k.tanggal,
+            tipe: k.tipe,
+            kategori: k.kategori ?? null,
+            keterangan: k.keterangan,
+            jumlah: k.jumlah.toString(),
+          }).returning();
+          keuanganIdMap.set(k.id, inserted.id);
+        }
+      }
 
-  // 1. Restore keuangan — bangun peta ID lama → baru
-  const keuanganIdMap = new Map<number, number>();
-  if (Array.isArray(backup.keuangan)) {
-    for (const k of backup.keuangan) {
-      const [inserted] = await db.insert(keuanganTable).values({
-        usahaId,
-        tanggal: k.tanggal,
-        tipe: k.tipe,
-        kategori: k.kategori ?? null,
-        keterangan: k.keterangan,
-        jumlah: k.jumlah.toString(),
-      }).returning();
-      keuanganIdMap.set(k.id, inserted.id);
-    }
-  }
+      // 2. Restore pelanggan — bangun peta ID lama → baru
+      const pelangganIdMap = new Map<number, number>();
+      for (const p of backup.pelanggan) {
+        const [inserted] = await tx.insert(pelangganTable).values({
+          usahaId,
+          nama: p.nama,
+          telepon: p.telepon ?? null,
+          alamat: p.alamat ?? null,
+          catatan: p.catatan ?? null,
+        }).returning();
+        pelangganIdMap.set(p.id, inserted.id);
+      }
 
-  // 2. Restore pelanggan — bangun peta ID lama → baru
-  const pelangganIdMap = new Map<number, number>();
-  for (const p of backup.pelanggan) {
-    const [inserted] = await db.insert(pelangganTable).values({
-      usahaId,
-      nama: p.nama,
-      telepon: p.telepon ?? null,
-      alamat: p.alamat ?? null,
-      catatan: p.catatan ?? null,
-    }).returning();
-    pelangganIdMap.set(p.id, inserted.id);
-  }
+      // 3. Restore barang — bangun peta ID lama → baru
+      const barangIdMap = new Map<number, number>();
+      if (Array.isArray(backup.barang)) {
+        for (const b of backup.barang) {
+          const [inserted] = await tx.insert(barangTable).values({
+            usahaId,
+            nama: b.nama,
+            satuan: b.satuan,
+            hargaBeli: b.harga_beli.toString(),
+            hargaJual: b.harga_jual.toString(),
+            stok: b.stok.toString(),
+            stokMinimum: b.stok_minimum.toString(),
+          }).returning();
+          barangIdMap.set(b.id, inserted.id);
+        }
+      }
 
-  // 3. Restore barang — bangun peta ID lama → baru
-  const barangIdMap = new Map<number, number>();
-  if (Array.isArray(backup.barang)) {
-    for (const b of backup.barang) {
-      const [inserted] = await db.insert(barangTable).values({
-        usahaId,
-        nama: b.nama,
-        satuan: b.satuan,
-        hargaBeli: b.harga_beli.toString(),
-        hargaJual: b.harga_jual.toString(),
-        stok: b.stok.toString(),
-        stokMinimum: b.stok_minimum.toString(),
-      }).returning();
-      barangIdMap.set(b.id, inserted.id);
-    }
-  }
+      // 4. Restore hutang — bangun peta ID lama → baru
+      const hutangIdMap = new Map<number, number>();
+      for (const h of backup.hutang) {
+        const newPelangganId = pelangganIdMap.get(h.pelanggan_id) ?? h.pelanggan_id;
+        const [inserted] = await tx.insert(hutangTable).values({
+          usahaId,
+          pelangganId: newPelangganId,
+          tanggalHutang: h.tanggal_hutang,
+          keterangan: h.keterangan ?? null,
+          nominalHutang: h.nominal_hutang.toString(),
+          totalDibayar: h.total_dibayar.toString(),
+          sisaHutang: h.sisa_hutang.toString(),
+          status: h.status,
+        }).returning();
+        hutangIdMap.set(h.id, inserted.id);
+      }
 
-  // 4. Restore hutang — bangun peta ID lama → baru
-  const hutangIdMap = new Map<number, number>();
-  for (const h of backup.hutang) {
-    const newPelangganId = pelangganIdMap.get(h.pelanggan_id) ?? h.pelanggan_id;
-    const [inserted] = await db.insert(hutangTable).values({
-      usahaId,
-      pelangganId: newPelangganId,
-      tanggalHutang: h.tanggal_hutang,
-      keterangan: h.keterangan ?? null,
-      nominalHutang: h.nominal_hutang.toString(),
-      totalDibayar: h.total_dibayar.toString(),
-      sisaHutang: h.sisa_hutang.toString(),
-      status: h.status,
-    }).returning();
-    hutangIdMap.set(h.id, inserted.id);
-  }
+      // 5. Restore pembayaran (dengan nomor kwitansi & link ke keuangan baru)
+      for (const p of backup.pembayaran) {
+        const newHutangId    = hutangIdMap.get(p.hutang_id) ?? p.hutang_id;
+        const newPelangganId = pelangganIdMap.get(p.pelanggan_id) ?? p.pelanggan_id;
+        const newKeuanganId  = p.keuangan_id != null ? (keuanganIdMap.get(p.keuangan_id) ?? null) : null;
+        await tx.insert(pembayaranTable).values({
+          usahaId,
+          hutangId: newHutangId,
+          pelangganId: newPelangganId,
+          tanggalBayar: p.tanggal_bayar,
+          nominalBayar: p.nominal_bayar.toString(),
+          catatan: p.catatan ?? null,
+          nomorKwitansi: p.nomor_kwitansi ?? null,
+          sisaHutangSetelah: p.sisa_hutang_setelah != null ? p.sisa_hutang_setelah.toString() : null,
+          keuanganId: newKeuanganId,
+        });
+      }
 
-  // 5. Restore pembayaran (dengan nomor kwitansi & link ke keuangan baru)
-  for (const p of backup.pembayaran) {
-    const newHutangId    = hutangIdMap.get(p.hutang_id) ?? p.hutang_id;
-    const newPelangganId = pelangganIdMap.get(p.pelanggan_id) ?? p.pelanggan_id;
-    const newKeuanganId  = p.keuangan_id != null ? (keuanganIdMap.get(p.keuangan_id) ?? null) : null;
-    await db.insert(pembayaranTable).values({
-      usahaId,
-      hutangId: newHutangId,
-      pelangganId: newPelangganId,
-      tanggalBayar: p.tanggal_bayar,
-      nominalBayar: p.nominal_bayar.toString(),
-      catatan: p.catatan ?? null,
-      nomorKwitansi: p.nomor_kwitansi ?? null,
-      sisaHutangSetelah: p.sisa_hutang_setelah != null ? p.sisa_hutang_setelah.toString() : null,
-      keuanganId: newKeuanganId,
+      // 6. Restore transaksi stok (dengan link ke barang & keuangan baru)
+      if (Array.isArray(backup.transaksi_stok)) {
+        for (const t of backup.transaksi_stok) {
+          const newBarangId   = barangIdMap.get(t.barang_id) ?? t.barang_id;
+          const newKeuanganId = t.keuangan_id != null ? (keuanganIdMap.get(t.keuangan_id) ?? null) : null;
+          await tx.insert(transaksiStokTable).values({
+            usahaId,
+            barangId: newBarangId,
+            tanggal: t.tanggal,
+            tipe: t.tipe,
+            jumlah: t.jumlah.toString(),
+            hargaSatuan: t.harga_satuan.toString(),
+            keterangan: t.keterangan ?? null,
+            keuanganId: newKeuanganId,
+          });
+        }
+      }
+
+      // 7. Restore transaksi kasir — bangun peta ID lama → baru
+      const kasirIdMap = new Map<number, number>();
+      if (Array.isArray(backup.transaksi_kasir)) {
+        for (const k of backup.transaksi_kasir) {
+          const [inserted] = await tx.insert(transaksiKasirTable).values({
+            usahaId,
+            tanggal: k.tanggal,
+            total: k.total.toString(),
+            uangBayar: k.uang_bayar.toString(),
+            kembalian: k.kembalian.toString(),
+            catatan: k.catatan ?? null,
+          }).returning();
+          kasirIdMap.set(k.id, inserted.id);
+        }
+      }
+
+      // 8. Restore item kasir (dengan link ke kasir baru & barang baru)
+      if (Array.isArray(backup.transaksi_kasir_item)) {
+        for (const i of backup.transaksi_kasir_item) {
+          const newKasirId  = kasirIdMap.get(i.transaksi_kasir_id) ?? i.transaksi_kasir_id;
+          const newBarangId = barangIdMap.get(i.barang_id) ?? i.barang_id;
+          await tx.insert(transaksiKasirItemTable).values({
+            transaksiKasirId: newKasirId,
+            barangId: newBarangId,
+            namaBarang: i.nama_barang,
+            satuan: i.satuan,
+            jumlah: i.jumlah.toString(),
+            hargaSatuan: i.harga_satuan.toString(),
+            subtotal: i.subtotal.toString(),
+          });
+        }
+      }
+
+      // 9. Perbarui info usaha dari backup (mendukung migrasi PC / install baru)
+      if (backup.usaha && typeof backup.usaha === "object") {
+        await tx.update(usahaTable).set({
+          namaUsaha: backup.usaha.nama_usaha ?? undefined,
+          alamat:    backup.usaha.alamat    ?? null,
+          telepon:   backup.usaha.telepon   ?? null,
+          catatan:   backup.usaha.catatan   ?? null,
+        }).where(eq(usahaTable.id, usahaId));
+      }
     });
-  }
-
-  // 6. Restore transaksi stok (dengan link ke barang & keuangan baru)
-  if (Array.isArray(backup.transaksi_stok)) {
-    for (const t of backup.transaksi_stok) {
-      const newBarangId   = barangIdMap.get(t.barang_id) ?? t.barang_id;
-      const newKeuanganId = t.keuangan_id != null ? (keuanganIdMap.get(t.keuangan_id) ?? null) : null;
-      await db.insert(transaksiStokTable).values({
-        usahaId,
-        barangId: newBarangId,
-        tanggal: t.tanggal,
-        tipe: t.tipe,
-        jumlah: t.jumlah.toString(),
-        hargaSatuan: t.harga_satuan.toString(),
-        keterangan: t.keterangan ?? null,
-        keuanganId: newKeuanganId,
-      });
-    }
-  }
-
-  // 7. Restore transaksi kasir — bangun peta ID lama → baru
-  const kasirIdMap = new Map<number, number>();
-  if (Array.isArray(backup.transaksi_kasir)) {
-    for (const k of backup.transaksi_kasir) {
-      const [inserted] = await db.insert(transaksiKasirTable).values({
-        usahaId,
-        tanggal: k.tanggal,
-        total: k.total.toString(),
-        uangBayar: k.uang_bayar.toString(),
-        kembalian: k.kembalian.toString(),
-        catatan: k.catatan ?? null,
-      }).returning();
-      kasirIdMap.set(k.id, inserted.id);
-    }
-  }
-
-  // 8. Restore item kasir (dengan link ke kasir baru & barang baru)
-  if (Array.isArray(backup.transaksi_kasir_item)) {
-    for (const i of backup.transaksi_kasir_item) {
-      const newKasirId = kasirIdMap.get(i.transaksi_kasir_id) ?? i.transaksi_kasir_id;
-      const newBarangId = barangIdMap.get(i.barang_id) ?? i.barang_id;
-      await db.insert(transaksiKasirItemTable).values({
-        transaksiKasirId: newKasirId,
-        barangId: newBarangId,
-        namaBarang: i.nama_barang,
-        satuan: i.satuan,
-        jumlah: i.jumlah.toString(),
-        hargaSatuan: i.harga_satuan.toString(),
-        subtotal: i.subtotal.toString(),
-      });
-    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: `Restore gagal, semua perubahan dibatalkan: ${message}` });
+    return;
   }
 
   res.json({ message: "Restore data berhasil." });

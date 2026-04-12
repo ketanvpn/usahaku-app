@@ -806,3 +806,4 @@ Hubungi Super Admin untuk melakukan reset password melalui menu **Admin → Kelo
 | 1.0.7 | GitHub Actions auto-build & release diperbaiki |
 | 1.0.8 | Fix: dialog crash palsu saat menutup aplikasi |
 | 1.0.9 | Fitur: Export Excel di semua laporan, Restore dari auto-backup .db dengan pengaman rollback otomatis |
+| 1.0.10 | Perbaikan: Restore JSON kini aman (database transaction), mendukung pindah PC, menampilkan nama usaha di preview |

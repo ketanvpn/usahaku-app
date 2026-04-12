@@ -13,6 +13,7 @@ interface BackupPreview {
   hutang: number;
   pembayaran: number;
   usaha_id: number;
+  nama_usaha?: string;
   exported_at?: string;
 }
 
@@ -139,6 +140,7 @@ export default function BackupPage() {
           hutang: Array.isArray(data.hutang) ? data.hutang.length : 0,
           pembayaran: Array.isArray(data.pembayaran) ? data.pembayaran.length : 0,
           usaha_id: data.usaha_id,
+          nama_usaha: data.usaha?.nama_usaha ?? undefined,
           exported_at: data.exported_at,
         });
       } catch {
@@ -343,10 +345,15 @@ export default function BackupPage() {
 
             {preview && !previewError && (
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <div className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-1">
+                <div className="text-sm font-semibold text-blue-800 mb-1 flex items-center gap-1">
                   <FileJson className="h-4 w-4" />
                   Preview Data: {file?.name}
                 </div>
+                {preview.nama_usaha && (
+                  <div className="text-xs text-blue-600 mb-2 bg-blue-100 rounded px-2 py-1">
+                    Usaha dalam backup: <strong>{preview.nama_usaha}</strong>
+                  </div>
+                )}
                 <div className="grid grid-cols-3 gap-2">
                   <div className="text-center p-2 bg-white rounded border border-blue-100">
                     <Users className="h-4 w-4 mx-auto mb-1 text-blue-500" />
@@ -409,6 +416,9 @@ export default function BackupPage() {
                 </p>
                 {preview && (
                   <div className="p-3 bg-muted rounded-md text-sm space-y-1">
+                    {preview.nama_usaha && (
+                      <div className="font-semibold text-primary">Usaha: {preview.nama_usaha}</div>
+                    )}
                     <div className="font-semibold mb-1">Data yang akan direstore:</div>
                     <div>{preview.pelanggan} pelanggan</div>
                     <div>{preview.hutang} hutang</div>
