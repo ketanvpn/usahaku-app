@@ -411,6 +411,23 @@ function createLoadingWindow(): void {
     return { action: "deny" };
   });
 
+  mainWindow.on("close", (e) => {
+    // Auto-backup sebelum tutup (hanya di production/release)
+    if (!isDev) {
+      e.preventDefault();
+      // Matikan backend dulu agar SQLite selesai menulis
+      if (backendProcess) {
+        backendProcess.kill();
+        backendProcess = null;
+      }
+      // Beri waktu 400ms agar SQLite flush WAL ke disk
+      setTimeout(() => {
+        performAutoBackup();
+        mainWindow?.destroy();
+      }, 400);
+    }
+  });
+
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
@@ -481,6 +498,45 @@ app.whenReady().then(async () => {
     app.quit();
   }
 });
+
+// ── Auto-backup on close ─────────────────────────────────────────────────────
+function getAutoBackupDir(): string {
+  return path.join(app.getPath("documents"), "UsahakuBackup");
+}
+
+function performAutoBackup(): void {
+  const dbPath = getDbPath();
+  if (!fs.existsSync(dbPath)) {
+    writeLog("Auto-backup: DB tidak ditemukan, dilewati");
+    return;
+  }
+  const backupDir = getAutoBackupDir();
+  try {
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    const now = new Date();
+    const datePart = now.toISOString().slice(0, 10);
+    const timePart = now.toTimeString().slice(0, 8).replace(/:/g, "-");
+    const backupFile = path.join(backupDir, `usahaku_${datePart}_${timePart}.db`);
+    fs.copyFileSync(dbPath, backupFile);
+    writeLog(`Auto-backup tersimpan: ${backupFile}`);
+
+    // Hapus backup lama, simpan maksimal 7 file terbaru
+    const allFiles = fs.readdirSync(backupDir)
+      .filter((f) => f.startsWith("usahaku_") && f.endsWith(".db"))
+      .sort()
+      .map((f) => path.join(backupDir, f));
+    if (allFiles.length > 7) {
+      allFiles.slice(0, allFiles.length - 7).forEach((f) => {
+        try { fs.unlinkSync(f); } catch {}
+      });
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    writeLog(`Auto-backup gagal: ${msg}`);
+  }
+}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {

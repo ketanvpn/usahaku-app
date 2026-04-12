@@ -14,6 +14,8 @@ Key features:
 - Laporan: tab Penjualan Kasir (harian/bulanan chart, top produk, export CSV/PDF), Hutang, Keuangan, Stok
 - Dashboard: kasir summary cards (hari ini & bulan ini), tren keuangan chart
 - Backup/restore (v1.2 format includes kasir tables)
+- Pengingat backup otomatis: banner kuning muncul jika belum backup > 7 hari (localStorage-based)
+- Auto-backup saat tutup aplikasi: salin file .db ke Documents/UsahakuBackup/, simpan 7 file terbaru (production/Electron only)
 - Offline license key system
 - Auto-update (electron-updater, GitHub releases) + manual check button + version display in sidebar
 
