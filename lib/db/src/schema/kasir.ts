@@ -6,6 +6,7 @@ export const transaksiKasirTable = sqliteTable("transaksi_kasir", {
   usahaId: integer("usaha_id").notNull().references(() => usahaTable.id),
   tanggal: text("tanggal").notNull(),
   total: text("total").notNull().default("0"),
+  diskon: text("diskon").notNull().default("0"),
   uangBayar: text("uang_bayar").notNull().default("0"),
   kembalian: text("kembalian").notNull().default("0"),
   catatan: text("catatan"),

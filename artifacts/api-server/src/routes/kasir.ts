@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, barangTable, transaksiStokTable, keuanganTable, transaksiKasirTable, transaksiKasirItemTable } from "@workspace/db";
+import { db, barangTable, transaksiStokTable, keuanganTable, transaksiKasirTable, transaksiKasirItemTable, usahaTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth, requireLicense } from "../middlewares/auth";
 import { z } from "zod";
@@ -17,6 +17,7 @@ const KasirItemSchema = z.object({
 const KasirTransaksiSchema = z.object({
   tanggal: z.string().min(1, "Tanggal wajib diisi").regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal tidak valid (YYYY-MM-DD)"),
   uang_bayar: z.coerce.number({ error: "Uang bayar harus berupa angka" }).positive("Uang bayar harus lebih dari 0"),
+  diskon: z.coerce.number({ error: "Diskon harus berupa angka" }).min(0).default(0),
   catatan: z.string().trim().optional(),
   items: z.array(KasirItemSchema).min(1, "Minimal 1 item harus dimasukkan"),
 });
@@ -34,7 +35,10 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
     return;
   }
 
-  const { tanggal, uang_bayar, catatan, items } = parsed.data;
+  const { tanggal, uang_bayar, diskon, catatan, items } = parsed.data;
+
+  // Ambil nama usaha untuk struk
+  const [usaha] = await db.select().from(usahaTable).where(eq(usahaTable.id, usahaId));
 
   // Validasi stok semua barang (di luar transaksi — hanya baca)
   const barangList: Array<typeof barangTable.$inferSelect> = [];
@@ -53,15 +57,19 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
     barangList.push(barang);
   }
 
-  // Hitung total
-  let total = 0;
+  // Hitung subtotal item
+  let subtotalItems = 0;
   const itemsCalc = items.map((item, i) => {
     const barang = barangList[i];
     const harga = item.harga_satuan ?? parseFloat(barang.hargaJual);
     const subtotal = item.jumlah * harga;
-    total += subtotal;
+    subtotalItems += subtotal;
     return { barang, jml: item.jumlah, harga, subtotal };
   });
+
+  // Terapkan diskon
+  const nominalDiskon = Math.min(diskon, subtotalItems);
+  const total = subtotalItems - nominalDiskon;
 
   if (uang_bayar < total) {
     res.status(400).json({ error: `Uang bayar kurang. Total: ${total}, Uang bayar: ${uang_bayar}` });
@@ -101,6 +109,7 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
       usahaId,
       tanggal,
       total: String(total),
+      diskon: String(nominalDiskon),
       uangBayar: String(uang_bayar),
       kembalian: String(kembalian),
       catatan: catatan || null,
@@ -126,6 +135,9 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
   res.status(201).json({
     id: kasir.id,
     tanggal: kasir.tanggal,
+    nama_usaha: usaha?.namaUsaha ?? "Usahaku",
+    subtotal: subtotalItems,
+    diskon: nominalDiskon,
     total,
     uang_bayar,
     kembalian,
@@ -159,6 +171,7 @@ router.get("/kasir/transaksi", requireAuth, async (req, res): Promise<void> => {
       id: k.id,
       tanggal: k.tanggal,
       total: parseFloat(k.total),
+      diskon: parseFloat(k.diskon ?? "0"),
       uang_bayar: parseFloat(k.uangBayar),
       kembalian: parseFloat(k.kembalian),
       catatan: k.catatan ?? null,

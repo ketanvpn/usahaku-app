@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import * as XLSX from "xlsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, Plus, Edit, Trash2, Package, AlertTriangle, ArrowDownCircle, ArrowUpCircle, RefreshCw } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Package, AlertTriangle, ArrowDownCircle, ArrowUpCircle, RefreshCw, Upload, FileSpreadsheet, CheckCircle2 } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -70,6 +71,18 @@ type TransaksiForm = z.infer<typeof transaksiSchema>;
 
 const BULAN_NAMES = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
+interface ImportRow {
+  nama: string;
+  satuan: string;
+  kategori?: string;
+  harga_beli: number;
+  harga_jual: number;
+  stok_awal: number;
+  stok_minimum: number;
+  _valid: boolean;
+  _error?: string;
+}
+
 async function apiFetch(path: string, options?: RequestInit) {
   const r = await fetch(`${BASE}${path}`, { credentials: "include", ...options });
   if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || "Terjadi kesalahan"); }
@@ -90,6 +103,12 @@ export default function StokPage() {
   const [filterTahun, setFilterTahun] = useState(String(now.getFullYear()));
   const [filterNama, setFilterNama] = useState("");
   const [filterKategori, setFilterKategori] = useState("__all__");
+
+  // Import barang
+  const [importDialog, setImportDialog] = useState(false);
+  const [importRows, setImportRows] = useState<ImportRow[]>([]);
+  const [importError, setImportError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: barangList = [], isLoading: loadingBarang } = useQuery<Barang[]>({
     queryKey: ["barang"],
@@ -124,6 +143,69 @@ export default function StokPage() {
     qc.invalidateQueries({ queryKey: ["keuangan-rekap-kategori"] });
     qc.invalidateQueries({ queryKey: ["keuangan-rekap-bulanan"] });
   };
+
+  // Import barang
+  const importMutation = useMutation({
+    mutationFn: (items: ImportRow[]) => apiFetch("/api/barang/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    }),
+    onSuccess: (data) => {
+      toast({ title: "Import selesai", description: data.message });
+      setImportDialog(false);
+      setImportRows([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      invalidate();
+    },
+    onError: (e: Error) => toast({ title: "Import gagal", description: e.message, variant: "destructive" }),
+  });
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    setImportError("");
+    setImportRows([]);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = ev.target?.result;
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
+
+        if (raw.length === 0) { setImportError("File kosong atau format tidak sesuai"); return; }
+
+        const rows: ImportRow[] = raw.map((r) => {
+          const nama = String(r["Nama"] ?? r["nama"] ?? "").trim();
+          const satuan = String(r["Satuan"] ?? r["satuan"] ?? "").trim();
+          const harga_beli = Number(r["Harga Beli"] ?? r["harga_beli"] ?? 0);
+          const harga_jual = Number(r["Harga Jual"] ?? r["harga_jual"] ?? 0);
+          const stok_awal = Number(r["Stok Awal"] ?? r["stok_awal"] ?? 0);
+          const stok_minimum = Number(r["Stok Minimum"] ?? r["stok_minimum"] ?? 0);
+          const kategori = String(r["Kategori"] ?? r["kategori"] ?? "").trim();
+
+          const valid = !!nama && !!satuan;
+          return { nama, satuan, kategori, harga_beli, harga_jual, stok_awal, stok_minimum, _valid: valid, _error: !valid ? "Nama / Satuan kosong" : undefined };
+        });
+
+        setImportRows(rows);
+      } catch {
+        setImportError("Gagal membaca file. Pastikan format Excel/CSV benar.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function downloadTemplate() {
+    const ws = XLSX.utils.json_to_sheet([
+      { Nama: "Contoh Barang", Satuan: "pcs", Kategori: "Minuman", "Harga Beli": 5000, "Harga Jual": 7000, "Stok Awal": 10, "Stok Minimum": 2 },
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Barang");
+    XLSX.writeFile(wb, "template_import_barang.xlsx");
+  }
 
   // Form barang
   const barangForm = useForm<BarangForm>({
@@ -222,6 +304,9 @@ export default function StokPage() {
           </Button>
           <Button variant="outline" className="border-red-500 text-red-700 hover:bg-red-50" onClick={() => openTransaksi("keluar")}>
             <ArrowUpCircle className="h-4 w-4 mr-2" /> Barang Keluar
+          </Button>
+          <Button variant="outline" onClick={() => { setImportRows([]); setImportError(""); setImportDialog(true); }}>
+            <Upload className="h-4 w-4 mr-2" /> Import Excel
           </Button>
           <Button onClick={openTambahBarang}>
             <Plus className="h-4 w-4 mr-2" /> Tambah Barang
@@ -672,6 +757,115 @@ export default function StokPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog Import Barang */}
+      <Dialog open={importDialog} onOpenChange={(open) => { if (!open) { setImportDialog(false); setImportRows([]); setImportError(""); if (fileInputRef.current) fileInputRef.current.value = ""; } }}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" /> Import Barang dari Excel / CSV
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 flex-1 overflow-y-auto">
+            {/* Info kolom */}
+            <div className="bg-muted/50 rounded-lg p-3 text-xs space-y-1">
+              <p className="font-semibold">Kolom yang dibutuhkan:</p>
+              <p className="text-muted-foreground">Nama*, Satuan*, Kategori, Harga Beli, Harga Jual, Stok Awal, Stok Minimum</p>
+              <p className="text-muted-foreground text-[11px]">* wajib diisi. Baris tanpa Nama/Satuan akan dilewati.</p>
+            </div>
+
+            {/* Download template + Upload */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <Button variant="outline" size="sm" onClick={downloadTemplate}>
+                <FileSpreadsheet className="h-4 w-4 mr-1.5" /> Download Template
+              </Button>
+              <div className="flex-1 min-w-[200px]">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="import-file-input"
+                />
+                <label htmlFor="import-file-input">
+                  <Button variant="outline" size="sm" asChild>
+                    <span className="cursor-pointer">
+                      <Upload className="h-4 w-4 mr-1.5" /> Pilih File Excel / CSV
+                    </span>
+                  </Button>
+                </label>
+              </div>
+            </div>
+
+            {importError && (
+              <p className="text-sm text-destructive bg-destructive/10 rounded p-2">{importError}</p>
+            )}
+
+            {/* Preview tabel */}
+            {importRows.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">{importRows.length} baris ditemukan</p>
+                  <Badge variant="secondary">{importRows.filter(r => r._valid).length} valid</Badge>
+                  {importRows.some(r => !r._valid) && (
+                    <Badge variant="destructive">{importRows.filter(r => !r._valid).length} dilewati</Badge>
+                  )}
+                </div>
+                <div className="overflow-x-auto border rounded-lg max-h-64">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-6"></TableHead>
+                        <TableHead>Nama</TableHead>
+                        <TableHead>Satuan</TableHead>
+                        <TableHead>Kategori</TableHead>
+                        <TableHead className="text-right">H. Beli</TableHead>
+                        <TableHead className="text-right">H. Jual</TableHead>
+                        <TableHead className="text-right">Stok</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {importRows.map((row, i) => (
+                        <TableRow key={i} className={!row._valid ? "opacity-40 bg-red-50" : ""}>
+                          <TableCell>
+                            {row._valid
+                              ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                              : <span className="text-destructive text-xs">✕</span>}
+                          </TableCell>
+                          <TableCell className="font-medium text-sm">{row.nama || "—"}</TableCell>
+                          <TableCell className="text-sm">{row.satuan || "—"}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{row.kategori || "—"}</TableCell>
+                          <TableCell className="text-right text-sm">{formatRupiah(row.harga_beli)}</TableCell>
+                          <TableCell className="text-right text-sm">{formatRupiah(row.harga_jual)}</TableCell>
+                          <TableCell className="text-right text-sm">{row.stok_awal}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex gap-2 pt-2 border-t mt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setImportDialog(false)}>
+              Batal
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={importRows.filter(r => r._valid).length === 0 || importMutation.isPending}
+              onClick={() => importMutation.mutate(importRows.filter(r => r._valid))}
+            >
+              {importMutation.isPending
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Mengimport...</>
+                : <><Upload className="h-4 w-4 mr-2" />Import {importRows.filter(r => r._valid).length} Barang</>}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

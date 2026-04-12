@@ -352,4 +352,75 @@ router.delete("/stok/transaksi/:id", requireAuth, requireLicense, async (req, re
   res.json({ message: "Riwayat transaksi berhasil dihapus", stok_baru: stokBaru });
 });
 
+// ─── Import Barang via Excel/CSV ──────────────────────────────────────────────
+
+const ImportBarangItemSchema = z.object({
+  nama: z.string().min(1, "Nama wajib diisi").trim(),
+  satuan: z.string().min(1, "Satuan wajib diisi").trim(),
+  kategori: z.string().trim().optional(),
+  harga_beli: z.coerce.number().min(0).default(0),
+  harga_jual: z.coerce.number().min(0).default(0),
+  stok_awal: z.coerce.number().min(0).default(0),
+  stok_minimum: z.coerce.number().min(0).default(0),
+});
+
+const ImportBarangSchema = z.object({
+  items: z.array(ImportBarangItemSchema).min(1, "Minimal 1 barang harus diimport"),
+});
+
+// POST /api/barang/import — import banyak barang sekaligus
+router.post("/barang/import", requireAuth, requireLicense, async (req, res): Promise<void> => {
+  const usahaId = req.session.usahaId;
+  if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  const parsed = ImportBarangSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid" });
+    return;
+  }
+
+  const { items } = parsed.data;
+  let berhasil = 0;
+  let dilewati = 0;
+
+  for (const item of items) {
+    const stokAwal = item.stok_awal ?? 0;
+    try {
+      db.transaction((tx) => {
+        const [barang] = tx.insert(barangTable).values({
+          usahaId,
+          nama: item.nama,
+          satuan: item.satuan,
+          kategori: item.kategori ?? "",
+          hargaBeli: String(item.harga_beli),
+          hargaJual: String(item.harga_jual),
+          stok: String(stokAwal),
+          stokMinimum: String(item.stok_minimum),
+        }).returning().all();
+
+        if (stokAwal > 0) {
+          tx.insert(transaksiStokTable).values({
+            usahaId,
+            barangId: barang.id,
+            tanggal: new Date().toISOString().slice(0, 10),
+            tipe: "masuk",
+            jumlah: String(stokAwal),
+            hargaSatuan: String(item.harga_beli),
+            keterangan: "Stok awal (import)",
+          }).run();
+        }
+      });
+      berhasil++;
+    } catch {
+      dilewati++;
+    }
+  }
+
+  res.status(201).json({
+    message: `Import selesai: ${berhasil} barang ditambahkan, ${dilewati} dilewati`,
+    berhasil,
+    dilewati,
+  });
+});
+
 export default router;

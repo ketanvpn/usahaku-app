@@ -6,16 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, Loader2, Receipt, Printer } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, Loader2, Receipt, Printer, Tag } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
 
-function openPrintStruk(hasil: HasilTransaksi, namaUsaha?: string) {
+function openPrintStruk(hasil: HasilTransaksi) {
   const tgl = new Date(hasil.tanggal + "T00:00:00").toLocaleDateString("id-ID", {
     day: "numeric", month: "long", year: "numeric",
   });
   const rows = hasil.items.map(i =>
     `<tr><td>${i.nama_barang}</td><td class="right">${i.jumlah} ${i.satuan}</td><td class="right">${fmt(i.harga_satuan)}</td><td class="right">${fmt(i.subtotal)}</td></tr>`
   ).join("");
+
+  const diskonRow = hasil.diskon > 0
+    ? `<tr><td colspan="3">Diskon</td><td class="right">-${fmt(hasil.diskon)}</td></tr>`
+    : "";
+
   const html = `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
 <style>
 @page{size:80mm auto;margin:4mm 4mm}
@@ -29,7 +34,7 @@ td{padding:1px 2px;font-size:10pt}
 </style>
 <script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);})<\/script>
 </head><body>
-<div class="center bold" style="font-size:13pt">${namaUsaha || "Usahaku"}</div>
+<div class="center bold" style="font-size:13pt">${hasil.nama_usaha || "Usahaku"}</div>
 <div class="center" style="font-size:9pt;margin-bottom:4px">by KetanTech</div>
 <div class="sep"></div>
 <div style="font-size:9pt">Tanggal : ${tgl}</div>
@@ -41,9 +46,10 @@ td{padding:1px 2px;font-size:10pt}
 </table>
 <div class="sep"></div>
 <table>
-<tr><td class="bold">TOTAL</td><td class="right bold" colspan="3">${fmt(hasil.total)}</td></tr>
+${hasil.diskon > 0 ? `<tr><td>Subtotal</td><td class="right" colspan="3">${fmt(hasil.subtotal)}</td></tr>${diskonRow}` : ""}
+<tr class="total"><td>TOTAL</td><td class="right bold" colspan="3">${fmt(hasil.total)}</td></tr>
 <tr><td>Bayar</td><td class="right" colspan="3">${fmt(hasil.uang_bayar)}</td></tr>
-<tr class="total"><td>Kembali</td><td class="right" colspan="3">${fmt(hasil.kembalian)}</td></tr>
+<tr><td>Kembali</td><td class="right" colspan="3">${fmt(hasil.kembalian)}</td></tr>
 </table>
 <div class="sep"></div>
 <div class="center" style="font-size:9pt;margin-top:4px">Terima kasih!</div>
@@ -81,6 +87,9 @@ interface CartItem {
 interface HasilTransaksi {
   id: number;
   tanggal: string;
+  nama_usaha: string;
+  subtotal: number;
+  diskon: number;
   total: number;
   uang_bayar: number;
   kembalian: number;
@@ -100,6 +109,8 @@ export default function KasirPage() {
   const [qtyInputs, setQtyInputs] = useState<Record<number, string>>({});
   const [uangBayar, setUangBayar] = useState("");
   const [catatan, setCatatan] = useState("");
+  const [diskonInput, setDiskonInput] = useState("");
+  const [diskonMode, setDiskonMode] = useState<"persen" | "nominal">("persen");
   const [hasil, setHasil] = useState<HasilTransaksi | null>(null);
   const [showHasil, setShowHasil] = useState(false);
 
@@ -117,7 +128,14 @@ export default function KasirPage() {
       b.nama.toLowerCase().includes(search.toLowerCase()) && b.stok > 0
     ), [barangList, search]);
 
-  const total = cart.reduce((s, i) => s + i.barang.harga_jual * i.jumlah, 0);
+  const subtotal = cart.reduce((s, i) => s + i.barang.harga_jual * i.jumlah, 0);
+
+  const diskonAngka = parseFloat(diskonInput) || 0;
+  const nominalDiskon = diskonMode === "persen"
+    ? Math.min(subtotal * diskonAngka / 100, subtotal)
+    : Math.min(diskonAngka, subtotal);
+
+  const total = subtotal - nominalDiskon;
   const uangBayarNum = parseFloat(uangBayar.replace(/[^0-9]/g, "")) || 0;
   const kembalian = uangBayarNum - total;
 
@@ -183,6 +201,7 @@ export default function KasirPage() {
     setQtyInputs({});
     setUangBayar("");
     setCatatan("");
+    setDiskonInput("");
     setHasil(null);
   }
 
@@ -195,6 +214,7 @@ export default function KasirPage() {
           jumlah: i.jumlah,
           harga_satuan: i.barang.harga_jual,
         })),
+        diskon: nominalDiskon,
         uang_bayar: uangBayarNum,
         catatan: catatan || undefined,
       };
@@ -336,7 +356,47 @@ export default function KasirPage() {
         </div>
 
         {/* Total & Pembayaran */}
-        <div className="p-3 border-t space-y-3">
+        <div className="p-3 border-t space-y-2.5">
+          {/* Diskon */}
+          {cart.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <Tag className="h-3 w-3" /> Diskon
+                </label>
+                <div className="flex rounded overflow-hidden border text-xs">
+                  <button
+                    onClick={() => setDiskonMode("persen")}
+                    className={`px-2 py-0.5 transition-colors ${diskonMode === "persen" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                  >%</button>
+                  <button
+                    onClick={() => setDiskonMode("nominal")}
+                    className={`px-2 py-0.5 transition-colors ${diskonMode === "nominal" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                  >Rp</button>
+                </div>
+              </div>
+              <Input
+                placeholder={diskonMode === "persen" ? "0 %" : "0 Rupiah"}
+                value={diskonInput}
+                onChange={e => setDiskonInput(e.target.value)}
+                type="number"
+                min={0}
+                max={diskonMode === "persen" ? 100 : undefined}
+                className="text-sm"
+              />
+              {nominalDiskon > 0 && (
+                <p className="text-xs text-emerald-600 text-right">Hemat {formatRupiah(nominalDiskon)}</p>
+              )}
+            </div>
+          )}
+
+          {/* Subtotal & Total */}
+          {nominalDiskon > 0 && (
+            <div className="flex justify-between items-center text-sm text-muted-foreground">
+              <span>Subtotal</span>
+              <span>{formatRupiah(subtotal)}</span>
+            </div>
+          )}
           <div className="flex justify-between items-center">
             <span className="font-semibold">Total</span>
             <span className="text-xl font-bold text-primary">{formatRupiah(total)}</span>
@@ -421,6 +481,18 @@ export default function KasirPage() {
                   </div>
                 ))}
                 <div className="border-t pt-1.5 mt-1.5 space-y-1">
+                  {hasil.diskon > 0 && (
+                    <>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Subtotal</span>
+                        <span>{formatRupiah(hasil.subtotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-emerald-600">
+                        <span>Diskon</span>
+                        <span>-{formatRupiah(hasil.diskon)}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between font-bold">
                     <span>Total</span>
                     <span className="text-primary">{formatRupiah(hasil.total)}</span>
