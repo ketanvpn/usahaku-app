@@ -499,10 +499,73 @@ app.whenReady().then(async () => {
   }
 });
 
+// ── Settings file ─────────────────────────────────────────────────────────────
+function getSettingsPath(): string {
+  return path.join(app.getPath("userData"), "settings.json");
+}
+
+function readSettings(): Record<string, unknown> {
+  try {
+    const data = fs.readFileSync(getSettingsPath(), "utf8");
+    return JSON.parse(data);
+  } catch {
+    return {};
+  }
+}
+
+function writeSettings(settings: Record<string, unknown>): void {
+  try {
+    fs.writeFileSync(getSettingsPath(), JSON.stringify(settings, null, 2), "utf8");
+  } catch (err: unknown) {
+    writeLog(`Gagal menyimpan settings: ${err}`);
+  }
+}
+
 // ── Auto-backup on close ─────────────────────────────────────────────────────
 function getAutoBackupDir(): string {
+  const settings = readSettings();
+  if (typeof settings.backupFolder === "string" && settings.backupFolder.trim()) {
+    return settings.backupFolder;
+  }
   return path.join(app.getPath("documents"), "UsahakuBackup");
 }
+
+ipcMain.handle("backup:getFolder", () => getAutoBackupDir());
+
+ipcMain.handle("backup:chooseFolder", async () => {
+  if (!mainWindow) return null;
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "Pilih Folder Backup Usahaku",
+    properties: ["openDirectory", "createDirectory"],
+    defaultPath: getAutoBackupDir(),
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  const chosen = result.filePaths[0];
+  const settings = readSettings();
+  settings.backupFolder = chosen;
+  writeSettings(settings);
+  writeLog(`Folder backup diubah ke: ${chosen}`);
+  return chosen;
+});
+
+ipcMain.handle("backup:saveManual", async (_event, jsonData: string) => {
+  if (!mainWindow) return { success: false, message: "Window tidak tersedia" };
+  const datePart = new Date().toISOString().slice(0, 10);
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: "Simpan Backup Usahaku",
+    defaultPath: path.join(getAutoBackupDir(), `usahaku_backup_${datePart}.json`),
+    filters: [{ name: "File Backup Usahaku", extensions: ["json"] }],
+  });
+  if (result.canceled || !result.filePath) return { success: false, message: "Dibatalkan" };
+  try {
+    fs.writeFileSync(result.filePath, jsonData, "utf8");
+    writeLog(`Backup manual tersimpan: ${result.filePath}`);
+    return { success: true, filePath: result.filePath };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, message: msg };
+  }
+});
 
 function performAutoBackup(): void {
   const dbPath = getDbPath();

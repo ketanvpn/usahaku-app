@@ -1,11 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { getExportBackupUrl, useImportBackup, getGetOwnerDashboardQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Loader2, Download, Upload, AlertTriangle, FileJson, Users, ReceiptText, CreditCard } from "lucide-react";
+import { Loader2, Download, Upload, AlertTriangle, FileJson, Users, ReceiptText, CreditCard, FolderOpen, HardDrive } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface BackupPreview {
@@ -22,33 +22,70 @@ export default function BackupPage() {
   const [preview, setPreview] = useState<BackupPreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isConfirmRestoreOpen, setIsConfirmRestoreOpen] = useState(false);
+  const [autoBackupFolder, setAutoBackupFolder] = useState<string>("");
+  const [isChoosingFolder, setIsChoosingFolder] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const importMutation = useImportBackup();
+  const isElectron = !!window.electronApp?.backup;
+
+  useEffect(() => {
+    if (window.electronApp?.backup) {
+      window.electronApp.backup.getFolder().then(setAutoBackupFolder).catch(() => {});
+    }
+  }, []);
+
+  const handleChooseFolder = async () => {
+    if (!window.electronApp?.backup) return;
+    setIsChoosingFolder(true);
+    try {
+      const chosen = await window.electronApp.backup.chooseFolder();
+      if (chosen) {
+        setAutoBackupFolder(chosen);
+        toast({ title: "Folder backup diperbarui", description: chosen });
+      }
+    } finally {
+      setIsChoosingFolder(false);
+    }
+  };
 
   const handleExport = async () => {
     setIsExporting(true);
     try {
       const response = await fetch(getExportBackupUrl(), { credentials: "include" });
-      if (!response.ok) throw new Error("Gagal mengunduh backup");
+      if (!response.ok) throw new Error("Gagal mengambil data backup");
 
       const data = await response.json();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
+      const jsonStr = JSON.stringify(data, null, 2);
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `backup_hutang_${new Date().toISOString().split("T")[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      localStorage.setItem("lastBackupDate", new Date().toISOString());
-      toast({ title: "Backup berhasil diunduh" });
+      if (window.electronApp?.backup?.saveManual) {
+        // Electron: buka dialog "Simpan sebagai"
+        const result = await window.electronApp.backup.saveManual(jsonStr);
+        if (!result.success) {
+          if (result.message && result.message !== "Dibatalkan") {
+            toast({ variant: "destructive", title: "Gagal menyimpan", description: result.message });
+          }
+          return;
+        }
+        localStorage.setItem("lastBackupDate", new Date().toISOString());
+        toast({ title: "Backup berhasil disimpan", description: result.filePath });
+      } else {
+        // Browser biasa: download otomatis
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `usahaku_backup_${new Date().toISOString().split("T")[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        localStorage.setItem("lastBackupDate", new Date().toISOString());
+        toast({ title: "Backup berhasil diunduh" });
+      }
     } catch (error: any) {
       toast({ variant: "destructive", title: "Gagal export", description: error.message });
     } finally {
@@ -139,6 +176,42 @@ export default function BackupPage() {
         <p className="text-muted-foreground">Amankan data usaha Anda secara berkala.</p>
       </div>
 
+      {isElectron && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <HardDrive className="h-5 w-5" />
+              Pengaturan Auto-Backup
+            </CardTitle>
+            <CardDescription>
+              Setiap kali menutup aplikasi, data otomatis dicadangkan ke folder ini. Maksimal 7 file terakhir disimpan.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2 p-3 bg-background rounded-md border text-sm">
+              <FolderOpen className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-muted-foreground flex-1 break-all">
+                {autoBackupFolder || "Memuat..."}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleChooseFolder}
+              disabled={isChoosingFolder}
+              className="w-full sm:w-auto"
+            >
+              {isChoosingFolder ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FolderOpen className="mr-2 h-4 w-4" />
+              )}
+              Ubah Folder Auto-Backup
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -147,12 +220,14 @@ export default function BackupPage() {
               Export Data
             </CardTitle>
             <CardDescription>
-              Unduh seluruh data pelanggan, hutang, dan pembayaran dalam format JSON.
+              {isElectron
+                ? "Simpan data ke file JSON — pilih lokasi penyimpanan sesuka Anda."
+                : "Unduh seluruh data pelanggan, hutang, dan pembayaran dalam format JSON."}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Lakukan backup secara rutin untuk menghindari kehilangan data. File yang diunduh
+              Lakukan backup secara rutin untuk menghindari kehilangan data. File yang disimpan
               dapat digunakan untuk restore kapan saja.
             </p>
           </CardContent>
@@ -163,7 +238,7 @@ export default function BackupPage() {
               ) : (
                 <Download className="mr-2 h-4 w-4" />
               )}
-              Unduh File Backup
+              {isElectron ? "Simpan File Backup..." : "Unduh File Backup"}
             </Button>
           </CardFooter>
         </Card>

@@ -12,6 +12,11 @@ declare global {
         download: () => Promise<void>;
         install: () => Promise<void>;
       };
+      backup?: {
+        getFolder: () => Promise<string>;
+        chooseFolder: () => Promise<string | null>;
+        saveManual: (jsonData: string) => Promise<{ success: boolean; filePath?: string; message?: string }>;
+      };
     };
   }
 }

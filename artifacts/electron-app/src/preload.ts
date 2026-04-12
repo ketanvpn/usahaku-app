@@ -19,4 +19,12 @@ contextBridge.exposeInMainWorld("electronApp", {
     install: () => ipcRenderer.invoke("update:install"),
   },
   getVersion: (): Promise<string> => ipcRenderer.invoke("app:getVersion"),
+  backup: {
+    getFolder: (): Promise<string> =>
+      ipcRenderer.invoke("backup:getFolder"),
+    chooseFolder: (): Promise<string | null> =>
+      ipcRenderer.invoke("backup:chooseFolder"),
+    saveManual: (jsonData: string): Promise<{ success: boolean; filePath?: string; message?: string }> =>
+      ipcRenderer.invoke("backup:saveManual", jsonData),
+  },
 });
