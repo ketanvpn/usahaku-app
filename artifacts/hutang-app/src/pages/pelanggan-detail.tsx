@@ -13,7 +13,7 @@ export default function PelangganDetail() {
   const id = parseInt(params?.id || "0");
 
   const { data, isLoading } = useGetPelanggan(id, {
-    query: { enabled: !!id },
+    query: { enabled: !!id, queryKey: [] as readonly unknown[] },
   });
 
   if (isLoading) {

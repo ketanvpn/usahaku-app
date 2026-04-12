@@ -22,15 +22,13 @@ import { formatRupiah, formatDate } from "@/lib/format";
 import { Loader2, Plus, Trash2, Filter, Printer } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 
-declare global {
-  interface Window {
-    electronApp?: {
-      platform: string;
-      isElectron: boolean;
-      openInBrowser: (html: string) => Promise<string>;
-    };
-  }
-}
+type PembayaranFull = Pembayaran & {
+  nomor_kwitansi?: string;
+  nama_usaha?: string;
+  hutang_keterangan?: string;
+  hutang_nominal?: number;
+  sisa_hutang_setelah?: number;
+};
 
 // ─── Format helpers (untuk HTML string, bukan React) ──────────────────────────
 function fmtRupiah(n: number) {
@@ -41,7 +39,7 @@ function fmtDate(iso: string) {
 }
 
 // ─── Kwitansi HTML builder (A5 Portrait) ──────────────────────────────────────
-function buildKwitansiHtml(p: Pembayaran): string {
+function buildKwitansiHtml(p: PembayaranFull): string {
   const nomorKwitansi = p.nomor_kwitansi || `KWT-${p.id}`;
   const namaUsaha     = p.nama_usaha || "Usaha";
   const pelangganNama = p.pelanggan_nama;
@@ -131,7 +129,7 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; 
 }
 
 // ─── Open kwitansi in browser / Electron ──────────────────────────────────────
-function openKwitansi(p: Pembayaran) {
+function openKwitansi(p: PembayaranFull) {
   const html = buildKwitansiHtml(p);
   if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
     window.electronApp.openInBrowser(html);
@@ -149,14 +147,14 @@ export default function PembayaranPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPembayaran, setSelectedPembayaran] = useState<Pembayaran | null>(null);
-  const [kwitansiSetelahBayar, setKwitansiSetelahBayar] = useState<Pembayaran | null>(null);
+  const [kwitansiSetelahBayar, setKwitansiSetelahBayar] = useState<PembayaranFull | null>(null);
   const [formPelangganId, setFormPelangganId] = useState<number | null>(null);
 
   const { data: pembayaranList, isLoading } = useGetPembayaranList({ pelanggan_id: filterPelanggan });
   const { data: pelangganList } = useGetPelangganList();
   const { data: hutangAktifList } = useGetHutangList(
     { pelanggan_id: formPelangganId || undefined, status: "aktif" },
-    { query: { enabled: !!formPelangganId } }
+    { query: { enabled: !!formPelangganId, queryKey: [] as readonly unknown[] } }
   );
 
   const { toast } = useToast();
@@ -200,7 +198,7 @@ export default function PembayaranPage() {
           queryClient.invalidateQueries({ queryKey: ["keuangan"] });
           queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
           setIsDialogOpen(false);
-          setKwitansiSetelahBayar(data as unknown as Pembayaran);
+          setKwitansiSetelahBayar(data as unknown as PembayaranFull);
         },
         onError: (err: any) =>
           toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" }),
@@ -436,7 +434,7 @@ export default function PembayaranPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  pembayaranList.map((p) => (
+                  (pembayaranList as PembayaranFull[]).map((p) => (
                     <TableRow key={p.id}>
                       <TableCell className="text-xs font-mono text-muted-foreground whitespace-nowrap">
                         {p.nomor_kwitansi || `#${p.id}`}

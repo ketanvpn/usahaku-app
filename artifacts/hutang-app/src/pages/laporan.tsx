@@ -48,16 +48,6 @@ function fmtDate(iso: string) {
 // Electron build : kirim HTML ke main process → tulis ke file temp →
 //                  shell.openPath() buka di browser default → Ctrl+P / Save as PDF
 // Browser biasa  : buka via blob URL di tab baru
-declare global {
-  interface Window {
-    electronApp?: {
-      platform: string;
-      isElectron: boolean;
-      openInBrowser: (html: string) => Promise<string>;
-    };
-  }
-}
-
 function openPrintWindow(html: string) {
   if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
     // Electron: tulis ke temp file lalu buka di browser default
@@ -324,7 +314,7 @@ export default function LaporanPage() {
 
   const { data: pelangganList } = useGetPelangganList();
   const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, {
-    query: { enabled: !!user?.usaha_id },
+    query: { enabled: !!user?.usaha_id, queryKey: [] as readonly unknown[] },
   });
   const { data: laporanData, isLoading: laporanLoading } = useGetLaporan({
     pelanggan_id: filterPelanggan, status: filterStatus,

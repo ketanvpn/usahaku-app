@@ -25,16 +25,6 @@ import {
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-declare global {
-  interface Window {
-    electronApp?: {
-      platform: string;
-      isElectron: boolean;
-      openInBrowser: (html: string) => Promise<string>;
-    };
-  }
-}
-
 function openPrintWindow(html: string) {
   if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
     window.electronApp.openInBrowser(html);
@@ -220,7 +210,7 @@ export default function KeuanganPage() {
   const [editData, setEditData] = useState<KeuanganItem | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const { user } = useAuth();
-  const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, { query: { enabled: !!user?.usaha_id } });
+  const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, { query: { enabled: !!user?.usaha_id, queryKey: [] as readonly unknown[] } });
   const namaUsaha = usahaData?.nama_usaha ?? "Usahaku";
 
   const filterParams = { bulan: filterBulan, tahun: filterTahun, tipe: filterTipe };
