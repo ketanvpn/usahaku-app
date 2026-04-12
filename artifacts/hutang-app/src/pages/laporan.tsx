@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as XLSX from "xlsx";
 import {
   useGetLaporan,
   useGetPelangganList,
@@ -23,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Download, Printer, Filter, X, TrendingUp, TrendingDown, Wallet, Package,
-  ShoppingBag, BarChart2, Receipt,
+  ShoppingBag, BarChart2, Receipt, FileSpreadsheet,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
@@ -475,6 +476,129 @@ export default function LaporanPage() {
       `laporan_kasir_${kasirTahun}_${String(kasirBulan).padStart(2,"0")}.csv`);
   };
 
+  // ── Excel export helpers ──
+  function downloadXlsx(wb: XLSX.WorkBook, filename: string) {
+    XLSX.writeFile(wb, filename);
+  }
+
+  const handleExportHutangXlsx = () => {
+    if (!laporanData?.length) return;
+    const wb = XLSX.utils.book_new();
+    const title = isSinglePelanggan ? `Riwayat Hutang: ${selectedPelanggan?.nama}` : "Laporan Hutang & Pembayaran";
+    const rows: (string | number)[][] = [
+      [namaUsaha],
+      [title],
+      [`Tanggal Cetak: ${tanggalCetak}`],
+      [],
+      ["Tanggal Hutang","Pelanggan","Keterangan","Status","Nominal Hutang","Total Dibayar","Sisa Hutang"],
+      ...laporanData.map(r => [
+        r.tanggal_hutang.split("T")[0],
+        r.nama_pelanggan,
+        r.keterangan || "",
+        r.status === "aktif" ? "Aktif" : "Lunas",
+        r.nominal_hutang,
+        r.total_dibayar,
+        r.sisa_hutang,
+      ]),
+      ["","","","TOTAL", totalHutang, totalDibayar, totalSisa],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = [14,18,22,8,16,16,14].map(w => ({ wch: w }));
+    XLSX.utils.book_append_sheet(wb, ws, "Laporan Hutang");
+    downloadXlsx(wb, `laporan_hutang_${new Date().toISOString().split("T")[0]}.xlsx`);
+  };
+
+  const handleExportKeuanganXlsx = () => {
+    if (!keuanganData.length) return;
+    const wb = XLSX.utils.book_new();
+    const rows: (string | number)[][] = [
+      [namaUsaha],
+      ["Laporan Keuangan"],
+      [`Tanggal Cetak: ${tanggalCetak}`],
+      [],
+      ["Ringkasan"],
+      ["Total Masuk", totalMasuk],
+      ["Total Keluar", totalKeluar],
+      ["Saldo Bersih", saldo],
+      [],
+      ["Tanggal","Tipe","Kategori","Keterangan","Nominal"],
+      ...keuanganData.map(k => [
+        k.tanggal,
+        k.tipe === "masuk" ? "Masuk" : "Keluar",
+        k.kategori,
+        k.keterangan || "",
+        k.tipe === "masuk" ? k.jumlah : -k.jumlah,
+      ]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = [14,10,20,36,18].map(w => ({ wch: w }));
+    XLSX.utils.book_append_sheet(wb, ws, "Laporan Keuangan");
+    downloadXlsx(wb, `laporan_keuangan_${new Date().toISOString().split("T")[0]}.xlsx`);
+  };
+
+  const handleExportStokXlsx = () => {
+    if (!barangData.length) return;
+    const wb = XLSX.utils.book_new();
+    const rows: (string | number)[][] = [
+      [namaUsaha],
+      ["Laporan Stok Barang"],
+      [`Tanggal Cetak: ${tanggalCetak}`],
+      [],
+      ["Nama Barang","Satuan","Stok Saat Ini","Stok Minimum","Status","Harga Beli","Harga Jual"],
+      ...barangData.map(b => [
+        b.nama,
+        b.satuan,
+        b.stok,
+        b.stok_minimum,
+        b.stok <= b.stok_minimum ? "Hampir Habis" : "Aman",
+        parseFloat(b.harga_beli),
+        parseFloat(b.harga_jual),
+      ]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = [28,10,14,14,14,14,14].map(w => ({ wch: w }));
+    XLSX.utils.book_append_sheet(wb, ws, "Laporan Stok");
+    downloadXlsx(wb, `laporan_stok_${new Date().toISOString().split("T")[0]}.xlsx`);
+  };
+
+  const handleExportKasirXlsx = () => {
+    if (!kasirHarian.length && !kasirTopProduk.length) return;
+    const wb = XLSX.utils.book_new();
+    const bulanNama = NAMA_BULAN[kasirBulan];
+
+    const rowsHarian: (string | number)[][] = [
+      [namaUsaha],
+      [`Laporan Penjualan Kasir — ${bulanNama} ${kasirTahun}`],
+      [`Tanggal Cetak: ${tanggalCetak}`],
+      [],
+      ["Ringkasan"],
+      ["Total Penjualan", kasirRingkasan?.total_penjualan ?? 0],
+      ["Jumlah Transaksi", kasirRingkasan?.jumlah_transaksi ?? 0],
+      ["Rata-rata/Transaksi", kasirRingkasan?.rata_rata ?? 0],
+      [],
+      ["Penjualan Harian"],
+      ["Tanggal","Jumlah Transaksi","Total Penjualan"],
+      ...kasirHarian.map(r => [r.tanggal, r.jumlah, r.total]),
+    ];
+    const wsHarian = XLSX.utils.aoa_to_sheet(rowsHarian);
+    wsHarian["!cols"] = [16,18,18].map(w => ({ wch: w }));
+    XLSX.utils.book_append_sheet(wb, wsHarian, "Penjualan Harian");
+
+    if (kasirTopProduk.length) {
+      const rowsTop: (string | number)[][] = [
+        [`Top Produk Terlaris — ${bulanNama} ${kasirTahun}`],
+        [],
+        ["Nama Produk","Satuan","Qty Terjual","Total Omset"],
+        ...kasirTopProduk.map(r => [r.nama_barang, r.satuan, r.total_qty, r.total_omset]),
+      ];
+      const wsTop = XLSX.utils.aoa_to_sheet(rowsTop);
+      wsTop["!cols"] = [30,10,14,16].map(w => ({ wch: w }));
+      XLSX.utils.book_append_sheet(wb, wsTop, "Top Produk");
+    }
+
+    downloadXlsx(wb, `laporan_kasir_${kasirTahun}_${String(kasirBulan).padStart(2,"0")}.xlsx`);
+  };
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
@@ -499,6 +623,9 @@ export default function LaporanPage() {
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleExportKasirCsv} disabled={!kasirHarian.length}>
                 <Download className="mr-2 h-4 w-4" /> Export CSV
+              </Button>
+              <Button variant="outline" onClick={handleExportKasirXlsx} disabled={!kasirHarian.length} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Excel
               </Button>
               <Button onClick={handlePrintKasir} disabled={!kasirRingkasan || !kasirHarian.length}>
                 <Printer className="mr-2 h-4 w-4" /> Cetak / PDF
@@ -693,6 +820,9 @@ export default function LaporanPage() {
               <Button variant="outline" onClick={handleExportHutangCsv} disabled={!laporanData?.length}>
                 <Download className="mr-2 h-4 w-4" /> Export CSV
               </Button>
+              <Button variant="outline" onClick={handleExportHutangXlsx} disabled={!laporanData?.length} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Excel
+              </Button>
               <Button onClick={handlePrintHutang} disabled={!laporanData?.length}>
                 <Printer className="mr-2 h-4 w-4" /> Cetak / PDF
               </Button>
@@ -809,6 +939,9 @@ export default function LaporanPage() {
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleExportKeuanganCsv} disabled={!keuanganData.length}>
                 <Download className="mr-2 h-4 w-4" /> Export CSV
+              </Button>
+              <Button variant="outline" onClick={handleExportKeuanganXlsx} disabled={!keuanganData.length} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Excel
               </Button>
               <Button onClick={handlePrintKeuangan} disabled={!keuanganData.length}>
                 <Printer className="mr-2 h-4 w-4" /> Cetak / PDF
@@ -940,6 +1073,9 @@ export default function LaporanPage() {
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleExportStokCsv} disabled={!barangData.length}>
                 <Download className="mr-2 h-4 w-4" /> Export CSV
+              </Button>
+              <Button variant="outline" onClick={handleExportStokXlsx} disabled={!barangData.length} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Excel
               </Button>
               <Button onClick={handlePrintStok} disabled={!barangData.length}>
                 <Printer className="mr-2 h-4 w-4" /> Cetak / PDF
