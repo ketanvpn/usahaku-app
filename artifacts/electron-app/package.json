@@ -15,7 +15,7 @@
     "build:frontend": "pnpm --filter @workspace/hutang-app run build:electron",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3",
     "pack": "pnpm run build:desktop && pnpm run rebuild:native && electron-builder --dir",
-    "dist:win": "node scripts/generate-icon.js && pnpm run build:desktop && pnpm run rebuild:native && electron-builder --win",
+    "dist:win": "node scripts/generate-icon.js && pnpm run build:desktop && pnpm run rebuild:native && electron-builder --win --publish always",
     "dist:win:nopublish": "node scripts/generate-icon.js && pnpm run build:desktop && pnpm run rebuild:native && electron-builder --win --publish never"
   },
   "dependencies": {
