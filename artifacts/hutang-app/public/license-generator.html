@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generator Lisensi — Usahaku by KetanTech</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .logo-text h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .logo-text p {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+
+    .tipe-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .tipe-btn {
+      background: #0f172a;
+      border: 2px solid #334155;
+      border-radius: 10px;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 14px 8px;
+      text-align: center;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+
+    .tipe-btn:hover {
+      border-color: #6366f1;
+      color: #e2e8f0;
+    }
+
+    .tipe-btn.active {
+      border-color: #6366f1;
+      background: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+    }
+
+    .tipe-btn .tipe-icon { font-size: 20px; margin-bottom: 6px; }
+    .tipe-btn .tipe-name { font-size: 13px; font-weight: 600; }
+    .tipe-btn .tipe-durasi { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+
+    .qty-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .qty-label {
+      font-size: 13px;
+      color: #94a3b8;
+      flex: 1;
+    }
+
+    .qty-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .qty-control button {
+      width: 32px;
+      height: 32px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: inherit;
+    }
+
+    .qty-control button:hover { border-color: #6366f1; }
+
+    .qty-control span {
+      width: 36px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .generate-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 14px;
+      transition: opacity 0.15s;
+      margin-bottom: 24px;
+    }
+
+    .generate-btn:hover { opacity: 0.9; }
+    .generate-btn:active { opacity: 0.8; }
+
+    .results {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .result-item {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-info { flex: 1; min-width: 0; }
+
+    .result-key {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #a5b4fc;
+      word-break: break-all;
+    }
+
+    .result-meta {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .copy-btn {
+      background: #334155;
+      border: none;
+      border-radius: 6px;
+      color: #94a3b8;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 6px 12px;
+      white-space: nowrap;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+
+    .copy-btn:hover { background: #475569; color: #e2e8f0; }
+    .copy-btn.copied { background: #166534; color: #86efac; }
+
+    .empty-state {
+      text-align: center;
+      padding: 24px;
+      color: #475569;
+      font-size: 14px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #1e293b;
+      margin: 24px 0;
+    }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .clear-btn {
+      background: none;
+      border: none;
+      color: #475569;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+    }
+
+    .clear-btn:hover { color: #94a3b8; }
+
+    .warning {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #fbbf24;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">🏪</div>
+      <div class="logo-text">
+        <h1>Generator Lisensi</h1>
+        <p>Usahaku by KetanTech — Internal Tool</p>
+      </div>
+    </div>
+
+    <div class="warning">
+      ⚠️ File ini RAHASIA. Jangan dibagikan ke pelanggan.
+    </div>
+
+    <div class="section-label">Tipe Lisensi</div>
+    <div class="tipe-grid">
+      <button class="tipe-btn" data-tipe="harian" onclick="pilihTipe('harian')">
+        <div class="tipe-icon">📅</div>
+        <div class="tipe-name">Harian</div>
+        <div class="tipe-durasi">1 hari</div>
+      </button>
+      <button class="tipe-btn active" data-tipe="bulanan" onclick="pilihTipe('bulanan')">
+        <div class="tipe-icon">📆</div>
+        <div class="tipe-name">Bulanan</div>
+        <div class="tipe-durasi">30 hari</div>
+      </button>
+      <button class="tipe-btn" data-tipe="tahunan" onclick="pilihTipe('tahunan')">
+        <div class="tipe-icon">🗓️</div>
+        <div class="tipe-name">Tahunan</div>
+        <div class="tipe-durasi">365 hari</div>
+      </button>
+    </div>
+
+    <div class="qty-row">
+      <span class="qty-label">Jumlah kunci yang di-generate</span>
+      <div class="qty-control">
+        <button onclick="ubahJumlah(-1)">−</button>
+        <span id="qty-display">1</span>
+        <button onclick="ubahJumlah(1)">+</button>
+      </div>
+    </div>
+
+    <button class="generate-btn" onclick="generate()">
+      ⚡ Generate Kunci Lisensi
+    </button>
+
+    <div class="results-header">
+      <span class="section-label" style="margin-bottom:0">Hasil</span>
+      <button class="clear-btn" onclick="clearResults()">Hapus semua</button>
+    </div>
+
+    <div id="results-list">
+      <div class="empty-state">Kunci lisensi akan muncul di sini</div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // RAHASIA — Ganti nilai ini kalau SECRET di server diubah
+    // ============================================================
+    const SECRET = "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE";
+    // ============================================================
+
+    const TIPE_CODE = { harian: 1, bulanan: 2, tahunan: 3 };
+    const DURASI_HARI = { harian: 1, bulanan: 30, tahunan: 365 };
+
+    let tipeAktif = "bulanan";
+    let jumlah = 1;
+    let hasilList = [];
+
+    function pilihTipe(tipe) {
+      tipeAktif = tipe;
+      document.querySelectorAll(".tipe-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tipe === tipe);
+      });
+    }
+
+    function ubahJumlah(delta) {
+      jumlah = Math.max(1, Math.min(10, jumlah + delta));
+      document.getElementById("qty-display").textContent = jumlah;
+    }
+
+    async function hmacSha256(secret, data) {
+      const enc = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        "raw",
+        enc.encode(secret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+      );
+      const sig = await crypto.subtle.sign("HMAC", key, data);
+      return new Uint8Array(sig);
+    }
+
+    async function generateSatuKey(tipe) {
+      const now = new Date();
+      const expiresAt = new Date(now);
+      expiresAt.setDate(expiresAt.getDate() + DURASI_HARI[tipe]);
+
+      const buf = new Uint8Array(8);
+      const view = new DataView(buf.buffer);
+
+      // byte 0: tipe code
+      view.setUint8(0, TIPE_CODE[tipe]);
+
+      // bytes 1–4: unix timestamp expires (big-endian)
+      view.setUint32(1, Math.floor(expiresAt.getTime() / 1000), false);
+
+      // bytes 5–7: nonce acak
+      const nonce = new Uint8Array(3);
+      crypto.getRandomValues(nonce);
+      buf[5] = nonce[0];
+      buf[6] = nonce[1];
+      buf[7] = nonce[2];
+
+      // HMAC-SHA256, ambil 4 byte pertama sebagai signature
+      const hmac = await hmacSha256(SECRET, buf);
+      const sig = hmac.slice(0, 4);
+
+      // gabung buf (8) + sig (4) = 12 byte
+      const full = new Uint8Array(12);
+      full.set(buf, 0);
+      full.set(sig, 8);
+
+      // hex → kelompok 4 karakter → prefix BUKU-
+      const hex = Array.from(full)
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("")
+        .toUpperCase();
+      const parts = hex.match(/.{1,4}/g);
+      const key = "BUKU-" + parts.join("-");
+
+      return { key, expiresAt };
+    }
+
+    function formatTanggal(date) {
+      return date.toLocaleDateString("id-ID", {
+        day: "numeric", month: "long", year: "numeric"
+      });
+    }
+
+    function tipeLabel(tipe) {
+      return { harian: "Harian", bulanan: "Bulanan", tahunan: "Tahunan" }[tipe];
+    }
+
+    async function generate() {
+      const btn = document.querySelector(".generate-btn");
+      btn.disabled = true;
+      btn.textContent = "Membuat kunci...";
+
+      try {
+        const baru = [];
+        for (let i = 0; i < jumlah; i++) {
+          const result = await generateSatuKey(tipeAktif);
+          baru.push({ ...result, tipe: tipeAktif, id: Date.now() + i });
+        }
+        hasilList = [...baru, ...hasilList];
+        renderResults();
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "⚡ Generate Kunci Lisensi";
+      }
+    }
+
+    function renderResults() {
+      const container = document.getElementById("results-list");
+      if (hasilList.length === 0) {
+        container.innerHTML = '<div class="empty-state">Kunci lisensi akan muncul di sini</div>';
+        return;
+      }
+
+      container.innerHTML = hasilList.map((item, idx) => `
+        <div class="result-item">
+          <div class="result-info">
+            <div class="result-key">${item.key}</div>
+            <div class="result-meta">
+              ${tipeLabel(item.tipe)} · Berlaku sampai ${formatTanggal(item.expiresAt)}
+            </div>
+          </div>
+          <button class="copy-btn" id="copy-${idx}" onclick="copyKey(${idx}, '${item.key}')">
+            Salin
+          </button>
+        </div>
+      `).join("");
+    }
+
+    async function copyKey(idx, key) {
+      try {
+        await navigator.clipboard.writeText(key);
+        const btn = document.getElementById(`copy-${idx}`);
+        btn.textContent = "Tersalin ✓";
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.textContent = "Salin";
+          btn.classList.remove("copied");
+        }, 2000);
+      } catch {
+        alert("Tidak bisa menyalin otomatis. Salin manual:\n\n" + key);
+      }
+    }
+
+    function clearResults() {
+      hasilList = [];
+      renderResults();
+    }
+  </script>
+</body>
+</html>
