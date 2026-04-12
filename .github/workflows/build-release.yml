@@ -35,15 +35,8 @@ jobs:
         run: pnpm --filter @workspace/electron-app run build:main
         working-directory: artifacts/electron-app
 
-      - name: Build installer Windows (.exe)
+      - name: Build installer Windows (.exe) dan upload ke Release
         run: pnpm run dist:win
         working-directory: artifacts/electron-app
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Upload .exe ke Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/electron-app/release/*.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
