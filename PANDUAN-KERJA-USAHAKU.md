@@ -15,18 +15,40 @@
 - Klik **"Import from GitHub"**
 - Tunggu sampai selesai loading (bisa 1-2 menit)
 
-### Langkah 3: Setup Git (lakukan sekali saja di akun baru)
-Buka **Shell** di Replit, ketik satu per satu:
+### Langkah 3: Setup nama di commit (opsional, tidak wajib)
+> Ini hanya untuk menandai nama siapa yang membuat commit — bukan untuk keamanan.
+> Kalau dilewati, commit tetap bisa dibuat tapi nama pengirimnya kosong.
+
+Kalau mau diisi, buka **Shell** di Replit, ketik:
 ```
 git config user.email "email_github_anda@gmail.com"
 git config user.name "Nama Anda"
 ```
-> Ganti dengan email dan nama akun GitHub Anda yang sebenarnya
 
-### Langkah 4: Hubungkan ke GitHub
-- Klik ikon **Git** di sidebar kiri Replit
-- Kalau diminta login GitHub, ikuti prosesnya sampai selesai
-- Pastikan remote sudah benar dengan ketik di Shell:
+### Langkah 4: Buat GitHub Token untuk akses push/pull (WAJIB)
+
+Token ini yang mengizinkan Replit untuk push/pull ke repo GitHub Anda.
+Anda bisa atur kapan token expired — cocok untuk kontrol keamanan per device.
+
+**Cara buat token:**
+1. Buka https://github.com/settings/tokens
+2. Klik **"Generate new token (classic)"**
+3. Isi **Note**: contoh `Replit Device A`
+4. Pilih **Expiration**: 7 hari, 30 hari, atau sesuai kebutuhan
+5. Centang izin: **repo** (full control of private repositories)
+6. Klik **"Generate token"**
+7. **COPY tokennya sekarang** — tidak bisa dilihat lagi setelah halaman ditutup
+
+**Cara pakai token di Replit:**
+- Saat pertama kali `git push`, GitHub akan minta username dan password
+- Isi **Username**: username GitHub Anda (contoh: `ketanvpn`)
+- Isi **Password**: paste token yang tadi di-copy (bukan password akun GitHub)
+- Token tersimpan otomatis — tidak perlu diisi lagi sampai expired
+
+> Kalau token expired, tinggal buat token baru di GitHub dan ulangi langkah ini.
+> Device yang tokennya expired otomatis tidak bisa push lagi — kontrol keamanan berjalan.
+
+**Cek apakah remote sudah benar:**
 ```
 git remote -v
 ```
