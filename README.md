@@ -31,11 +31,13 @@ Usahaku membantu Anda mencatat hutang pelanggan, keuangan masuk/keluar, stok bar
 | Keuangan | Catatan pemasukan & pengeluaran, rekap bulanan, grafik |
 | Auto-Keuangan | Pembayaran hutang otomatis tercatat sebagai pemasukan di Keuangan |
 | Stok Barang | Kelola barang, harga beli/jual, stok minimum, transaksi masuk/keluar |
-| Laporan | Filter tanggal, pelanggan, status — cetak atau unduh CSV |
-| Export CSV | Unduh data ke Excel/spreadsheet |
+| Laporan | Filter tanggal, pelanggan, status — cetak atau export ke Excel |
+| Export Excel | Unduh laporan hutang, keuangan, dan stok ke file Excel (.xlsx) |
 | Cetak PDF | Cetak laporan & kwitansi via browser default |
-| Backup Data | Export semua data (hutang, keuangan, stok) ke file JSON |
-| Restore Data | Pulihkan data dari file backup (kompatibel antar versi) |
+| Auto-Backup | Data dicadangkan otomatis setiap kali menutup aplikasi (file .db) |
+| Backup JSON | Export semua data ke file JSON untuk cadangan manual |
+| Restore JSON | Pulihkan data dari file backup JSON |
+| Restore Auto-Backup | Pulihkan data dari file auto-backup .db dengan pengaman rollback otomatis |
 | License Key | Sistem lisensi untuk aktivasi aplikasi |
 | Multi Usaha | Super Admin kelola banyak toko/usaha |
 | Offline 100% | Tidak butuh internet sama sekali |
@@ -57,12 +59,13 @@ Usahaku membantu Anda mencatat hutang pelanggan, keuangan masuk/keluar, stok bar
 
 ### Instalasi Aplikasi
 
-1. Jalankan file **Usahaku-Setup-1.0.0.exe**
-2. Klik **Next** / **Lanjut** di setiap langkah
-3. Pilih lokasi instalasi (default sudah tepat)
-4. Centang **Create Desktop Shortcut** agar ada ikon di Desktop
-5. Klik **Install**
-6. Setelah selesai, klik **Finish**
+1. Jalankan file **Usahaku-Setup-x.x.x.exe** yang Anda terima (contoh: `Usahaku-Setup-1.0.9.exe`)
+2. Kalau muncul peringatan "Windows melindungi PC Anda" — klik **Informasi selengkapnya**, lalu klik **Tetap jalankan**
+3. Klik **Next** / **Lanjut** di setiap langkah
+4. Pilih lokasi instalasi (biarkan default sudah tepat)
+5. Centang **Create Desktop Shortcut** agar ada ikon di Desktop
+6. Klik **Install**
+7. Setelah selesai, klik **Finish**
 
 ### Membuka Aplikasi
 
@@ -71,117 +74,183 @@ Usahaku membantu Anda mencatat hutang pelanggan, keuangan masuk/keluar, stok bar
 
 ### Pertama Kali Buka
 
-1. Layar loading akan muncul sebentar — ini normal
-2. Tunggu sampai halaman **Setup Awal** muncul
-3. Isi nama usaha dan data awal, klik **Mulai**
-4. Login dengan akun Owner atau Super Admin
+1. Layar loading akan muncul sebentar — ini normal, tunggu sampai 30 detik
+2. Setelah loading selesai, halaman **Setup Awal** akan muncul
+3. Isi nama usaha Anda, lalu klik **Mulai**
+4. Selanjutnya akan muncul halaman **Login**
+5. Login menggunakan akun Owner atau Super Admin (lihat tabel Akun Default di atas)
+
+---
 
 ### Mengelola Pelanggan
 
 1. Klik menu **Pelanggan** di sidebar kiri
-2. Klik **Tambah Pelanggan** untuk menambah baru
-3. Isi nama dan nomor telepon, klik **Simpan**
-4. Untuk edit: klik ikon pensil di baris pelanggan
-5. Untuk hapus: klik ikon tempat sampah (hanya bisa dihapus jika tidak ada hutang)
+2. Klik tombol **Tambah Pelanggan**
+3. Isi nama dan nomor telepon pelanggan, lalu klik **Simpan**
+4. Pelanggan baru akan muncul di daftar
+5. Untuk **mengubah data**: klik ikon pensil (✏️) di baris pelanggan
+6. Untuk **menghapus**: klik ikon tempat sampah (🗑️) — pelanggan hanya bisa dihapus jika tidak ada hutang aktif
+
+---
 
 ### Mencatat Hutang
 
 1. Klik menu **Hutang** di sidebar
-2. Klik **Tambah Hutang**
-3. Pilih pelanggan, isi keterangan, nominal, dan tanggal
-4. Klik **Simpan** — hutang tersimpan dengan status **Aktif**
+2. Klik tombol **Tambah Hutang**
+3. Pilih nama pelanggan dari daftar dropdown
+4. Isi keterangan (contoh: "Beras 5kg"), nominal hutang, dan tanggal
+5. Klik **Simpan**
+6. Hutang akan muncul di daftar dengan status **Aktif**
+
+---
 
 ### Mencatat Pembayaran
 
-1. Klik menu **Pembayaran**
-2. Klik **Tambah Pembayaran**
-3. Pilih hutang yang dibayar, isi jumlah pembayaran dan tanggal
-4. Klik **Simpan**
-5. Kwitansi A5 otomatis muncul dan bisa dicetak
-6. Status hutang berubah otomatis menjadi **Lunas** jika sudah terbayar penuh
-7. Pembayaran otomatis tercatat sebagai **Pemasukan** di menu Keuangan
+1. Klik menu **Pembayaran** di sidebar
+2. Klik tombol **Tambah Pembayaran**
+3. Pilih hutang yang sedang dibayar dari daftar
+4. Isi jumlah pembayaran dan tanggal
+5. Klik **Simpan**
+6. Kwitansi A5 otomatis muncul — klik **Cetak Kwitansi** untuk mencetak via printer
+7. Status hutang akan otomatis berubah menjadi **Lunas** jika sudah terbayar penuh
+8. Pembayaran ini juga otomatis tercatat sebagai **Pemasukan** di menu Keuangan
+
+---
 
 ### Mencetak Kwitansi
 
 - Kwitansi muncul otomatis setelah pembayaran disimpan
-- Klik **Cetak Kwitansi** untuk membuka di browser default → lalu `Ctrl+P`
-- Kwitansi bernomor urut format `KWT-YYYY-NNNN` (tidak pernah duplikat)
+- Klik **Cetak Kwitansi** → browser default (Chrome/Edge) akan terbuka
+- Tekan **Ctrl + P** di browser untuk mencetak
+- Kwitansi bernomor urut format `KWT-YYYY-NNNN` dan tidak pernah duplikat
+- Untuk mencetak ulang kwitansi lama: buka menu **Pembayaran** → klik ikon cetak di baris pembayaran
+
+---
 
 ### Keuangan (Pemasukan & Pengeluaran)
 
 1. Klik menu **Keuangan** di sidebar
-2. Pilih bulan dan tahun yang ingin dilihat
-3. Lihat rekap **Total Masuk**, **Total Keluar**, dan **Saldo**
-4. Klik **Tambah Transaksi** untuk catat pemasukan/pengeluaran manual
-5. Klik **Cetak** untuk mencetak laporan keuangan bulan tersebut
-6. Klik **Unduh CSV** untuk export ke Excel
+2. Pilih bulan dan tahun yang ingin dilihat di bagian atas
+3. Akan terlihat rekap **Total Masuk**, **Total Keluar**, dan **Saldo** bulan tersebut
+4. Untuk tambah catatan manual: klik **Tambah Transaksi**, isi jenis (masuk/keluar), nominal, dan keterangan
+5. Untuk mencetak laporan bulan ini: klik **Cetak**
+6. Untuk export ke Excel: klik **Export Excel**
 
 > Pembayaran hutang otomatis muncul di sini sebagai "Pelunasan Hutang" — tidak perlu catat manual.
+
+---
 
 ### Stok Barang
 
 1. Klik menu **Stok** di sidebar
-2. Klik **Tambah Barang** untuk mendaftarkan barang baru (nama, satuan, harga beli/jual, stok minimum)
-3. Klik barang untuk melihat riwayat transaksi stok
-4. Klik **Tambah Transaksi** untuk catat barang masuk atau keluar
-5. Barang yang stoknya di bawah minimum akan ditandai otomatis
+2. Klik **Tambah Barang** untuk mendaftarkan barang baru
+   - Isi nama barang, satuan (contoh: kg, pcs, karton), harga beli, harga jual, dan stok minimum
+3. Klik nama barang untuk melihat riwayat transaksi stok barang tersebut
+4. Klik **Tambah Transaksi** untuk mencatat barang masuk (beli stok) atau keluar (terjual/terpakai)
+5. Barang yang stoknya di bawah angka minimum akan ditandai merah secara otomatis
 
-### Melihat Laporan Hutang
+---
 
-1. Klik menu **Laporan**
-2. Gunakan filter di atas tabel untuk menyaring berdasarkan:
+### Melihat Laporan
+
+1. Klik menu **Laporan** di sidebar
+2. Di sini ada beberapa tab: **Kasir**, **Hutang**, **Keuangan**, dan **Stok**
+3. Gunakan filter di setiap tab untuk menyaring data berdasarkan:
    - Pelanggan tertentu
    - Status (Aktif / Lunas / Semua)
-   - Periode tanggal
-3. Klik **Reset Filter** untuk kembali ke tampilan semua data
-4. Klik **Cetak** untuk mencetak laporan via browser default
+   - Periode tanggal tertentu
+4. Klik **Reset Filter** untuk kembali menampilkan semua data
+5. Klik **Cetak** untuk mencetak laporan via browser default
+6. Klik **Export Excel** (tombol hijau) untuk mengunduh laporan ke file Excel (.xlsx)
+   - File Excel akan tersimpan di folder **Unduhan** komputer Anda
+   - Buka dengan Microsoft Excel atau aplikasi spreadsheet lain
 
-### Export CSV (ke Excel)
+---
 
-1. Buka menu **Laporan** atau **Keuangan**
-2. Atur filter sesuai kebutuhan (opsional)
-3. Klik tombol **Unduh CSV**
-4. File akan tersimpan di folder **Unduhan** komputer Anda
-5. Buka file tersebut di Excel atau Google Sheets
+### Backup Data (Cadangan Manual - Format JSON)
 
-### Backup Data
+Backup JSON berguna untuk menyimpan cadangan data yang bisa dibuka dan dicek isinya.
 
-1. Klik menu **Backup**
-2. Klik **Unduh File Backup**
-3. File JSON tersimpan di folder **Unduhan** komputer Anda
-4. Simpan file ini di tempat aman (flashdisk, Google Drive, dll.)
-5. Beri nama file yang mudah diingat, misalnya: `backup_januari_2025.json`
+1. Klik menu **Backup** di sidebar
+2. Di bagian **Export Data**, klik tombol **Simpan File Backup...**
+3. Pilih lokasi penyimpanan (disarankan: flashdisk atau folder yang mudah diingat)
+4. Beri nama file yang mudah diingat, contoh: `backup-toko-januari-2025.json`
+5. Klik **Simpan**
 
-> **Disarankan**: Backup data secara rutin, misalnya setiap minggu.
-> File backup mencakup seluruh data: pelanggan, hutang, pembayaran, keuangan, dan stok.
+> **Disarankan**: Lakukan backup manual setiap bulan dan simpan di flashdisk terpisah.
 
-### Restore Data dari Backup
+---
 
-1. Klik menu **Backup**
-2. Scroll ke bagian **Restore Data**
-3. Klik **Pilih File Backup** dan pilih file JSON backup Anda
-4. Preview data akan ditampilkan (jumlah pelanggan, hutang, pembayaran)
+### Auto-Backup (Cadangan Otomatis - Format .db)
+
+Auto-backup berjalan **otomatis setiap kali Anda menutup aplikasi** — tidak perlu melakukan apapun secara manual.
+
+**Cara melihat file auto-backup:**
+1. Klik menu **Backup** di sidebar
+2. Di bagian **Pengaturan Auto-Backup**, terlihat folder tempat file auto-backup disimpan
+3. Maksimal **7 file backup terakhir** yang disimpan — yang paling lama dihapus otomatis
+
+**Mengubah folder auto-backup:**
+1. Di bagian yang sama, klik tombol **Ubah Folder Auto-Backup**
+2. Pilih folder baru (contoh: folder di flashdisk yang selalu ditancapkan)
+3. Klik **OK** — mulai sekarang backup otomatis masuk ke folder itu
+
+---
+
+### Restore Data dari Backup JSON
+
+Gunakan ini untuk memulihkan data dari file backup `.json` yang pernah Anda simpan.
+
+1. Klik menu **Backup** di sidebar
+2. Di bagian **Restore Data**, klik tombol **Pilih File** dan cari file `.json` backup Anda
+3. Akan muncul preview berisi jumlah pelanggan, hutang, dan pembayaran yang akan di-restore
+4. Pastikan preview sesuai dengan yang Anda harapkan
 5. Klik **Mulai Restore**
-6. Konfirmasi di dialog yang muncul
-7. **Perhatian**: Restore akan menggantikan seluruh data saat ini
+6. Konfirmasi di dialog yang muncul dengan klik **Ya, Restore Sekarang**
 
-> File backup versi lama (v1.0) tetap bisa di-restore di versi aplikasi terbaru.
+> **Perhatian**: Restore akan **menghapus semua data saat ini** dan menggantinya dengan isi file backup. Pastikan Anda sudah yakin sebelum melanjutkan.
+
+---
+
+### Restore Data dari Auto-Backup (.db)
+
+Gunakan ini untuk memulihkan data dari file auto-backup `.db` yang tersimpan otomatis.
+
+Fitur ini dilengkapi **pengaman otomatis** — jika file backup yang dipilih ternyata rusak atau tidak valid, data Anda saat ini akan **dikembalikan seperti semula secara otomatis**.
+
+**Langkah-langkahnya:**
+
+1. Klik menu **Backup** di sidebar
+2. Di bagian **Restore dari Auto-Backup (.db)**, klik tombol **Pilih File Auto-Backup & Restore...**
+3. Dialog konfirmasi akan muncul — baca dulu, lalu klik **Lanjutkan, Pilih File...**
+4. Jendela pemilihan file akan terbuka, otomatis mengarah ke folder auto-backup
+5. Pilih file `.db` yang ingin Anda restore (nama file mengandung tanggal)
+6. Klik **Open** / **Buka**
+7. Aplikasi akan memproses restore — tunggu beberapa detik
+8. Setelah selesai, aplikasi otomatis memuat ulang dan menampilkan data yang sudah di-restore
+
+**Jika restore gagal** (misal file rusak):
+- Akan muncul pesan error
+- Data Anda saat ini **tidak berubah** — aplikasi otomatis mengembalikan ke kondisi semula
+- Coba pilih file auto-backup yang lain
+
+---
 
 ### Ganti Password
 
-1. Klik menu **Profil** di sidebar bawah
-2. Isi **Password Lama** (password saat ini)
-3. Isi **Password Baru** dan **Konfirmasi Password Baru**
-4. Klik **Simpan Perubahan**
+1. Klik menu **Profil** di sidebar bagian bawah
+2. Isi kolom **Password Lama** dengan password yang sekarang digunakan
+3. Isi kolom **Password Baru** dengan password yang diinginkan
+4. Isi kolom **Konfirmasi Password Baru** (ketik ulang password baru)
+5. Klik **Simpan Perubahan**
+
+---
 
 ### Menutup Aplikasi
 
 - Klik tombol **X** di pojok kanan atas window
 - Semua data tersimpan otomatis — tidak perlu simpan manual
-
----
-
-## Panduan Developer
+- Auto-backup juga berjalan otomatis saat menutup aplikasi
 
 ---
 
@@ -203,7 +272,7 @@ Node.js adalah program yang dibutuhkan untuk menjalankan kode aplikasi ini.
 
 **Cek apakah berhasil:**
 - Tekan `Windows + R`, ketik `cmd`, tekan Enter
-- Di jendela hitam yang muncul, ketik:
+- Di jendela hitam yang muncul, ketik perintah berikut lalu tekan Enter:
   ```
   node --version
   ```
@@ -216,12 +285,12 @@ Node.js adalah program yang dibutuhkan untuk menjalankan kode aplikasi ini.
 
 pnpm adalah alat untuk mengunduh semua komponen yang dibutuhkan aplikasi.
 
-1. Masih di jendela Command Prompt tadi (atau buka yang baru)
+1. Masih di jendela Command Prompt tadi (atau buka yang baru dengan `Windows + R` → `cmd` → Enter)
 2. Ketik perintah berikut lalu tekan Enter:
    ```
    npm install -g pnpm
    ```
-3. Tunggu sampai selesai (biasanya 1-2 menit)
+3. Tunggu sampai selesai (biasanya 1-2 menit) — biarkan tulisan-tulisan di layar berjalan sendiri
 
 **Cek apakah berhasil:**
 ```
@@ -229,11 +298,14 @@ pnpm --version
 ```
 Harus muncul angka versi, contoh: `9.x.x` ✅
 
-> Jika muncul error `pnpm : File ... cannot be loaded`, buka **PowerShell sebagai Administrator** lalu ketik:
-> ```
-> Set-ExecutionPolicy RemoteSigned
-> ```
-> Ketik `Y` lalu Enter, lalu coba install ulang pnpm.
+> **Jika muncul error** `pnpm : File ... cannot be loaded`, buka **PowerShell sebagai Administrator**:
+> - Klik Start Menu → cari "PowerShell" → klik kanan → **Run as Administrator**
+> - Ketik perintah berikut lalu tekan Enter:
+>   ```
+>   Set-ExecutionPolicy RemoteSigned
+>   ```
+> - Ketik `Y` lalu Enter
+> - Tutup PowerShell, buka Command Prompt biasa, dan coba install pnpm lagi
 
 ---
 
@@ -242,9 +314,10 @@ Harus muncul angka versi, contoh: `9.x.x` ✅
 Git digunakan untuk mengunduh kode dari GitHub.
 
 1. Buka browser, kunjungi: **https://git-scm.com/download/win**
-2. Download otomatis dimulai — jalankan file installer-nya
-3. Klik **Next** terus, semua pilihan default sudah benar
-4. Klik **Install**, tunggu sampai selesai, klik **Finish**
+2. Download akan mulai otomatis — tunggu sampai selesai
+3. Jalankan file installer yang terunduh (contoh: `Git-2.x.x-64-bit.exe`)
+4. Klik **Next** terus sampai selesai — semua pilihan default sudah benar
+5. Klik **Install**, tunggu sampai selesai, lalu klik **Finish**
 
 **Cek apakah berhasil** (buka Command Prompt baru):
 ```
@@ -252,16 +325,18 @@ git --version
 ```
 Harus muncul angka versi, contoh: `git version 2.x.x` ✅
 
+> Jika `git` tidak dikenali, tutup dan buka ulang Command Prompt, lalu coba lagi.
+
 ---
 
 ### Langkah 4 — Download Kode dari GitHub
 
-1. Buka Command Prompt (tekan `Windows + R`, ketik `cmd`, Enter)
-2. Pilih folder tempat menyimpan kode. Contoh, ke Desktop:
+1. Buka Command Prompt (tekan `Windows + R`, ketik `cmd`, tekan Enter)
+2. Arahkan ke Desktop dengan mengetik perintah berikut lalu tekan Enter:
    ```
    cd Desktop
    ```
-3. Download kode dengan perintah berikut:
+3. Download kode dengan perintah berikut lalu tekan Enter:
    ```
    git clone https://github.com/ketanvpn/usahaku-app.git
    ```
@@ -270,36 +345,39 @@ Harus muncul angka versi, contoh: `git version 2.x.x` ✅
    ```
    cd usahaku-app
    ```
+6. Pastikan sudah masuk ke folder yang benar — di Command Prompt tertulis `...\Desktop\usahaku-app>` ✅
 
 ---
 
 ### Langkah 5 — Install Semua Komponen
 
-Perintah ini mengunduh semua komponen yang dibutuhkan aplikasi (hanya perlu dilakukan sekali):
+Perintah ini mengunduh semua komponen yang dibutuhkan aplikasi. Ketik perintah berikut lalu tekan Enter:
 
 ```
 pnpm install
 ```
 
-Tunggu sampai selesai — bisa memakan waktu **5-15 menit** tergantung kecepatan internet. Ini normal.
+- Tunggu sampai selesai — bisa memakan waktu **5-15 menit** tergantung kecepatan internet
+- Biarkan saja tulisan-tulisan yang muncul di layar, itu normal
+- Tanda berhasil: muncul tulisan `Done` atau kembali ke prompt `>` ✅
 
-Kalau muncul tulisan `Done` atau kembali ke prompt `>`, berarti berhasil ✅
-
-> **Normal**: Kalau muncul pesan kuning `Ignored build scripts: bcrypt, electron` — itu **bukan error**, abaikan saja dan lanjutkan ke langkah berikutnya.
+> **Normal**: Jika muncul pesan kuning `Ignored build scripts: bcrypt, electron` — itu **bukan error**, abaikan dan lanjutkan ke langkah berikutnya.
 
 ---
 
 ### Langkah 6 — Izinkan Build Scripts
 
-Karena pnpm versi terbaru memerlukan izin eksplisit untuk menjalankan script instalasi, jalankan perintah ini:
+Karena pnpm versi baru memerlukan izin khusus untuk beberapa komponen, jalankan perintah berikut:
 
 ```
 pnpm approve-builds
 ```
 
-Akan muncul daftar package — pilih **semua** dengan menekan `Space` di setiap baris, lalu `Enter` untuk konfirmasi.
+- Akan muncul daftar nama-nama komponen
+- Tekan tombol **Spasi** di keyboard untuk memilih setiap baris (tandai semua)
+- Setelah semua dipilih, tekan **Enter** untuk konfirmasi
 
-Jika perintah ini tidak tersedia atau tidak ada daftar yang muncul, lewati saja ke langkah berikutnya.
+> Jika perintah ini tidak menghasilkan daftar apapun (langsung kembali ke prompt), lewati saja ke langkah berikutnya.
 
 ---
 
@@ -311,26 +389,27 @@ Perintah ini menghasilkan file `.exe` yang bisa diinstall di komputer Windows ma
 pnpm --filter @workspace/electron-app run dist:win
 ```
 
-Proses ini memakan waktu **5-15 menit**. Selama proses berjalan akan muncul banyak tulisan — ini normal, biarkan sampai selesai.
-
-Tanda berhasil: muncul tulisan seperti `target=nsis` atau `built` di bagian akhir ✅
+- Proses ini memakan waktu **5-15 menit**
+- Selama proses berjalan akan muncul banyak tulisan — biarkan saja, itu normal
+- Tanda berhasil: muncul tulisan seperti `target=nsis` atau `built` di bagian akhir ✅
+- Jika tiba-tiba berhenti, coba jalankan perintah yang sama sekali lagi — biasanya langsung lanjut
 
 ---
 
 ### Langkah 8 — Ambil File Installer
 
-Setelah build selesai, file installer ada di:
+Setelah build selesai, file installer ada di folder:
 
 ```
-usahaku-app\artifacts\electron-app\release\
+Desktop\usahaku-app\artifacts\electron-app\release\
 ```
 
-Cari file bernama **`Usahaku-Setup-1.0.0.exe`** — inilah file yang bisa dibagikan dan diinstall.
+Cari file bernama **`Usahaku-Setup-x.x.x.exe`** (contoh: `Usahaku-Setup-1.0.9.exe`) — inilah file yang bisa dibagikan dan diinstall di komputer Windows manapun.
 
-**Cara buka folder tersebut:**
-1. Buka File Explorer
-2. Navigasi ke: `Desktop → usahaku-app → artifacts → electron-app → release`
-3. File `.exe` ada di sana
+**Cara membuka folder tersebut:**
+1. Buka **File Explorer** (ikon folder di taskbar)
+2. Navigasi ke: `Desktop` → `usahaku-app` → `artifacts` → `electron-app` → `release`
+3. File `.exe` ada di dalam folder `release` tersebut
 
 ---
 
@@ -354,7 +433,7 @@ Cari file bernama **`Usahaku-Setup-1.0.0.exe`** — inilah file yang bisa dibagi
 
 ### Cara Update ke Versi Baru
 
-Saat ada pembaruan kode di GitHub, cukup jalankan urutan ini:
+Saat ada pembaruan kode di GitHub, cukup jalankan urutan perintah ini satu per satu:
 
 ```
 git pull
@@ -363,13 +442,9 @@ pnpm approve-builds
 pnpm --filter @workspace/electron-app run dist:win
 ```
 
-Perintah-perintah ini sudah cukup — tidak perlu install ulang Node.js, pnpm, atau Git.
+> Tidak perlu install ulang Node.js, pnpm, atau Git — cukup 4 perintah di atas.
 
-> **Catatan**: Saat `pnpm approve-builds` muncul daftar package, pilih semua dengan tekan `A` lalu `Enter`.
-> Kalau tidak ada daftar yang muncul, lewati saja dan lanjut ke `dist:win`.
-
-**Jika `git pull` gagal dengan pesan "local changes would be overwritten":**
-
+**Jika `git pull` gagal** dengan pesan "local changes would be overwritten":
 ```
 git checkout -- package.json pnpm-lock.yaml
 git pull
@@ -378,11 +453,11 @@ pnpm approve-builds
 pnpm --filter @workspace/electron-app run dist:win
 ```
 
-Perintah `git checkout -- package.json pnpm-lock.yaml` membuang perubahan lokal di kedua file tersebut sehingga pull bisa berjalan.
-
 ---
 
-### Prasyarat (Ringkasan untuk Developer)
+## Panduan Developer
+
+### Prasyarat
 
 - Node.js 18+
 - pnpm 8+
@@ -417,44 +492,50 @@ pnpm --filter @workspace/electron-app run build:desktop
 pnpm --filter @workspace/electron-app run electron:prod
 ```
 
-### Build Windows Installer (.exe)
+### Build Windows Installer (.exe) — Tanpa Publish
+
+Untuk build lokal tanpa upload ke GitHub Release:
 
 ```bash
-# Harus dijalankan di mesin Windows dengan Node.js terinstall
-pnpm --filter @workspace/electron-app run dist:win
+pnpm --filter @workspace/electron-app run dist:win:nopublish
 ```
 
-Output: `artifacts/electron-app/release/Usahaku-Setup-1.0.0.exe`
+Output: `artifacts/electron-app/release/Usahaku-Setup-x.x.x.exe`
 
-### Update Versi Aplikasi (Rilis ke Pengguna)
+### Rilis Versi Baru ke Pengguna (via GitHub Actions)
 
-Fitur **auto-update** sudah aktif — aplikasi yang terinstall di komputer pengguna akan otomatis mendeteksi versi baru dan menampilkan notifikasi untuk download + install tanpa harus rebuild manual.
+Fitur **auto-update** sudah aktif — aplikasi yang terinstall di komputer pengguna akan otomatis mendeteksi versi baru dan menampilkan notifikasi untuk update.
+
+Proses build dan upload `.exe` ditangani **otomatis oleh GitHub Actions** — tidak perlu build manual di Windows.
 
 **Langkah rilis versi baru:**
 
 1. Naikkan versi di `artifacts/electron-app/package.json`:
-```json
-{
-  "version": "1.0.1"
-}
-```
+   ```json
+   {
+     "version": "1.0.9"
+   }
+   ```
 
-2. Build installer baru di Windows:
-```
-pnpm --filter @workspace/electron-app run dist:win
-```
+2. Commit dan push ke GitHub:
+   ```bash
+   git add .
+   git commit -m "chore: bump version to 1.0.9"
+   git push origin main
+   ```
 
 3. Buat **GitHub Release** baru di https://github.com/ketanvpn/usahaku-app/releases :
-   - Tag: `v1.0.1`
-   - Judul: `Usahaku v1.0.1`
-   - Upload file-file berikut dari folder `artifacts/electron-app/release/`:
-     - `Usahaku-Setup-1.0.1.exe`
-     - `Usahaku-Setup-1.0.1.exe.blockmap`
-     - `latest.yml`
+   - Klik **Draft a new release**
+   - **Tag**: ketik `v1.0.9` (harus diawali huruf `v`)
+   - **Title**: `Usahaku v1.0.9`
+   - Isi deskripsi perubahan (changelog)
+   - Klik **Publish release**
 
-4. Publish release → semua pengguna aktif akan otomatis dapat notifikasi pembaruan di dalam aplikasi.
+4. GitHub Actions akan otomatis mulai build dalam beberapa menit
+5. Setelah selesai (±10-15 menit), file `.exe` akan ter-upload otomatis ke release tersebut
+6. Semua pengguna aktif akan otomatis mendapat notifikasi pembaruan di dalam aplikasi
 
-> **Catatan**: File `latest.yml` wajib di-upload — electron-updater membaca file ini untuk mengetahui versi terbaru.
+> **Jangan upload .exe secara manual** ke release yang sama — biarkan GitHub Actions yang menangani.
 
 ### Icon Aplikasi
 
@@ -505,10 +586,11 @@ Database akan dibuat ulang dengan data seed otomatis.
 | File / Folder | Lokasi | Keterangan |
 |---------------|--------|-----------|
 | Database (desktop) | `C:\Users\{nama}\AppData\Roaming\Usahaku\app.db` | Data utama |
+| Auto-backup | `C:\Users\{nama}\AppData\Roaming\Usahaku\UsahakuBackup\` | Backup otomatis saat tutup app (default) |
 | Log aplikasi | `C:\Users\{nama}\AppData\Roaming\Usahaku\buku-hutang.log` | Log error & info |
 | Database (dev) | `artifacts/api-server/data/app.db` | Data development |
-| File Backup | Folder Unduhan | Setelah klik "Unduh Backup" |
-| Export CSV | Folder Unduhan | Setelah klik "Unduh CSV" |
+| File Backup JSON | Pilihan user saat export | Hasil klik "Simpan File Backup" |
+| Export Excel | Folder Unduhan | Hasil klik "Export Excel" di Laporan |
 | Installer | `artifacts/electron-app/release/` | Hasil `dist:win` |
 | Icon | `artifacts/electron-app/assets/icon.ico` | Untuk build installer |
 
@@ -533,7 +615,7 @@ Gunakan checklist ini sebelum mendistribusikan ke pengguna:
 - [ ] Installer berjalan tanpa error
 - [ ] Ikon muncul di Desktop dan Start Menu
 - [ ] Aplikasi terbuka — halaman setup atau login muncul
-- [ ] Tidak ada blank screen yang lama
+- [ ] Tidak ada blank screen yang lama (maks 30 detik loading)
 
 ### Setup Awal & Login
 - [ ] Setup wizard muncul saat pertama buka (fresh install)
@@ -563,37 +645,46 @@ Gunakan checklist ini sebelum mendistribusikan ke pengguna:
 - [ ] Rekap Total Masuk / Keluar / Saldo terhitung benar
 - [ ] Filter bulan & tahun bekerja
 - [ ] Klik Cetak → terbuka di browser default
-- [ ] Unduh CSV → file terunduh dan terbaca di Excel
+- [ ] Klik Export Excel → file .xlsx terunduh dan terbaca di Excel
 
 ### Stok Barang
 - [ ] Tambah barang baru → muncul di daftar
 - [ ] Edit barang → tersimpan
 - [ ] Tambah transaksi stok masuk → stok bertambah
 - [ ] Tambah transaksi stok keluar → stok berkurang
-- [ ] Barang stok di bawah minimum → ditandai
+- [ ] Barang stok di bawah minimum → ditandai merah
 
-### Laporan & Export
-- [ ] Laporan menampilkan semua data hutang
+### Laporan & Export Excel
+- [ ] Laporan tab Kasir menampilkan data
+- [ ] Laporan tab Hutang menampilkan semua data hutang
 - [ ] Filter status "Aktif" bekerja
 - [ ] Filter "Lunas" bekerja
 - [ ] Filter berdasarkan pelanggan bekerja
 - [ ] Filter berdasarkan tanggal bekerja
 - [ ] Reset filter mengembalikan semua data
-- [ ] Klik "Unduh CSV" → file terunduh dan terbaca di Excel
+- [ ] Klik "Export Excel" di setiap tab → file .xlsx terunduh
+- [ ] File Excel berisi data yang benar dan bisa dibuka di Excel
 - [ ] Klik "Cetak" → terbuka di browser default
 
 ### Backup & Restore
-- [ ] Klik "Unduh File Backup" → file JSON terunduh
-- [ ] Buka file JSON — pastikan berisi data pelanggan, hutang, keuangan, dan stok
-- [ ] Upload file JSON → preview data muncul
+- [ ] Klik "Simpan File Backup" → dialog simpan muncul, file JSON tersimpan
+- [ ] Upload file JSON → preview data muncul (jumlah pelanggan, hutang, pembayaran)
 - [ ] Klik "Mulai Restore" + konfirmasi → data terganti
 - [ ] Data setelah restore sesuai dengan isi backup
-- [ ] Restore file backup versi lama (v1.0) → tetap berhasil
+- [ ] Tutup aplikasi → file .db auto-backup tersimpan di folder auto-backup
+- [ ] Klik "Pilih File Auto-Backup & Restore" → dialog konfirmasi muncul
+- [ ] Pilih file .db → restore berhasil, aplikasi reload otomatis
+- [ ] Jika pilih file .db yang rusak → muncul pesan error, data tidak berubah (auto-rollback)
 
 ### Persistensi Data
 - [ ] Tutup aplikasi
 - [ ] Buka kembali aplikasi
 - [ ] Login → semua data masih ada
+
+### Auto-Update
+- [ ] Rilis versi baru di GitHub
+- [ ] Buka aplikasi versi lama → muncul notifikasi update tersedia
+- [ ] Klik update → proses download dan install berjalan
 
 ### Super Admin
 - [ ] Login admin → melihat daftar semua usaha
@@ -602,7 +693,7 @@ Gunakan checklist ini sebelum mendistribusikan ke pengguna:
 - [ ] Reset password owner → owner bisa login dengan password baru
 
 ### Ketahanan
-- [ ] Nonaktifkan koneksi internet → aplikasi tetap berjalan
+- [ ] Nonaktifkan koneksi internet → aplikasi tetap berjalan normal
 - [ ] Jalankan di PC berbeda (dengan install) → berfungsi normal
 
 ---
@@ -615,14 +706,17 @@ Gunakan checklist ini sebelum mendistribusikan ke pengguna:
 
 **Langkah diagnosis**:
 1. Lihat file log di: `C:\Users\{nama}\AppData\Roaming\Usahaku\buku-hutang.log`
-2. Cari baris `[backend:err]` atau `FATAL` di log tersebut
-3. Kirim isi log tersebut ke pengembang untuk analisis lebih lanjut
+2. Buka file tersebut dengan Notepad
+3. Cari baris yang mengandung kata `[backend:err]` atau `FATAL`
+4. Kirim isi log tersebut ke pengembang untuk analisis lebih lanjut
 
 **Solusi umum**:
 - Tutup aplikasi dan buka kembali
 - Pastikan tidak ada aplikasi lain yang menggunakan port 8080
 - Coba restart komputer, lalu buka aplikasi lagi
 - Jika masih gagal, uninstall dan install ulang aplikasi
+
+---
 
 ### Error: "Cannot find module better-sqlite3" atau database crash saat startup
 
@@ -638,6 +732,8 @@ Perintah `dist:win` akan otomatis rebuild `better-sqlite3` untuk Electron ABI (`
 
 **Jangan** copy manual file `better-sqlite3` dari folder lain — harus melalui proses build ini.
 
+---
+
 ### Error: "Cannot find module 'bindings'"
 
 **Sudah diperbaiki secara otomatis**: Proyek ini sudah menyertakan `bindings-stub` di `electron-app/assets/bindings-stub/`. Pastikan build dilakukan dari source code terbaru.
@@ -646,6 +742,8 @@ Jika masih error, cek log file:
 ```
 C:\Users\{nama}\AppData\Roaming\Usahaku\buku-hutang.log
 ```
+
+---
 
 ### Dialog error muncul saat pertama buka
 
@@ -656,6 +754,8 @@ C:\Users\{nama}\AppData\Roaming\Usahaku\buku-hutang.log
 | "Server tidak merespons setelah 30 detik" | Port 8080 mungkin dipakai app lain; coba restart PC |
 | "Layanan Aplikasi Berhenti" | Lihat log di AppData, kirim ke pengembang |
 
+---
+
 ### Data hilang setelah uninstall lalu install ulang
 
 Data **tidak** dihapus saat uninstall. Data tersimpan di:
@@ -663,6 +763,8 @@ Data **tidak** dihapus saat uninstall. Data tersimpan di:
 C:\Users\{nama}\AppData\Roaming\Usahaku\app.db
 ```
 Saat install ulang, data lama otomatis digunakan kembali.
+
+---
 
 ### Lupa password
 
@@ -688,14 +790,19 @@ Hubungi Super Admin untuk melakukan reset password melalui menu **Admin → Kelo
 | Backend | Express 5 + TypeScript |
 | Database | SQLite (better-sqlite3) + Drizzle ORM |
 | Auth | express-session + bcrypt |
+| Export Excel | SheetJS (xlsx) |
 | Installer | electron-builder (NSIS) |
+| CI/CD | GitHub Actions |
 | Monorepo | pnpm workspaces |
 
 ---
 
-## Versi
+## Riwayat Versi
 
 | Versi | Keterangan |
 |-------|-----------|
 | 1.0.0 | Rilis awal — hutang, pembayaran, laporan, stok, keuangan |
-| — | Format backup v1.1 — mencakup keuangan & stok |
+| 1.0.1–1.0.6 | Perbaikan bug, stabilitas, auto-update |
+| 1.0.7 | GitHub Actions auto-build & release diperbaiki |
+| 1.0.8 | Fix: dialog crash palsu saat menutup aplikasi |
+| 1.0.9 | Fitur: Export Excel di semua laporan, Restore dari auto-backup .db dengan pengaman rollback otomatis |
