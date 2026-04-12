@@ -17,6 +17,7 @@ let backendProcess: Electron.UtilityProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
 let backendStderrBuffer = "";
 let logFilePath = "";
+let isQuitting = false;
 
 app.setName(APP_NAME);
 if (process.platform === "win32") {
@@ -266,7 +267,7 @@ function startBackend(): void {
     writeLog(`[backend] Exited with code ${code}`);
     backendProcess = null;
 
-    if (mainWindow && !mainWindow.isDestroyed()) {
+    if (!isQuitting && mainWindow && !mainWindow.isDestroyed()) {
       const errorDetail = backendStderrBuffer.trim()
         ? `\n\nDetail error:\n${backendStderrBuffer.slice(-1000)}`
         : "";
@@ -415,6 +416,7 @@ function createLoadingWindow(): void {
     // Auto-backup sebelum tutup (hanya di production/release)
     if (!isDev) {
       e.preventDefault();
+      isQuitting = true;
       // Matikan backend dulu agar SQLite selesai menulis
       if (backendProcess) {
         backendProcess.kill();
@@ -608,6 +610,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("will-quit", () => {
+  isQuitting = true;
   writeLog("App quitting, killing backend...");
   if (backendProcess) {
     backendProcess.kill();
