@@ -196,222 +196,228 @@ export default function LoginPage() {
         </div>
 
         <div className="w-full max-w-sm">
-          {!showReset ? (
-            <>
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-foreground">Masuk ke Akun Anda</h2>
-                <p className="text-muted-foreground text-sm mt-1">
-                  Masukkan username dan password untuk melanjutkan.
-                </p>
-              </div>
 
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground font-medium">Username</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Masukkan username"
-                            autoFocus
-                            autoComplete="username"
-                            className="h-11 bg-white"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground font-medium">Password</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="Masukkan password"
-                            autoComplete="current-password"
-                            className="h-11 bg-white"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full h-11 text-base font-semibold mt-2 shadow-sm"
-                    disabled={loginMutation.isPending}
-                  >
-                    {loginMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Memproses...
-                      </>
-                    ) : (
-                      "Masuk"
-                    )}
-                  </Button>
-                </form>
-              </Form>
+          {/* ── Form Login (selalu ada di DOM, disembunyikan CSS) ── */}
+          <div style={{ display: showReset ? "none" : undefined }}>
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-foreground">Masuk ke Akun Anda</h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                Masukkan username dan password untuk melanjutkan.
+              </p>
+            </div>
 
-              <div className="flex flex-col items-center gap-2 mt-6">
-                <button
-                  type="button"
-                  onClick={() => { setShowReset(true); resetForm.reset(); setShowUsernames(false); }}
-                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                >
-                  <KeyRound className="h-3 w-3" />
-                  Lupa password? Reset dengan kode dari administrator
-                </button>
-                <button
-                  type="button"
-                  onClick={showUsernames ? () => setShowUsernames(false) : handleShowUsernames}
-                  disabled={isFetchingUsernames}
-                  className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 disabled:opacity-50"
-                >
-                  {isFetchingUsernames ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <User className="h-3 w-3" />
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-foreground font-medium">Username</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Masukkan username"
+                          autoFocus
+                          autoComplete="username"
+                          className="h-11 bg-white"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                  {showUsernames ? "Sembunyikan daftar akun" : "Lupa username? Lihat daftar akun"}
-                </button>
-
-                {showUsernames && (
-                  <div className="w-full mt-1 rounded-lg border bg-muted/50 p-3">
-                    <p className="text-xs text-muted-foreground mb-2 font-medium">Akun yang terdaftar di perangkat ini:</p>
-                    {usernameList.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">Belum ada akun owner.</p>
-                    ) : (
-                      <div className="flex flex-col gap-1">
-                        {usernameList.map((u) => (
-                          <button
-                            key={u.username}
-                            type="button"
-                            onClick={() => {
-                              form.setValue("username", u.username);
-                              setShowUsernames(false);
-                            }}
-                            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-background hover:shadow-sm transition-all text-left"
-                          >
-                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                              <User className="h-3.5 w-3.5 text-primary" />
-                            </div>
-                            <div>
-                              <span className="font-mono font-semibold text-foreground">{u.username}</span>
-                              {u.nama && <span className="text-muted-foreground text-xs ml-2">({u.nama})</span>}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-2">Klik nama akun untuk mengisi username otomatis.</p>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="mb-8">
-                <button
-                  type="button"
-                  onClick={() => setShowReset(false)}
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-foreground font-medium">Password</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Masukkan password"
+                          autoComplete="current-password"
+                          className="h-11 bg-white"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="w-full h-11 text-base font-semibold mt-2 shadow-sm"
+                  disabled={loginMutation.isPending}
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                  Kembali ke login
-                </button>
-                <h2 className="text-2xl font-bold text-foreground">Reset Password</h2>
-                <p className="text-muted-foreground text-sm mt-1">
-                  Masukkan kode reset yang dikirim administrator via WhatsApp.
-                </p>
-              </div>
+                  {loginMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Memproses...
+                    </>
+                  ) : (
+                    "Masuk"
+                  )}
+                </Button>
+              </form>
+            </Form>
 
-              <Form {...resetForm}>
-                <form onSubmit={resetForm.handleSubmit(onResetSubmit)} className="space-y-5">
-                  <FormField
-                    control={resetForm.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground font-medium">Username Anda</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Masukkan username"
-                            className="h-11 bg-white"
-                            {...field}
-                            ref={(el) => {
-                              field.ref(el);
-                              resetUsernameRef.current = el;
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={resetForm.control}
-                    name="reset_code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground font-medium">Kode Reset</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="RST-XXXX-XXXX-XXXX-XXXX"
-                            className="h-11 bg-white font-mono tracking-wider"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                        <p className="text-xs text-muted-foreground">Kode dikirim oleh administrator via WhatsApp. Berlaku 24 jam.</p>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={resetForm.control}
-                    name="new_password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground font-medium">Password Baru</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="Minimal 6 karakter"
-                            className="h-11 bg-white"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full h-11 text-base font-semibold shadow-sm"
-                    disabled={isResetting}
-                  >
-                    {isResetting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Memproses...
-                      </>
-                    ) : (
-                      "Reset Password"
-                    )}
-                  </Button>
-                </form>
-              </Form>
-            </>
-          )}
+            <div className="flex flex-col items-center gap-2 mt-6">
+              <button
+                type="button"
+                onClick={() => { setShowReset(true); resetForm.reset(); setShowUsernames(false); }}
+                className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+              >
+                <KeyRound className="h-3 w-3" />
+                Lupa password? Reset dengan kode dari administrator
+              </button>
+              <button
+                type="button"
+                onClick={showUsernames ? () => setShowUsernames(false) : handleShowUsernames}
+                disabled={isFetchingUsernames}
+                className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 disabled:opacity-50"
+              >
+                {isFetchingUsernames ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <User className="h-3 w-3" />
+                )}
+                {showUsernames ? "Sembunyikan daftar akun" : "Lupa username? Lihat daftar akun"}
+              </button>
+
+              {showUsernames && (
+                <div className="w-full mt-1 rounded-lg border bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">Akun yang terdaftar di perangkat ini:</p>
+                  {usernameList.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">Belum ada akun owner.</p>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      {usernameList.map((u) => (
+                        <button
+                          key={u.username}
+                          type="button"
+                          onClick={() => {
+                            form.setValue("username", u.username);
+                            setShowUsernames(false);
+                          }}
+                          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-background hover:shadow-sm transition-all text-left"
+                        >
+                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <User className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                          <div>
+                            <span className="font-mono font-semibold text-foreground">{u.username}</span>
+                            {u.nama && <span className="text-muted-foreground text-xs ml-2">({u.nama})</span>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2">Klik nama akun untuk mengisi username otomatis.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Form Reset Password (selalu ada di DOM, disembunyikan CSS) ── */}
+          <div style={{ display: showReset ? undefined : "none" }}>
+            <div className="mb-8">
+              <button
+                type="button"
+                onClick={() => setShowReset(false)}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Kembali ke login
+              </button>
+              <h2 className="text-2xl font-bold text-foreground">Reset Password</h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                Masukkan kode reset yang dikirim administrator via WhatsApp.
+              </p>
+            </div>
+
+            <Form {...resetForm}>
+              <form onSubmit={resetForm.handleSubmit(onResetSubmit)} className="space-y-5">
+                <FormField
+                  control={resetForm.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-foreground font-medium">Username Anda</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Masukkan username"
+                          autoComplete="off"
+                          spellCheck={false}
+                          className="h-11 bg-white"
+                          {...field}
+                          ref={(el) => {
+                            field.ref(el);
+                            resetUsernameRef.current = el;
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={resetForm.control}
+                  name="reset_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-foreground font-medium">Kode Reset</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="RST-XXXX-XXXX-XXXX-XXXX"
+                          autoComplete="off"
+                          spellCheck={false}
+                          className="h-11 bg-white font-mono tracking-wider"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-xs text-muted-foreground">Kode dikirim oleh administrator via WhatsApp. Berlaku 24 jam.</p>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={resetForm.control}
+                  name="new_password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-foreground font-medium">Password Baru</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Minimal 6 karakter"
+                          className="h-11 bg-white"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="w-full h-11 text-base font-semibold shadow-sm"
+                  disabled={isResetting}
+                >
+                  {isResetting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Memproses...
+                    </>
+                  ) : (
+                    "Reset Password"
+                  )}
+                </Button>
+              </form>
+            </Form>
+          </div>
+
         </div>
       </div>
     </div>
