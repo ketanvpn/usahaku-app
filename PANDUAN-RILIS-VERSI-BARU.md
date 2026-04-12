@@ -4,58 +4,31 @@ Ikuti langkah-langkah ini setiap kali ingin merilis pembaruan aplikasi ke penggu
 
 ---
 
-## Langkah 1 — Naikkan Nomor Versi
+## Langkah 1 — Push Kode ke GitHub (dari Shell Replit)
 
-Buka file:
-```
-artifacts/electron-app/package.json
-```
-
-Ubah nomor versi:
-```json
-"version": "1.0.1"
-```
-
-> Gunakan format: BESAR.MINOR.PATCH
-> Contoh: perbaikan kecil → 1.0.1, fitur baru → 1.1.0, perubahan besar → 2.0.0
-
----
-
-## Langkah 2 — Push ke GitHub (dari Shell Replit)
+Jalankan perintah berikut di Shell Replit:
 
 ```
+git add .
+git commit -m "keterangan perubahan"
 git push
 ```
 
----
-
-## Langkah 3 — Build Installer di Windows
-
-Buka Command Prompt di folder project, jalankan:
-
-```
-git checkout -- package.json pnpm-lock.yaml
-git pull
-pnpm --filter @workspace/electron-app run dist:win
-```
-
-> Catatan: Jika `git pull` gagal dengan "local changes would be overwritten",
-> jalankan dulu: `git checkout -- package.json pnpm-lock.yaml`
-
-Setelah selesai, cari 3 file ini di folder:
-```
-artifacts\electron-app\release\
-```
-
-| File | Keterangan |
-|------|------------|
-| `Usahaku-Setup-1.0.1.exe` | Installer untuk pengguna baru |
-| `Usahaku-Setup-1.0.1.exe.blockmap` | File teknis untuk proses update |
-| `latest.yml` | Daftar versi terbaru (wajib ada) |
+> **Catatan git push:** GitHub tidak mendukung login pakai password biasa.
+> Harus pakai **Personal Access Token (PAT)**.
+>
+> Cara setup PAT (cukup sekali):
+> 1. Buka [github.com/settings/tokens](https://github.com/settings/tokens)
+> 2. Klik **"Generate new token (classic)"** → centang scope **`repo`** → klik Generate
+> 3. Copy token-nya, lalu jalankan di Shell Replit:
+>    ```
+>    git remote set-url origin https://TOKEN@github.com/ketanvpn/usahaku-app.git
+>    ```
+> 4. Setelah itu `git push` langsung jalan tanpa minta password lagi.
 
 ---
 
-## Langkah 4 — Buat GitHub Release
+## Langkah 2 — Buat GitHub Release
 
 1. Buka browser, pergi ke:
    ```
@@ -64,21 +37,32 @@ artifacts\electron-app\release\
 
 2. Klik tombol **"Draft a new release"**
 
-3. Isi kolom **"Choose a tag"** → ketik `v1.0.1` → klik **"Create new tag"**
+3. Isi kolom **"Choose a tag"** → ketik versi baru misalnya `v1.0.14` → klik **"Create new tag"**
 
-4. Isi kolom **"Release title"** → ketik `Usahaku v1.0.1`
+4. Isi kolom **"Release title"** → ketik `Usahaku v1.0.14`
 
 5. Di kolom deskripsi, tulis apa saja yang berubah di versi ini
    (contoh: "Perbaikan bug tampilan" atau "Tambah fitur pengingat hutang")
 
-6. Di bagian **"Attach binaries"**, upload ketiga file dari Langkah 3:
-   - `Usahaku-Setup-1.0.1.exe`
-   - `Usahaku-Setup-1.0.1.exe.blockmap`
-   - `latest.yml`
+6. Klik **"Publish release"**
 
-7. Pastikan **"Set as latest release"** dicentang
+---
 
-8. Klik **"Publish release"**
+## Langkah 3 — Tunggu Build Otomatis
+
+Setelah release dipublish, **GitHub Actions otomatis akan:**
+- Build installer Windows (`.exe`) di server GitHub
+- Upload file installer ke release tersebut secara otomatis
+- Tidak perlu build manual di komputer Windows
+
+Pantau prosesnya di:
+```
+https://github.com/ketanvpn/usahaku-app/actions
+```
+
+Tunggu sampai statusnya **hijau (✓)**. Biasanya selesai dalam 5–10 menit.
+
+Nomor versi di installer akan **otomatis sesuai dengan tag** yang dibuat — tidak perlu ubah `package.json` secara manual.
 
 ---
 
@@ -94,21 +78,14 @@ Aplikasi pengguna yang sudah terinstall akan:
 
 ---
 
-## Untuk Rilis Pertama (v1.0.0)
-
-Lakukan hal yang sama tapi dengan file dari build pertama Anda.
-File `latest.yml` dan `.blockmap` sudah ada di folder `release\` dari build sebelumnya.
-
----
-
 ## Ringkasan Singkat
 
 ```
-1. Ubah "version" di package.json
-2. git push (dari Replit Shell)
-3. git pull + dist:win (di Windows)
-4. Buat GitHub Release, upload 3 file
-5. Publish → pengguna otomatis dapat notifikasi
+1. Edit kode di Replit
+2. git add . && git commit -m "..." && git push
+3. Buat GitHub Release dengan tag baru (misal v1.0.14)
+4. Klik Publish release → GitHub Actions otomatis build & upload .exe
+5. Tunggu ~10 menit → pengguna otomatis dapat notifikasi update
 ```
 
 ---

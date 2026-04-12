@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.7**
+**Current version: 1.0.13**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -22,6 +22,15 @@ Key features:
 ## User Preferences
 
 The user wants the agent to focus on high-level architectural decisions and system design rather than granular implementation details or historical changes. The agent should prioritize stability and robust error handling, especially concerning native module integration and database operations in packaged environments. When making changes, ensure that existing data and functionalities remain compatible and that user experience is smooth, particularly during application startup and error scenarios.
+
+- **Selalu ingatkan perintah git setelah setiap perubahan kode.** Di akhir setiap pekerjaan, selalu tampilkan perintah git lengkap yang harus dijalankan user di Shell Replit, contoh:
+  ```
+  git add .
+  git commit -m "keterangan singkat perubahan"
+  git push
+  ```
+- Penjelasan dalam Bahasa Indonesia, pelan dan jelas.
+- Hati-hati tidak merusak fitur yang sudah ada.
 
 ## System Architecture
 
@@ -134,6 +143,27 @@ resources/
 - `SERVE_STATIC=true` + `STATIC_PATH` — serve frontend
 - `SESSION_SECRET` — derived from userData path
 - `BETTER_SQLITE3_PATH` — absolute path to better-sqlite3 package (for logging/fallback)
+
+### Git Push ke GitHub (dari Replit)
+
+GitHub sudah tidak mendukung login pakai password biasa. Harus pakai **Personal Access Token (PAT)**.
+
+**Setup sekali (sudah dilakukan):**
+```bash
+git remote set-url origin https://TOKEN@github.com/ketanvpn/usahaku-app.git
+```
+Ganti `TOKEN` dengan PAT yang dibuat di [github.com/settings/tokens](https://github.com/settings/tokens) (centang scope `repo`).
+
+**Setelah itu, git push cukup:**
+```bash
+git add .
+git commit -m "pesan commit"
+git push
+```
+
+> Catatan: Jika token expired atau dicabut, buat token baru dan jalankan `git remote set-url` lagi.
+
+---
 
 ### Build Command (Windows)
 ```powershell
