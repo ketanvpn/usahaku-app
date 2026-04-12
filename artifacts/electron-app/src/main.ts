@@ -16,6 +16,7 @@ const isDev = !app.isPackaged || process.env.NODE_ENV === "development";
 let backendProcess: Electron.UtilityProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
 let backendStderrBuffer = "";
+let isRestoring = false;
 let logFilePath = "";
 let isQuitting = false;
 
@@ -267,7 +268,7 @@ function startBackend(): void {
     writeLog(`[backend] Exited with code ${code}`);
     backendProcess = null;
 
-    if (!isQuitting && mainWindow && !mainWindow.isDestroyed()) {
+    if (!isQuitting && !isRestoring && mainWindow && !mainWindow.isDestroyed()) {
       const errorDetail = backendStderrBuffer.trim()
         ? `\n\nDetail error:\n${backendStderrBuffer.slice(-1000)}`
         : "";
@@ -577,6 +578,8 @@ ipcMain.handle("backup:restoreDB", async (): Promise<{ success: boolean; cancele
   }
 
   // ── LANGKAH 2: Hentikan backend ─────────────────────────────────────────
+  isRestoring = true;
+  backendStderrBuffer = "";
   if (backendProcess) {
     backendProcess.kill();
     backendProcess = null;
@@ -594,6 +597,7 @@ ipcMain.handle("backup:restoreDB", async (): Promise<{ success: boolean; cancele
     try { fs.copyFileSync(rollbackPath, dbPath); } catch { /* abaikan */ }
     try { fs.unlinkSync(rollbackPath); } catch { /* abaikan */ }
     startBackend();
+    isRestoring = false;
     return { success: false, message: `Gagal menyalin file: ${message}` };
   }
 
@@ -605,6 +609,7 @@ ipcMain.handle("backup:restoreDB", async (): Promise<{ success: boolean; cancele
     // Berhasil → hapus file rollback, reload renderer
     try { fs.unlinkSync(rollbackPath); } catch { /* tidak kritis */ }
     writeLog("Restore berhasil. Rollback dihapus.");
+    isRestoring = false;
 
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.reload();
@@ -632,6 +637,7 @@ ipcMain.handle("backup:restoreDB", async (): Promise<{ success: boolean; cancele
     }
 
     startBackend();
+    isRestoring = false;
     return {
       success: false,
       message: `File backup tidak valid atau tidak kompatibel dengan versi ini. Data Anda sudah dikembalikan seperti semula.`,
