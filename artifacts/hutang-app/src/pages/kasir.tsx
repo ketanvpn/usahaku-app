@@ -9,12 +9,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, Loader2, Receipt, Printer, Tag } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
 
+function escHtml(s: string | number): string {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function openPrintStruk(hasil: HasilTransaksi) {
   const tgl = new Date(hasil.tanggal + "T00:00:00").toLocaleDateString("id-ID", {
     day: "numeric", month: "long", year: "numeric",
   });
   const rows = hasil.items.map(i =>
-    `<tr><td>${i.nama_barang}</td><td class="right">${i.jumlah} ${i.satuan}</td><td class="right">${fmt(i.harga_satuan)}</td><td class="right">${fmt(i.subtotal)}</td></tr>`
+    `<tr><td>${escHtml(i.nama_barang)}</td><td class="right">${escHtml(i.jumlah)} ${escHtml(i.satuan)}</td><td class="right">${fmt(i.harga_satuan)}</td><td class="right">${fmt(i.subtotal)}</td></tr>`
   ).join("");
 
   const diskonRow = hasil.diskon > 0
@@ -34,11 +43,11 @@ td{padding:1px 2px;font-size:10pt}
 </style>
 <script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);})<\/script>
 </head><body>
-<div class="center bold" style="font-size:13pt">${hasil.nama_usaha || "Usahaku"}</div>
+<div class="center bold" style="font-size:13pt">${escHtml(hasil.nama_usaha || "Usahaku")}</div>
 <div class="center" style="font-size:9pt;margin-bottom:4px">by KetanTech</div>
 <div class="sep"></div>
-<div style="font-size:9pt">Tanggal : ${tgl}</div>
-<div style="font-size:9pt">No      : #${String(hasil.id).padStart(4,"0")}</div>
+<div style="font-size:9pt">Tanggal : ${escHtml(tgl)}</div>
+<div style="font-size:9pt">No      : #${escHtml(String(hasil.id).padStart(4,"0"))}</div>
 <div class="sep"></div>
 <table>
 <thead><tr><td class="bold">Barang</td><td class="bold right">Qty</td><td class="bold right">Harga</td><td class="bold right">Sub</td></tr></thead>

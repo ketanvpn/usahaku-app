@@ -1,6 +1,6 @@
 import { createHmac, randomBytes } from "crypto";
 
-const SECRET = "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE";
+const SECRET = process.env.LICENSE_SECRET ?? "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE";
 
 export type LicenseTipe = "harian" | "bulanan" | "tahunan";
 
