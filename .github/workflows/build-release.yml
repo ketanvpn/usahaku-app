@@ -7,6 +7,8 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout kode
@@ -39,4 +41,4 @@ jobs:
         run: pnpm run dist:win
         working-directory: artifacts/electron-app
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
