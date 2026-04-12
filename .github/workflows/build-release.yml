@@ -36,5 +36,5 @@ jobs:
         working-directory: artifacts/electron-app
 
       - name: Build installer Windows (.exe)
-        run: pnpm run dist:win --publish never
+        run: pnpm run dist:win:nopublish
         working-directory: artifacts/electron-app
