@@ -103,7 +103,7 @@ router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promis
   const [pelanggan] = await db.select().from(pelangganTable).where(eq(pelangganTable.id, hutang.pelangganId));
   const [usaha] = await db.select().from(usahaTable).where(eq(usahaTable.id, usahaId));
 
-  // Auto-generate nomor kwitansi: KWT-YYYY-NNNN (berdasarkan max nomor urut tahun ini)
+  // Generate nomor kwitansi berdasarkan tahun ini
   const tahun = new Date().getFullYear();
   const existingKwitansi = await db.select({ nomor: pembayaranTable.nomorKwitansi })
     .from(pembayaranTable)
@@ -119,39 +119,42 @@ router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promis
   const nomorKwitansi = `KWT-${tahun}-${String(maxUrut + 1).padStart(4, "0")}`;
 
   const sisaSetelah = Math.max(0, parseFloat(hutang.nominalHutang) - (parseFloat(hutang.totalDibayar) + parsed.data.nominal_bayar));
-
-  // Auto-catat keuangan masuk untuk pelunasan hutang
-  const [keuangan] = await db.insert(keuanganTable).values({
-    usahaId,
-    tanggal: parsed.data.tanggal_bayar,
-    tipe: "masuk",
-    kategori: "Pelunasan Hutang",
-    keterangan: `Bayar hutang: ${pelanggan?.nama ?? ""}${hutang.keterangan ? ` (${hutang.keterangan})` : ""}`,
-    jumlah: parsed.data.nominal_bayar.toString(),
-  }).returning();
-
-  const [pembayaran] = await db.insert(pembayaranTable).values({
-    usahaId,
-    hutangId: parsed.data.hutang_id,
-    pelangganId: hutang.pelangganId,
-    tanggalBayar: parsed.data.tanggal_bayar,
-    nominalBayar: parsed.data.nominal_bayar.toString(),
-    catatan: parsed.data.catatan ?? null,
-    nomorKwitansi,
-    sisaHutangSetelah: sisaSetelah.toString(),
-    keuanganId: keuangan.id,
-  }).returning();
-
   const newTotalDibayar = parseFloat(hutang.totalDibayar) + parsed.data.nominal_bayar;
   const newSisaHutang = parseFloat(hutang.nominalHutang) - newTotalDibayar;
   const newStatus = newSisaHutang <= 0 ? "lunas" : "aktif";
 
-  await db.update(hutangTable).set({
-    totalDibayar: newTotalDibayar.toString(),
-    sisaHutang: Math.max(0, newSisaHutang).toString(),
-    status: newStatus,
-    updatedAt: new Date(),
-  }).where(eq(hutangTable.id, parsed.data.hutang_id));
+  // Semua operasi tulis dalam satu transaction agar atomik
+  const { pembayaran } = db.transaction((tx) => {
+    const [keuangan] = tx.insert(keuanganTable).values({
+      usahaId,
+      tanggal: parsed.data.tanggal_bayar,
+      tipe: "masuk",
+      kategori: "Pelunasan Hutang",
+      keterangan: `Bayar hutang: ${pelanggan?.nama ?? ""}${hutang.keterangan ? ` (${hutang.keterangan})` : ""}`,
+      jumlah: parsed.data.nominal_bayar.toString(),
+    }).returning().all();
+
+    const [pembayaran] = tx.insert(pembayaranTable).values({
+      usahaId,
+      hutangId: parsed.data.hutang_id,
+      pelangganId: hutang.pelangganId,
+      tanggalBayar: parsed.data.tanggal_bayar,
+      nominalBayar: parsed.data.nominal_bayar.toString(),
+      catatan: parsed.data.catatan ?? null,
+      nomorKwitansi,
+      sisaHutangSetelah: sisaSetelah.toString(),
+      keuanganId: keuangan.id,
+    }).returning().all();
+
+    tx.update(hutangTable).set({
+      totalDibayar: newTotalDibayar.toString(),
+      sisaHutang: Math.max(0, newSisaHutang).toString(),
+      status: newStatus,
+      updatedAt: new Date(),
+    }).where(eq(hutangTable.id, parsed.data.hutang_id)).run();
+
+    return { pembayaran };
+  });
 
   res.status(201).json({
     id: pembayaran.id,
@@ -193,23 +196,26 @@ router.delete("/pembayaran/:id", requireAuth, requireLicense, async (req, res): 
   }
 
   const [hutang] = await db.select().from(hutangTable).where(eq(hutangTable.id, pembayaran.hutangId));
-  if (hutang) {
-    const newTotalDibayar = Math.max(0, parseFloat(hutang.totalDibayar) - parseFloat(pembayaran.nominalBayar));
-    const newSisaHutang = parseFloat(hutang.nominalHutang) - newTotalDibayar;
-    await db.update(hutangTable).set({
-      totalDibayar: newTotalDibayar.toString(),
-      sisaHutang: newSisaHutang.toString(),
-      status: newSisaHutang > 0 ? "aktif" : "lunas",
-      updatedAt: new Date(),
-    }).where(eq(hutangTable.id, hutang.id));
-  }
 
-  // Hapus entri keuangan yang otomatis dibuat saat pembayaran dibuat
-  if (pembayaran.keuanganId) {
-    await db.delete(keuanganTable).where(eq(keuanganTable.id, pembayaran.keuanganId));
-  }
+  // Semua operasi tulis dalam satu transaction agar atomik
+  db.transaction((tx) => {
+    if (hutang) {
+      const newTotalDibayar = Math.max(0, parseFloat(hutang.totalDibayar) - parseFloat(pembayaran.nominalBayar));
+      const newSisaHutang = parseFloat(hutang.nominalHutang) - newTotalDibayar;
+      tx.update(hutangTable).set({
+        totalDibayar: newTotalDibayar.toString(),
+        sisaHutang: newSisaHutang.toString(),
+        status: newSisaHutang > 0 ? "aktif" : "lunas",
+        updatedAt: new Date(),
+      }).where(eq(hutangTable.id, hutang.id)).run();
+    }
 
-  await db.delete(pembayaranTable).where(eq(pembayaranTable.id, params.data.id));
+    if (pembayaran.keuanganId) {
+      tx.delete(keuanganTable).where(eq(keuanganTable.id, pembayaran.keuanganId)).run();
+    }
+
+    tx.delete(pembayaranTable).where(eq(pembayaranTable.id, params.data.id)).run();
+  });
 
   res.json({ message: "Pembayaran berhasil dihapus." });
 });

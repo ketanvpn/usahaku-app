@@ -174,39 +174,41 @@ router.post("/stok/masuk", requireAuth, requireLicense, async (req, res): Promis
   const total = jml * harga;
   const stokBaru = parseFloat(barang.stok) + jml;
 
-  // Insert keuangan keluar otomatis
-  let keuanganId: number | null = null;
-  if (total > 0) {
-    const [k] = await db.insert(keuanganTable).values({
+  // Semua operasi tulis dalam satu transaction agar atomik
+  const { transaksi } = db.transaction((tx) => {
+    let keuanganId: number | null = null;
+    if (total > 0) {
+      const [k] = tx.insert(keuanganTable).values({
+        usahaId,
+        tanggal: String(tanggal),
+        tipe: "keluar",
+        kategori: "Pembelian Bahan",
+        keterangan: keterangan ? String(keterangan).trim() : `Beli ${barang.nama} ${jml} ${barang.satuan}`,
+        jumlah: String(total),
+      }).returning().all();
+      keuanganId = k.id;
+    }
+
+    const [transaksi] = tx.insert(transaksiStokTable).values({
       usahaId,
+      barangId: barang.id,
       tanggal: String(tanggal),
-      tipe: "keluar",
-      kategori: "Pembelian Bahan",
-      keterangan: keterangan ? String(keterangan).trim() : `Beli ${barang.nama} ${jml} ${barang.satuan}`,
-      jumlah: String(total),
-    }).returning();
-    keuanganId = k.id;
-  }
+      tipe: "masuk",
+      jumlah: String(jml),
+      hargaSatuan: String(harga),
+      keterangan: keterangan ? String(keterangan).trim() : null,
+      keuanganId,
+    }).returning().all();
 
-  // Insert transaksi stok
-  const [transaksi] = await db.insert(transaksiStokTable).values({
-    usahaId,
-    barangId: barang.id,
-    tanggal: String(tanggal),
-    tipe: "masuk",
-    jumlah: String(jml),
-    hargaSatuan: String(harga),
-    keterangan: keterangan ? String(keterangan).trim() : null,
-    keuanganId,
-  }).returning();
+    tx.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id)).run();
 
-  // Update stok barang
-  await db.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id));
+    return { transaksi, keuanganId };
+  });
 
   res.status(201).json({
     transaksi: fmtTransaksi(transaksi, barang.nama, barang.satuan),
     stok_baru: stokBaru,
-    keuangan_otomatis: keuanganId !== null,
+    keuangan_otomatis: transaksi.keuanganId !== null,
   });
 });
 
@@ -235,40 +237,42 @@ router.post("/stok/keluar", requireAuth, requireLicense, async (req, res): Promi
   const total = jml * harga;
   const stokBaru = stokSaat - jml;
 
-  // Insert keuangan masuk otomatis
-  let keuanganId: number | null = null;
-  if (total > 0) {
-    const [k] = await db.insert(keuanganTable).values({
+  // Semua operasi tulis dalam satu transaction agar atomik
+  const { transaksi } = db.transaction((tx) => {
+    let keuanganId: number | null = null;
+    if (total > 0) {
+      const [k] = tx.insert(keuanganTable).values({
+        usahaId,
+        tanggal: String(tanggal),
+        tipe: "masuk",
+        kategori: "Penjualan",
+        keterangan: keterangan ? String(keterangan).trim() : `Jual ${barang.nama} ${jml} ${barang.satuan}`,
+        jumlah: String(total),
+      }).returning().all();
+      keuanganId = k.id;
+    }
+
+    const [transaksi] = tx.insert(transaksiStokTable).values({
       usahaId,
+      barangId: barang.id,
       tanggal: String(tanggal),
-      tipe: "masuk",
-      kategori: "Penjualan",
-      keterangan: keterangan ? String(keterangan).trim() : `Jual ${barang.nama} ${jml} ${barang.satuan}`,
-      jumlah: String(total),
-    }).returning();
-    keuanganId = k.id;
-  }
+      tipe: "keluar",
+      jumlah: String(jml),
+      hargaSatuan: String(harga),
+      keterangan: keterangan ? String(keterangan).trim() : null,
+      keuanganId,
+    }).returning().all();
 
-  // Insert transaksi stok
-  const [transaksi] = await db.insert(transaksiStokTable).values({
-    usahaId,
-    barangId: barang.id,
-    tanggal: String(tanggal),
-    tipe: "keluar",
-    jumlah: String(jml),
-    hargaSatuan: String(harga),
-    keterangan: keterangan ? String(keterangan).trim() : null,
-    keuanganId,
-  }).returning();
+    tx.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id)).run();
 
-  // Update stok barang
-  await db.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id));
+    return { transaksi };
+  });
 
   res.status(201).json({
     transaksi: fmtTransaksi(transaksi, barang.nama, barang.satuan),
     stok_baru: stokBaru,
     peringatan_stok: stokBaru <= parseFloat(barang.stokMinimum) && parseFloat(barang.stokMinimum) > 0,
-    keuangan_otomatis: keuanganId !== null,
+    keuangan_otomatis: transaksi.keuanganId !== null,
   });
 });
 
@@ -290,21 +294,17 @@ router.delete("/stok/transaksi/:id", requireAuth, requireLicense, async (req, re
 
   const jumlah = parseFloat(transaksi.jumlah);
   const stokSaat = parseFloat(barang.stok);
-
-  // Balik stok: jika transaksi masuk → kurangi stok, jika keluar → tambah stok
   const stokBaru = transaksi.tipe === "masuk" ? stokSaat - jumlah : stokSaat + jumlah;
 
-  // Hapus keuangan terkait (jika ada)
-  if (transaksi.keuanganId) {
-    await db.delete(keuanganTable).where(eq(keuanganTable.id, transaksi.keuanganId));
-  }
-
-  // Hapus transaksi stok
-  await db.delete(transaksiStokTable)
-    .where(and(eq(transaksiStokTable.id, id), eq(transaksiStokTable.usahaId, usahaId)));
-
-  // Update stok barang
-  await db.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id));
+  // Semua operasi tulis dalam satu transaction agar atomik
+  db.transaction((tx) => {
+    if (transaksi.keuanganId) {
+      tx.delete(keuanganTable).where(eq(keuanganTable.id, transaksi.keuanganId)).run();
+    }
+    tx.delete(transaksiStokTable)
+      .where(and(eq(transaksiStokTable.id, id), eq(transaksiStokTable.usahaId, usahaId))).run();
+    tx.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id)).run();
+  });
 
   res.json({ message: "Riwayat transaksi berhasil dihapus", stok_baru: stokBaru });
 });

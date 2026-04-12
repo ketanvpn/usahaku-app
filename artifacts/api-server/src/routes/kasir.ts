@@ -19,7 +19,7 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
     res.status(400).json({ error: "uang_bayar wajib diisi" }); return;
   }
 
-  // Validasi semua barang dan cek stok
+  // Validasi semua barang dan cek stok (di luar transaksi — hanya baca)
   const barangList: Array<typeof barangTable.$inferSelect> = [];
   for (const item of items) {
     const { barang_id, jumlah } = item;
@@ -55,58 +55,59 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
     res.status(400).json({ error: `Uang bayar kurang. Total: ${total}, Uang bayar: ${uangBayarNum}` }); return;
   }
   const kembalian = uangBayarNum - total;
-
-  // Buat satu entri keuangan masuk untuk seluruh transaksi
   const namaBarangList = itemsCalc.map(i => i.barang.nama).join(", ");
-  const [keuangan] = await db.insert(keuanganTable).values({
-    usahaId,
-    tanggal: String(tanggal),
-    tipe: "masuk",
-    kategori: "Penjualan Kasir",
-    keterangan: catatan ? String(catatan).trim() : `Kasir: ${namaBarangList.slice(0, 100)}`,
-    jumlah: String(total),
-  }).returning();
 
-  // Proses setiap item: kurangi stok + buat transaksi_stok
-  for (const { barang, jml, harga } of itemsCalc) {
-    const stokBaru = parseFloat(barang.stok) - jml;
-    await db.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id));
-    await db.insert(transaksiStokTable).values({
+  // Semua operasi tulis dalam satu database transaction agar atomik
+  const { kasir, kasirItems } = db.transaction((tx) => {
+    const [keuangan] = tx.insert(keuanganTable).values({
       usahaId,
-      barangId: barang.id,
       tanggal: String(tanggal),
-      tipe: "keluar",
-      jumlah: String(jml),
-      hargaSatuan: String(harga),
-      keterangan: catatan ? String(catatan).trim() : `Kasir`,
-      keuanganId: keuangan.id,
-    });
-  }
+      tipe: "masuk",
+      kategori: "Penjualan Kasir",
+      keterangan: catatan ? String(catatan).trim() : `Kasir: ${namaBarangList.slice(0, 100)}`,
+      jumlah: String(total),
+    }).returning().all();
 
-  // Buat header transaksi_kasir
-  const [kasir] = await db.insert(transaksiKasirTable).values({
-    usahaId,
-    tanggal: String(tanggal),
-    total: String(total),
-    uangBayar: String(uangBayarNum),
-    kembalian: String(kembalian),
-    catatan: catatan ? String(catatan).trim() : null,
-  }).returning();
+    for (const { barang, jml, harga } of itemsCalc) {
+      const stokBaru = parseFloat(barang.stok) - jml;
+      tx.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id)).run();
+      tx.insert(transaksiStokTable).values({
+        usahaId,
+        barangId: barang.id,
+        tanggal: String(tanggal),
+        tipe: "keluar",
+        jumlah: String(jml),
+        hargaSatuan: String(harga),
+        keterangan: catatan ? String(catatan).trim() : `Kasir`,
+        keuanganId: keuangan.id,
+      }).run();
+    }
 
-  // Buat item-item transaksi kasir
-  const kasirItems = [];
-  for (const { barang, jml, harga, subtotal } of itemsCalc) {
-    const [ki] = await db.insert(transaksiKasirItemTable).values({
-      transaksiKasirId: kasir.id,
-      barangId: barang.id,
-      namaBarang: barang.nama,
-      satuan: barang.satuan,
-      jumlah: String(jml),
-      hargaSatuan: String(harga),
-      subtotal: String(subtotal),
-    }).returning();
-    kasirItems.push(ki);
-  }
+    const [kasir] = tx.insert(transaksiKasirTable).values({
+      usahaId,
+      tanggal: String(tanggal),
+      total: String(total),
+      uangBayar: String(uangBayarNum),
+      kembalian: String(kembalian),
+      catatan: catatan ? String(catatan).trim() : null,
+    }).returning().all();
+
+    const kasirItems: Array<typeof transaksiKasirItemTable.$inferSelect> = [];
+    for (const { barang, jml, harga, subtotal } of itemsCalc) {
+      const [ki] = tx.insert(transaksiKasirItemTable).values({
+        transaksiKasirId: kasir.id,
+        barangId: barang.id,
+        namaBarang: barang.nama,
+        satuan: barang.satuan,
+        jumlah: String(jml),
+        hargaSatuan: String(harga),
+        subtotal: String(subtotal),
+      }).returning().all();
+      kasirItems.push(ki);
+    }
+
+    return { kasir, kasirItems };
+  });
 
   res.status(201).json({
     id: kasir.id,

@@ -62,6 +62,12 @@ The application is built as a pnpm workspace monorepo.
     - User can change their password with current password verification.
     - Error messages are user-friendly and localized (Indonesian).
     - `SESSION_SECRET` is derived from `userData` path for uniqueness.
+- **Data Integrity — Database Transactions**:
+    - `POST /kasir/transaksi`: All writes (keuangan, stok update, transaksi_stok, transaksi_kasir, transaksi_kasir_item) wrapped in a single `db.transaction()` to prevent partial state on failure.
+    - `POST /pembayaran`: keuangan insert + pembayaran insert + hutang update wrapped atomically.
+    - `DELETE /pembayaran/:id`: hutang update + keuangan delete + pembayaran delete wrapped atomically.
+    - `POST /stok/masuk` & `POST /stok/keluar`: keuangan insert + transaksi_stok insert + barang stok update wrapped atomically.
+    - `DELETE /stok/transaksi/:id`: keuangan delete + transaksi_stok delete + barang stok update wrapped atomically.
 
 **Feature Specifications:**
 - **Owner Pages**: Dashboard (summary), Customer List (CRUD, search, safe delete), Customer Detail (split active/lunas hutang, payment history), Debt List (filters), Debt Detail, Payment Recording, Reports (filters, CSV, PDF), Backup/Restore (with preview), Profile (change password, logout).
