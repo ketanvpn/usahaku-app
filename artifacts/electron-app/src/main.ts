@@ -564,38 +564,76 @@ ipcMain.handle("backup:restoreDB", async (): Promise<{ success: boolean; cancele
 
   const sourcePath = result.filePaths[0];
   const dbPath = getDbPath();
+  const rollbackPath = dbPath + ".rollback";
 
+  // ── LANGKAH 1: Buat salinan rollback dari DB aktif ──────────────────────
   try {
-    // Hentikan backend dulu agar tidak ada write aktif
-    if (backendProcess) {
-      backendProcess.kill();
-      backendProcess = null;
-    }
-    // Tunggu proses benar-benar berhenti
-    await new Promise(r => setTimeout(r, 600));
+    fs.copyFileSync(dbPath, rollbackPath);
+    writeLog(`Rollback tersimpan: ${rollbackPath}`);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    writeLog(`Gagal membuat rollback: ${message}`);
+    return { success: false, message: `Gagal membuat salinan pengaman: ${message}` };
+  }
 
-    // Timpa DB dengan file backup
+  // ── LANGKAH 2: Hentikan backend ─────────────────────────────────────────
+  if (backendProcess) {
+    backendProcess.kill();
+    backendProcess = null;
+  }
+  await new Promise(r => setTimeout(r, 600));
+
+  // ── LANGKAH 3: Salin file backup pilihan user ke DB aktif ────────────────
+  try {
     fs.copyFileSync(sourcePath, dbPath);
     writeLog(`DB di-restore dari: ${sourcePath}`);
+  } catch (err: unknown) {
+    // Salin gagal → rollback langsung, tidak perlu cek backend
+    const message = err instanceof Error ? err.message : String(err);
+    writeLog(`Salin file gagal, rollback...: ${message}`);
+    try { fs.copyFileSync(rollbackPath, dbPath); } catch { /* abaikan */ }
+    try { fs.unlinkSync(rollbackPath); } catch { /* abaikan */ }
+    startBackend();
+    return { success: false, message: `Gagal menyalin file: ${message}` };
+  }
 
-    // Nyalakan backend lagi
+  // ── LANGKAH 4: Nyalakan backend, cek apakah berhasil jalan ──────────────
+  try {
     startBackend();
     await waitForBackend(BACKEND_PORT, 20000);
 
-    // Reload halaman di renderer
+    // Berhasil → hapus file rollback, reload renderer
+    try { fs.unlinkSync(rollbackPath); } catch { /* tidak kritis */ }
+    writeLog("Restore berhasil. Rollback dihapus.");
+
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.reload();
     }
 
     return { success: true };
+
   } catch (err: unknown) {
+    // Backend gagal start → kembalikan DB semula (auto-rollback)
     const message = err instanceof Error ? err.message : String(err);
-    writeLog(`Restore DB gagal: ${message}`);
-    // Coba restart backend walau gagal
-    if (!backendProcess) {
-      startBackend();
+    writeLog(`Backend gagal setelah restore, menjalankan auto-rollback: ${message}`);
+
+    if (backendProcess) { backendProcess.kill(); backendProcess = null; }
+    await new Promise(r => setTimeout(r, 400));
+
+    try {
+      fs.copyFileSync(rollbackPath, dbPath);
+      fs.unlinkSync(rollbackPath);
+      writeLog("Auto-rollback berhasil. DB dikembalikan ke semula.");
+    } catch (rbErr: unknown) {
+      const rbMsg = rbErr instanceof Error ? rbErr.message : String(rbErr);
+      writeLog(`Auto-rollback GAGAL: ${rbMsg}`);
     }
-    return { success: false, message };
+
+    startBackend();
+    return {
+      success: false,
+      message: `File backup tidak valid atau tidak kompatibel dengan versi ini. Data Anda sudah dikembalikan seperti semula.`,
+    };
   }
 });
 
