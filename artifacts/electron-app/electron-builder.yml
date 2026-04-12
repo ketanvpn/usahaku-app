@@ -1,7 +1,7 @@
 appId: com.ketantech.usahaku
 productName: Usahaku
 copyright: Copyright © 2025 KetanTech
-buildVersion: "1.0.6"
+buildVersion: "1.0.7"
 
 directories:
   output: release
