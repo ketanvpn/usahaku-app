@@ -117,6 +117,15 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
   });
 });
 
+router.get("/auth/usernames", async (req, res): Promise<void> => {
+  const users = await db
+    .select({ username: usersTable.username, nama: usersTable.nama })
+    .from(usersTable)
+    .where(eq(usersTable.role, "owner"));
+
+  res.json(users.filter((u) => u.username !== "admin"));
+});
+
 router.post("/auth/reset-with-code", async (req, res): Promise<void> => {
   const { username, reset_code, new_password } = req.body;
 

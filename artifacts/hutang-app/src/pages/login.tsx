@@ -12,7 +12,7 @@ import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, BookOpen, ShieldCheck, TrendingUp, Package, KeyRound, ArrowLeft } from "lucide-react";
+import { Loader2, BookOpen, ShieldCheck, TrendingUp, Package, KeyRound, ArrowLeft, User } from "lucide-react";
 
 const loginSchema = z.object({
   username: z.string().min(1, { message: "Username tidak boleh kosong" }),
@@ -42,6 +42,9 @@ export default function LoginPage() {
   const loginMutation = useLogin();
   const [showReset, setShowReset] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [showUsernames, setShowUsernames] = useState(false);
+  const [usernameList, setUsernameList] = useState<{username: string; nama: string}[]>([]);
+  const [isFetchingUsernames, setIsFetchingUsernames] = useState(false);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -87,6 +90,22 @@ export default function LoginPage() {
         },
       }
     );
+  };
+
+  const handleShowUsernames = async () => {
+    setIsFetchingUsernames(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/usernames`);
+      if (res.ok) {
+        const data = await res.json();
+        setUsernameList(data);
+        setShowUsernames(true);
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Gagal", description: "Tidak dapat memuat daftar akun." });
+    } finally {
+      setIsFetchingUsernames(false);
+    }
   };
 
   const onResetSubmit = async (values: z.infer<typeof resetSchema>) => {
@@ -233,15 +252,60 @@ export default function LoginPage() {
                 </form>
               </Form>
 
-              <div className="text-center mt-6">
+              <div className="flex flex-col items-center gap-2 mt-6">
                 <button
                   type="button"
-                  onClick={() => { setShowReset(true); resetForm.reset(); }}
+                  onClick={() => { setShowReset(true); resetForm.reset(); setShowUsernames(false); }}
                   className="text-xs text-primary hover:underline inline-flex items-center gap-1"
                 >
                   <KeyRound className="h-3 w-3" />
                   Lupa password? Reset dengan kode dari administrator
                 </button>
+                <button
+                  type="button"
+                  onClick={showUsernames ? () => setShowUsernames(false) : handleShowUsernames}
+                  disabled={isFetchingUsernames}
+                  className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 disabled:opacity-50"
+                >
+                  {isFetchingUsernames ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <User className="h-3 w-3" />
+                  )}
+                  {showUsernames ? "Sembunyikan daftar akun" : "Lupa username? Lihat daftar akun"}
+                </button>
+
+                {showUsernames && (
+                  <div className="w-full mt-1 rounded-lg border bg-muted/50 p-3">
+                    <p className="text-xs text-muted-foreground mb-2 font-medium">Akun yang terdaftar di perangkat ini:</p>
+                    {usernameList.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">Belum ada akun owner.</p>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        {usernameList.map((u) => (
+                          <button
+                            key={u.username}
+                            type="button"
+                            onClick={() => {
+                              form.setValue("username", u.username);
+                              setShowUsernames(false);
+                            }}
+                            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-background hover:shadow-sm transition-all text-left"
+                          >
+                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <User className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            <div>
+                              <span className="font-mono font-semibold text-foreground">{u.username}</span>
+                              {u.nama && <span className="text-muted-foreground text-xs ml-2">({u.nama})</span>}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-2">Klik nama akun untuk mengisi username otomatis.</p>
+                  </div>
+                )}
               </div>
             </>
           ) : (
