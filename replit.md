@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.14**
+**Current version: 1.0.18**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -16,8 +16,11 @@ Key features:
 - Backup/restore (v1.2 format includes kasir tables)
 - Pengingat backup otomatis: banner kuning muncul jika belum backup > 7 hari (localStorage-based)
 - Auto-backup saat tutup aplikasi: salin file .db ke Documents/UsahakuBackup/, simpan 7 file terbaru (production/Electron only)
-- Offline license key system
+- Offline license key system (HMAC-SHA256, format BUKU-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX)
 - Auto-update (electron-updater, GitHub releases) + manual check button + version display in sidebar
+- Remote password reset via signed code (RST-XXXX-XXXX-XXXX-XXXX, 24-hour expiry, no auth required)
+- "Lupa username?" — pelanggan bisa lihat daftar akun owner di halaman login
+- Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 
 ## User Preferences
 
@@ -59,7 +62,7 @@ The application is built as a pnpm workspace monorepo.
     - Uses `electron.utilityProcess.fork()` to spawn the backend within Electron's Node.js runtime.
     - Database path dynamically determined (`app.getPath('userData')` for desktop).
     - Frontend static files served by the Express backend in production desktop builds.
-    - Security focused with `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`.
+    - Security focused with `contextIsolation: true`, `nodeIntegration: false`, `sandbox: false` (required for utilityProcess).
     - Improved startup experience with loading screens and robust error logging for backend failures.
     - Native modules are handled carefully: see **Electron Packaging — Native Module Chain** below for full details.
     - `bcrypt` replaced with `bcryptjs` (pure JS, bundled by esbuild). Hash format compatible.
@@ -173,7 +176,7 @@ pnpm run dist:win               # builds backend+frontend+electron, rebuilds nat
 ```
 
 ### Diagnostic Log (on startup failure)
-`C:\Users\{name}\AppData\Roaming\Buku Hutang\buku-hutang.log`
+`C:\Users\{name}\AppData\Roaming\Usahaku\\usahaku.log`
 Key lines to check:
 - `[native] better-sqlite3 exists: true/false`
 - `[native] bindings stub exists: true/false`
