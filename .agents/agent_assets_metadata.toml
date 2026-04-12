@@ -12,3 +12,9 @@ id = "4inOmFpm_M71TG4y8zrVA"
 uri = "file://PANDUAN-RILIS-VERSI-BARU.md"
 type = "text"
 title = "Panduan Rilis Versi Baru — Usahaku"
+
+[[outputs]]
+id = "5PdYqd5arUtIVXPVno8Mk"
+uri = "file://PANDUAN-KERJA-USAHAKU.md"
+type = "text"
+title = "Panduan Kerja Proyek Usahaku"
