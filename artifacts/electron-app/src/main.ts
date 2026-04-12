@@ -617,7 +617,9 @@ ipcMain.handle("backup:restoreDB", async (): Promise<{ success: boolean; cancele
     const message = err instanceof Error ? err.message : String(err);
     writeLog(`Backend gagal setelah restore, menjalankan auto-rollback: ${message}`);
 
-    if (backendProcess) { backendProcess.kill(); backendProcess = null; }
+    const stuckProcess = backendProcess as Electron.UtilityProcess | null;
+    stuckProcess?.kill();
+    backendProcess = null;
     await new Promise(r => setTimeout(r, 400));
 
     try {
