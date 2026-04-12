@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -45,6 +45,7 @@ export default function LoginPage() {
   const [showUsernames, setShowUsernames] = useState(false);
   const [usernameList, setUsernameList] = useState<{username: string; nama: string}[]>([]);
   const [isFetchingUsernames, setIsFetchingUsernames] = useState(false);
+  const resetUsernameRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -62,6 +63,15 @@ export default function LoginPage() {
       else setLocation("/dashboard");
     }
   }, [authLoading, isAuthenticated, user, setLocation]);
+
+  useEffect(() => {
+    if (showReset) {
+      const timer = setTimeout(() => {
+        resetUsernameRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [showReset]);
 
   if (authLoading) {
     return (
@@ -334,7 +344,15 @@ export default function LoginPage() {
                       <FormItem>
                         <FormLabel className="text-foreground font-medium">Username Anda</FormLabel>
                         <FormControl>
-                          <Input placeholder="Masukkan username" className="h-11 bg-white" {...field} />
+                          <Input
+                            placeholder="Masukkan username"
+                            className="h-11 bg-white"
+                            {...field}
+                            ref={(el) => {
+                              field.ref(el);
+                              resetUsernameRef.current = el;
+                            }}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
