@@ -550,6 +550,55 @@ ipcMain.handle("backup:chooseFolder", async () => {
   return chosen;
 });
 
+ipcMain.handle("backup:restoreDB", async (): Promise<{ success: boolean; canceled?: boolean; message?: string }> => {
+  if (!mainWindow) return { success: false, message: "Window tidak tersedia" };
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "Pilih File Auto-Backup (.db)",
+    defaultPath: getAutoBackupDir(),
+    filters: [{ name: "File Auto-Backup Usahaku", extensions: ["db"] }],
+    properties: ["openFile"],
+  });
+
+  if (result.canceled || result.filePaths.length === 0) return { success: false, canceled: true };
+
+  const sourcePath = result.filePaths[0];
+  const dbPath = getDbPath();
+
+  try {
+    // Hentikan backend dulu agar tidak ada write aktif
+    if (backendProcess) {
+      backendProcess.kill();
+      backendProcess = null;
+    }
+    // Tunggu proses benar-benar berhenti
+    await new Promise(r => setTimeout(r, 600));
+
+    // Timpa DB dengan file backup
+    fs.copyFileSync(sourcePath, dbPath);
+    writeLog(`DB di-restore dari: ${sourcePath}`);
+
+    // Nyalakan backend lagi
+    startBackend();
+    await waitForBackend(BACKEND_PORT, 20000);
+
+    // Reload halaman di renderer
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.reload();
+    }
+
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    writeLog(`Restore DB gagal: ${message}`);
+    // Coba restart backend walau gagal
+    if (!backendProcess) {
+      startBackend();
+    }
+    return { success: false, message };
+  }
+});
+
 ipcMain.handle("backup:saveManual", async (_event, jsonData: string) => {
   if (!mainWindow) return { success: false, message: "Window tidak tersedia" };
   const datePart = new Date().toISOString().slice(0, 10);

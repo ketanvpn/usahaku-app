@@ -26,5 +26,7 @@ contextBridge.exposeInMainWorld("electronApp", {
       ipcRenderer.invoke("backup:chooseFolder"),
     saveManual: (jsonData: string): Promise<{ success: boolean; filePath?: string; message?: string }> =>
       ipcRenderer.invoke("backup:saveManual", jsonData),
+    restoreDB: (): Promise<{ success: boolean; canceled?: boolean; message?: string }> =>
+      ipcRenderer.invoke("backup:restoreDB"),
   },
 });

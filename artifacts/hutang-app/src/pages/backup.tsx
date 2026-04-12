@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Loader2, Download, Upload, AlertTriangle, FileJson, Users, ReceiptText, CreditCard, FolderOpen, HardDrive } from "lucide-react";
+import { Loader2, Download, Upload, AlertTriangle, FileJson, Users, ReceiptText, CreditCard, FolderOpen, HardDrive, Database, RotateCcw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface BackupPreview {
@@ -24,6 +24,8 @@ export default function BackupPage() {
   const [isConfirmRestoreOpen, setIsConfirmRestoreOpen] = useState(false);
   const [autoBackupFolder, setAutoBackupFolder] = useState<string>("");
   const [isChoosingFolder, setIsChoosingFolder] = useState(false);
+  const [isRestoringDB, setIsRestoringDB] = useState(false);
+  const [isConfirmRestoreDBOpen, setIsConfirmRestoreDBOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -49,6 +51,22 @@ export default function BackupPage() {
       }
     } finally {
       setIsChoosingFolder(false);
+    }
+  };
+
+  const handleRestoreDB = async () => {
+    if (!window.electronApp?.backup?.restoreDB) return;
+    setIsRestoringDB(true);
+    try {
+      const result = await window.electronApp.backup.restoreDB();
+      if (result.canceled) return;
+      if (result.success) {
+        toast({ title: "Restore auto-backup berhasil!", description: "Aplikasi memuat ulang data..." });
+      } else {
+        toast({ variant: "destructive", title: "Restore gagal", description: result.message || "Terjadi kesalahan" });
+      }
+    } finally {
+      setIsRestoringDB(false);
     }
   };
 
@@ -212,6 +230,46 @@ export default function BackupPage() {
         </Card>
       )}
 
+      {isElectron && (
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-800">
+              <Database className="h-5 w-5" />
+              Restore dari Auto-Backup (.db)
+            </CardTitle>
+            <CardDescription className="text-amber-700">
+              Pulihkan data dari file auto-backup yang tersimpan otomatis saat menutup aplikasi.
+              File auto-backup berformat <strong>.db</strong> dan tersimpan di folder auto-backup di atas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Alert className="bg-amber-100 border-amber-300 text-amber-900">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Perhatian</AlertTitle>
+              <AlertDescription className="text-xs mt-1">
+                Restore akan menghapus semua data saat ini dan menggantinya dengan isi file .db yang dipilih.
+                Aplikasi akan memuat ulang secara otomatis setelah selesai.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+          <CardFooter>
+            <Button
+              variant="outline"
+              className="border-amber-400 text-amber-800 hover:bg-amber-100 w-full sm:w-auto"
+              onClick={() => setIsConfirmRestoreDBOpen(true)}
+              disabled={isRestoringDB}
+            >
+              {isRestoringDB ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RotateCcw className="mr-2 h-4 w-4" />
+              )}
+              Pilih File Auto-Backup & Restore...
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -371,6 +429,35 @@ export default function BackupPage() {
               className="bg-destructive text-destructive-foreground"
             >
               Ya, Restore Sekarang
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={isConfirmRestoreDBOpen} onOpenChange={setIsConfirmRestoreDBOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restore dari Auto-Backup?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Anda akan memilih file <strong>.db</strong> dari folder auto-backup.
+                  Semua data saat ini akan <strong>dihapus dan diganti</strong> dengan isi file tersebut.
+                </p>
+                <p>Aplikasi akan memuat ulang otomatis setelah restore selesai.</p>
+                <p className="text-destructive font-medium">Proses ini tidak dapat dibatalkan.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setIsConfirmRestoreDBOpen(false);
+                handleRestoreDB();
+              }}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Lanjutkan, Pilih File...
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
