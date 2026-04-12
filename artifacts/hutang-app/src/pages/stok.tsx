@@ -24,6 +24,7 @@ interface Barang {
   id: number;
   nama: string;
   satuan: string;
+  kategori: string;
   harga_beli: number;
   harga_jual: number;
   stok: number;
@@ -44,9 +45,12 @@ interface TransaksiStok {
   keterangan: string | null;
 }
 
+const KATEGORI_OPTIONS = ["Minuman", "Makanan & Snack", "Sembako", "Rokok", "Sabun & Kebersihan", "Obat-obatan", "Lain-lain"];
+
 const barangSchema = z.object({
   nama: z.string().min(1, "Nama wajib diisi"),
   satuan: z.string().min(1, "Satuan wajib diisi"),
+  kategori: z.string().optional(),
   harga_beli: z.coerce.number().min(0, "Harga tidak boleh negatif"),
   harga_jual: z.coerce.number().min(0, "Harga tidak boleh negatif"),
   stok_awal: z.coerce.number().min(0),
@@ -85,6 +89,7 @@ export default function StokPage() {
   const [filterBulan, setFilterBulan] = useState(String(now.getMonth() + 1));
   const [filterTahun, setFilterTahun] = useState(String(now.getFullYear()));
   const [filterNama, setFilterNama] = useState("");
+  const [filterKategori, setFilterKategori] = useState("");
 
   const { data: barangList = [], isLoading: loadingBarang } = useQuery<Barang[]>({
     queryKey: ["barang"],
@@ -97,6 +102,10 @@ export default function StokPage() {
   });
 
   const peringatan = barangList.filter(b => b.peringatan);
+  const kategoriList = Array.from(new Set(barangList.map(b => b.kategori).filter(Boolean))).sort();
+  const barangFiltered = filterKategori
+    ? barangList.filter(b => b.kategori === filterKategori)
+    : barangList;
   const tahunOptions = Array.from({ length: 5 }, (_, i) => String(now.getFullYear() - i));
 
   const transaksiFiltered = filterNama.trim()
@@ -119,18 +128,18 @@ export default function StokPage() {
   // Form barang
   const barangForm = useForm<BarangForm>({
     resolver: zodResolver(barangSchema),
-    defaultValues: { nama: "", satuan: "", harga_beli: 0, harga_jual: 0, stok_awal: 0, stok_minimum: 0 },
+    defaultValues: { nama: "", satuan: "", kategori: "", harga_beli: 0, harga_jual: 0, stok_awal: 0, stok_minimum: 0 },
   });
 
   const openTambahBarang = () => {
     setEditBarang(null);
-    barangForm.reset({ nama: "", satuan: "", harga_beli: 0, harga_jual: 0, stok_awal: 0, stok_minimum: 0 });
+    barangForm.reset({ nama: "", satuan: "", kategori: "", harga_beli: 0, harga_jual: 0, stok_awal: 0, stok_minimum: 0 });
     setBarangDialog(true);
   };
 
   const openEditBarang = (b: Barang) => {
     setEditBarang(b);
-    barangForm.reset({ nama: b.nama, satuan: b.satuan, harga_beli: b.harga_beli, harga_jual: b.harga_jual, stok_awal: 0, stok_minimum: b.stok_minimum });
+    barangForm.reset({ nama: b.nama, satuan: b.satuan, kategori: b.kategori ?? "", harga_beli: b.harga_beli, harga_jual: b.harga_jual, stok_awal: 0, stok_minimum: b.stok_minimum });
     setBarangDialog(true);
   };
 
@@ -255,6 +264,24 @@ export default function StokPage() {
 
         {/* Tab Daftar Barang */}
         <TabsContent value="daftar">
+          {barangList.length > 0 && (
+            <div className="flex gap-2 mb-3">
+              <Select value={filterKategori} onValueChange={setFilterKategori}>
+                <SelectTrigger className="w-48 h-9 text-sm">
+                  <SelectValue placeholder="Semua Kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Semua Kategori</SelectItem>
+                  {kategoriList.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {filterKategori && (
+                <Button variant="ghost" size="sm" onClick={() => setFilterKategori("")} className="text-xs">
+                  Reset Filter
+                </Button>
+              )}
+            </div>
+          )}
           <Card>
             <CardContent className="p-0">
               {loadingBarang ? (
@@ -262,6 +289,7 @@ export default function StokPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nama Barang</TableHead>
+                      <TableHead>Kategori</TableHead>
                       <TableHead>Satuan</TableHead>
                       <TableHead className="text-right">Harga Beli</TableHead>
                       <TableHead className="text-right">Harga Jual</TableHead>
@@ -271,7 +299,7 @@ export default function StokPage() {
                       <TableHead className="text-center w-24">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableSkeleton cols={8} />
+                  <TableSkeleton cols={9} />
                 </Table>
               ) : barangList.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
@@ -284,6 +312,7 @@ export default function StokPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nama Barang</TableHead>
+                      <TableHead>Kategori</TableHead>
                       <TableHead>Satuan</TableHead>
                       <TableHead className="text-right">Harga Beli</TableHead>
                       <TableHead className="text-right">Harga Jual</TableHead>
@@ -294,9 +323,14 @@ export default function StokPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {barangList.map(b => (
+                    {barangFiltered.map(b => (
                       <TableRow key={b.id}>
                         <TableCell className="font-medium">{b.nama}</TableCell>
+                        <TableCell>
+                          {b.kategori
+                            ? <Badge variant="outline" className="text-xs font-normal">{b.kategori}</Badge>
+                            : <span className="text-muted-foreground text-xs">—</span>}
+                        </TableCell>
                         <TableCell className="text-muted-foreground">{b.satuan}</TableCell>
                         <TableCell className="text-right text-sm">{formatRupiah(b.harga_beli)}</TableCell>
                         <TableCell className="text-right text-sm">{formatRupiah(b.harga_jual)}</TableCell>
@@ -464,6 +498,20 @@ export default function StokPage() {
               <FormField control={barangForm.control} name="satuan" render={({ field }) => (
                 <FormItem><FormLabel>Satuan</FormLabel>
                   <FormControl><Input placeholder="kg, pcs, sak, karung, liter" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={barangForm.control} name="kategori" render={({ field }) => (
+                <FormItem><FormLabel>Kategori <span className="text-muted-foreground text-xs">(opsional)</span></FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                    <FormControl>
+                      <SelectTrigger><SelectValue placeholder="Pilih kategori..." /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">— Tanpa Kategori —</SelectItem>
+                      {KATEGORI_OPTIONS.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )} />

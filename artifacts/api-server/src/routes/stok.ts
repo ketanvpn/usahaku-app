@@ -13,6 +13,7 @@ function fmtBarang(b: typeof barangTable.$inferSelect) {
     usaha_id: b.usahaId,
     nama: b.nama,
     satuan: b.satuan,
+    kategori: b.kategori ?? "",
     harga_beli: parseFloat(b.hargaBeli),
     harga_jual: parseFloat(b.hargaJual),
     stok,
@@ -68,13 +69,14 @@ router.post("/barang", requireAuth, requireLicense, async (req, res): Promise<vo
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const { nama, satuan, harga_beli, harga_jual, stok_awal, stok_minimum } = req.body;
+  const { nama, satuan, harga_beli, harga_jual, stok_awal, stok_minimum, kategori } = req.body;
   if (!nama || !satuan) { res.status(400).json({ error: "nama dan satuan wajib diisi" }); return; }
 
   const [inserted] = await db.insert(barangTable).values({
     usahaId,
     nama: String(nama).trim(),
     satuan: String(satuan).trim(),
+    kategori: String(kategori ?? "").trim(),
     hargaBeli: String(parseFloat(harga_beli ?? "0") || 0),
     hargaJual: String(parseFloat(harga_jual ?? "0") || 0),
     stok: String(parseFloat(stok_awal ?? "0") || 0),
@@ -94,12 +96,13 @@ router.put("/barang/:id", requireAuth, requireLicense, async (req, res): Promise
   const [existing] = await db.select().from(barangTable).where(and(eq(barangTable.id, id), eq(barangTable.usahaId, usahaId)));
   if (!existing) { res.status(404).json({ error: "Barang tidak ditemukan" }); return; }
 
-  const { nama, satuan, harga_beli, harga_jual, stok_minimum } = req.body;
+  const { nama, satuan, harga_beli, harga_jual, stok_minimum, kategori } = req.body;
   if (!nama || !satuan) { res.status(400).json({ error: "nama dan satuan wajib diisi" }); return; }
 
   const [updated] = await db.update(barangTable).set({
     nama: String(nama).trim(),
     satuan: String(satuan).trim(),
+    kategori: String(kategori ?? "").trim(),
     hargaBeli: String(parseFloat(harga_beli ?? "0") || 0),
     hargaJual: String(parseFloat(harga_jual ?? "0") || 0),
     stokMinimum: String(parseFloat(stok_minimum ?? "0") || 0),

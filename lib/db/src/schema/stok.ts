@@ -10,6 +10,7 @@ export const barangTable = sqliteTable("barang", {
   hargaJual: text("harga_jual").notNull().default("0"),
   stok: text("stok").notNull().default("0"),
   stokMinimum: text("stok_minimum").notNull().default("0"),
+  kategori: text("kategori").notNull().default(""),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 
