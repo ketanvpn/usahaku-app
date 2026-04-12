@@ -2,8 +2,21 @@ import { Router, type IRouter } from "express";
 import { db, keuanganTable } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { requireAuth, requireLicense } from "../middlewares/auth";
+import { z } from "zod";
 
 const router: IRouter = Router();
+
+// ─── Zod Schemas ──────────────────────────────────────────────────────────────
+
+const KeuanganBodySchema = z.object({
+  tanggal: z.string().min(1, "Tanggal wajib diisi").regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal tidak valid (YYYY-MM-DD)"),
+  tipe: z.enum(["masuk", "keluar"], { error: "Tipe harus 'masuk' atau 'keluar'" }),
+  kategori: z.string().trim().optional(),
+  keterangan: z.string().min(1, "Keterangan wajib diisi").trim(),
+  jumlah: z.coerce.number({ error: "Jumlah harus berupa angka" }).positive("Jumlah harus lebih dari 0"),
+});
+
+// ─── Helper ───────────────────────────────────────────────────────────────────
 
 function formatKeuangan(k: typeof keuanganTable.$inferSelect) {
   return {
@@ -17,6 +30,8 @@ function formatKeuangan(k: typeof keuanganTable.$inferSelect) {
     created_at: k.createdAt instanceof Date ? k.createdAt.toISOString() : new Date(k.createdAt).toISOString(),
   };
 }
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
 
 // GET /api/keuangan/rekap-kategori?bulan=4&tahun=2026
 router.get("/keuangan/rekap-kategori", requireAuth, async (req, res): Promise<void> => {
@@ -81,23 +96,13 @@ router.get("/keuangan", requireAuth, async (req, res): Promise<void> => {
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
   const { bulan, tahun, tipe } = req.query as { bulan?: string; tahun?: string; tipe?: string };
-
   const conditions = [eq(keuanganTable.usahaId, usahaId)];
 
-  if (tahun) {
-    conditions.push(sql`strftime('%Y', ${keuanganTable.tanggal}) = ${tahun}`);
-  }
-  if (bulan) {
-    const bulanPadded = bulan.padStart(2, "0");
-    conditions.push(sql`strftime('%m', ${keuanganTable.tanggal}) = ${bulanPadded}`);
-  }
-  if (tipe === "masuk" || tipe === "keluar") {
-    conditions.push(eq(keuanganTable.tipe, tipe));
-  }
+  if (tahun) conditions.push(sql`strftime('%Y', ${keuanganTable.tanggal}) = ${tahun}`);
+  if (bulan) conditions.push(sql`strftime('%m', ${keuanganTable.tanggal}) = ${bulan.padStart(2, "0")}`);
+  if (tipe === "masuk" || tipe === "keluar") conditions.push(eq(keuanganTable.tipe, tipe));
 
-  const rows = await db
-    .select()
-    .from(keuanganTable)
+  const rows = await db.select().from(keuanganTable)
     .where(and(...conditions))
     .orderBy(desc(keuanganTable.tanggal), desc(keuanganTable.id));
 
@@ -110,20 +115,11 @@ router.get("/keuangan/rekap", requireAuth, async (req, res): Promise<void> => {
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
   const { bulan, tahun } = req.query as { bulan?: string; tahun?: string };
-
   const conditions = [eq(keuanganTable.usahaId, usahaId)];
-  if (tahun) {
-    conditions.push(sql`strftime('%Y', ${keuanganTable.tanggal}) = ${tahun}`);
-  }
-  if (bulan) {
-    const bulanPadded = bulan.padStart(2, "0");
-    conditions.push(sql`strftime('%m', ${keuanganTable.tanggal}) = ${bulanPadded}`);
-  }
+  if (tahun) conditions.push(sql`strftime('%Y', ${keuanganTable.tanggal}) = ${tahun}`);
+  if (bulan) conditions.push(sql`strftime('%m', ${keuanganTable.tanggal}) = ${bulan.padStart(2, "0")}`);
 
-  const rows = await db
-    .select()
-    .from(keuanganTable)
-    .where(and(...conditions));
+  const rows = await db.select().from(keuanganTable).where(and(...conditions));
 
   let totalMasuk = 0;
   let totalKeluar = 0;
@@ -146,29 +142,21 @@ router.post("/keuangan", requireAuth, requireLicense, async (req, res): Promise<
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const { tanggal, tipe, kategori, keterangan, jumlah } = req.body;
+  const parsed = KeuanganBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid" });
+    return;
+  }
 
-  if (!tanggal || !tipe || !keterangan || jumlah === undefined) {
-    res.status(400).json({ error: "tanggal, tipe, keterangan, dan jumlah wajib diisi" });
-    return;
-  }
-  if (tipe !== "masuk" && tipe !== "keluar") {
-    res.status(400).json({ error: "tipe harus 'masuk' atau 'keluar'" });
-    return;
-  }
-  const nominalParsed = parseFloat(String(jumlah));
-  if (isNaN(nominalParsed) || nominalParsed <= 0) {
-    res.status(400).json({ error: "jumlah harus berupa angka positif" });
-    return;
-  }
+  const { tanggal, tipe, kategori, keterangan, jumlah } = parsed.data;
 
   const [inserted] = await db.insert(keuanganTable).values({
     usahaId,
-    tanggal: String(tanggal),
+    tanggal,
     tipe,
-    kategori: kategori ? String(kategori).trim() : null,
-    keterangan: String(keterangan).trim(),
-    jumlah: String(nominalParsed),
+    kategori: kategori || null,
+    keterangan,
+    jumlah: String(jumlah),
   }).returning();
 
   res.status(201).json(formatKeuangan(inserted));
@@ -182,31 +170,24 @@ router.put("/keuangan/:id", requireAuth, requireLicense, async (req, res): Promi
   const id = parseInt(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "ID tidak valid" }); return; }
 
-  const [existing] = await db.select().from(keuanganTable).where(and(eq(keuanganTable.id, id), eq(keuanganTable.usahaId, usahaId)));
+  const [existing] = await db.select().from(keuanganTable)
+    .where(and(eq(keuanganTable.id, id), eq(keuanganTable.usahaId, usahaId)));
   if (!existing) { res.status(404).json({ error: "Data tidak ditemukan" }); return; }
 
-  const { tanggal, tipe, kategori, keterangan, jumlah } = req.body;
+  const parsed = KeuanganBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid" });
+    return;
+  }
 
-  if (!tanggal || !tipe || !keterangan || jumlah === undefined) {
-    res.status(400).json({ error: "tanggal, tipe, keterangan, dan jumlah wajib diisi" });
-    return;
-  }
-  if (tipe !== "masuk" && tipe !== "keluar") {
-    res.status(400).json({ error: "tipe harus 'masuk' atau 'keluar'" });
-    return;
-  }
-  const nominalParsed = parseFloat(String(jumlah));
-  if (isNaN(nominalParsed) || nominalParsed <= 0) {
-    res.status(400).json({ error: "jumlah harus berupa angka positif" });
-    return;
-  }
+  const { tanggal, tipe, kategori, keterangan, jumlah } = parsed.data;
 
   const [updated] = await db.update(keuanganTable).set({
-    tanggal: String(tanggal),
+    tanggal,
     tipe,
-    kategori: kategori ? String(kategori).trim() : null,
-    keterangan: String(keterangan).trim(),
-    jumlah: String(nominalParsed),
+    kategori: kategori || null,
+    keterangan,
+    jumlah: String(jumlah),
   }).where(and(eq(keuanganTable.id, id), eq(keuanganTable.usahaId, usahaId))).returning();
 
   res.json(formatKeuangan(updated));
@@ -220,7 +201,8 @@ router.delete("/keuangan/:id", requireAuth, requireLicense, async (req, res): Pr
   const id = parseInt(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "ID tidak valid" }); return; }
 
-  const [existing] = await db.select().from(keuanganTable).where(and(eq(keuanganTable.id, id), eq(keuanganTable.usahaId, usahaId)));
+  const [existing] = await db.select().from(keuanganTable)
+    .where(and(eq(keuanganTable.id, id), eq(keuanganTable.usahaId, usahaId)));
   if (!existing) { res.status(404).json({ error: "Data tidak ditemukan" }); return; }
 
   await db.delete(keuanganTable).where(and(eq(keuanganTable.id, id), eq(keuanganTable.usahaId, usahaId)));

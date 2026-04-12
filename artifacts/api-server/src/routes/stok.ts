@@ -1,9 +1,37 @@
 import { Router, type IRouter } from "express";
 import { db, barangTable, transaksiStokTable, keuanganTable } from "@workspace/db";
-import { eq, and, desc, lte, sql } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { requireAuth, requireLicense } from "../middlewares/auth";
+import { z } from "zod";
 
 const router: IRouter = Router();
+
+// ─── Zod Schemas ──────────────────────────────────────────────────────────────
+
+const BarangBodySchema = z.object({
+  nama: z.string().min(1, "Nama barang wajib diisi").trim(),
+  satuan: z.string().min(1, "Satuan wajib diisi").trim(),
+  kategori: z.string().trim().optional(),
+  harga_beli: z.coerce.number({ error: "Harga beli harus berupa angka" }).min(0, "Harga beli tidak boleh negatif").default(0),
+  harga_jual: z.coerce.number({ error: "Harga jual harus berupa angka" }).min(0, "Harga jual tidak boleh negatif").default(0),
+  stok_minimum: z.coerce.number({ error: "Stok minimum harus berupa angka" }).min(0, "Stok minimum tidak boleh negatif").default(0),
+});
+
+const BarangCreateSchema = BarangBodySchema.extend({
+  stok_awal: z.coerce.number({ error: "Stok awal harus berupa angka" }).min(0, "Stok awal tidak boleh negatif").default(0),
+});
+
+const StokMasukSchema = z.object({
+  barang_id: z.coerce.number({ error: "barang_id harus berupa angka" }).int().positive("barang_id tidak valid"),
+  tanggal: z.string().min(1, "Tanggal wajib diisi").regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal tidak valid (YYYY-MM-DD)"),
+  jumlah: z.coerce.number({ error: "Jumlah harus berupa angka" }).positive("Jumlah harus lebih dari 0"),
+  harga_satuan: z.coerce.number({ error: "Harga satuan harus berupa angka" }).min(0).optional(),
+  keterangan: z.string().trim().optional(),
+});
+
+const StokKeluarSchema = StokMasukSchema;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtBarang(b: typeof barangTable.$inferSelect) {
   const stok = parseFloat(b.stok);
@@ -40,6 +68,8 @@ function fmtTransaksi(t: typeof transaksiStokTable.$inferSelect, namaBahan: stri
   };
 }
 
+// ─── Routes ───────────────────────────────────────────────────────────────────
+
 // GET /api/barang
 router.get("/barang", requireAuth, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
@@ -69,19 +99,25 @@ router.post("/barang", requireAuth, requireLicense, async (req, res): Promise<vo
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const { nama, satuan, harga_beli, harga_jual, stok_awal, stok_minimum, kategori } = req.body;
-  if (!nama || !satuan) { res.status(400).json({ error: "nama dan satuan wajib diisi" }); return; }
+  const parsed = BarangCreateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid" });
+    return;
+  }
+
+  const { nama, satuan, kategori, harga_beli, harga_jual, stok_awal, stok_minimum } = parsed.data;
 
   const [inserted] = await db.insert(barangTable).values({
     usahaId,
-    nama: String(nama).trim(),
-    satuan: String(satuan).trim(),
-    kategori: String(kategori ?? "").trim(),
-    hargaBeli: String(parseFloat(harga_beli ?? "0") || 0),
-    hargaJual: String(parseFloat(harga_jual ?? "0") || 0),
-    stok: String(parseFloat(stok_awal ?? "0") || 0),
-    stokMinimum: String(parseFloat(stok_minimum ?? "0") || 0),
+    nama,
+    satuan,
+    kategori: kategori ?? "",
+    hargaBeli: String(harga_beli),
+    hargaJual: String(harga_jual),
+    stok: String(stok_awal),
+    stokMinimum: String(stok_minimum),
   }).returning();
+
   res.status(201).json(fmtBarang(inserted));
 });
 
@@ -93,19 +129,25 @@ router.put("/barang/:id", requireAuth, requireLicense, async (req, res): Promise
   const id = parseInt(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "ID tidak valid" }); return; }
 
-  const [existing] = await db.select().from(barangTable).where(and(eq(barangTable.id, id), eq(barangTable.usahaId, usahaId)));
+  const [existing] = await db.select().from(barangTable)
+    .where(and(eq(barangTable.id, id), eq(barangTable.usahaId, usahaId)));
   if (!existing) { res.status(404).json({ error: "Barang tidak ditemukan" }); return; }
 
-  const { nama, satuan, harga_beli, harga_jual, stok_minimum, kategori } = req.body;
-  if (!nama || !satuan) { res.status(400).json({ error: "nama dan satuan wajib diisi" }); return; }
+  const parsed = BarangBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid" });
+    return;
+  }
+
+  const { nama, satuan, kategori, harga_beli, harga_jual, stok_minimum } = parsed.data;
 
   const [updated] = await db.update(barangTable).set({
-    nama: String(nama).trim(),
-    satuan: String(satuan).trim(),
-    kategori: String(kategori ?? "").trim(),
-    hargaBeli: String(parseFloat(harga_beli ?? "0") || 0),
-    hargaJual: String(parseFloat(harga_jual ?? "0") || 0),
-    stokMinimum: String(parseFloat(stok_minimum ?? "0") || 0),
+    nama,
+    satuan,
+    kategori: kategori ?? "",
+    hargaBeli: String(harga_beli),
+    hargaJual: String(harga_jual),
+    stokMinimum: String(stok_minimum),
   }).where(and(eq(barangTable.id, id), eq(barangTable.usahaId, usahaId))).returning();
 
   res.json(fmtBarang(updated));
@@ -119,7 +161,8 @@ router.delete("/barang/:id", requireAuth, requireLicense, async (req, res): Prom
   const id = parseInt(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "ID tidak valid" }); return; }
 
-  const [existing] = await db.select().from(barangTable).where(and(eq(barangTable.id, id), eq(barangTable.usahaId, usahaId)));
+  const [existing] = await db.select().from(barangTable)
+    .where(and(eq(barangTable.id, id), eq(barangTable.usahaId, usahaId)));
   if (!existing) { res.status(404).json({ error: "Barang tidak ditemukan" }); return; }
 
   const transaksi = await db.select().from(transaksiStokTable).where(eq(transaksiStokTable.barangId, id));
@@ -159,31 +202,31 @@ router.post("/stok/masuk", requireAuth, requireLicense, async (req, res): Promis
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const { barang_id, tanggal, jumlah, harga_satuan, keterangan } = req.body;
-  if (!barang_id || !tanggal || !jumlah) {
-    res.status(400).json({ error: "barang_id, tanggal, dan jumlah wajib diisi" }); return;
+  const parsed = StokMasukSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid" });
+    return;
   }
 
-  const [barang] = await db.select().from(barangTable).where(and(eq(barangTable.id, parseInt(barang_id)), eq(barangTable.usahaId, usahaId)));
+  const { barang_id, tanggal, jumlah, harga_satuan, keterangan } = parsed.data;
+
+  const [barang] = await db.select().from(barangTable)
+    .where(and(eq(barangTable.id, barang_id), eq(barangTable.usahaId, usahaId)));
   if (!barang) { res.status(404).json({ error: "Barang tidak ditemukan" }); return; }
 
-  const jml = parseFloat(String(jumlah));
-  const harga = parseFloat(String(harga_satuan ?? barang.hargaBeli));
-  if (isNaN(jml) || jml <= 0) { res.status(400).json({ error: "Jumlah harus lebih dari 0" }); return; }
+  const harga = harga_satuan ?? parseFloat(barang.hargaBeli);
+  const total = jumlah * harga;
+  const stokBaru = parseFloat(barang.stok) + jumlah;
 
-  const total = jml * harga;
-  const stokBaru = parseFloat(barang.stok) + jml;
-
-  // Semua operasi tulis dalam satu transaction agar atomik
   const { transaksi } = db.transaction((tx) => {
     let keuanganId: number | null = null;
     if (total > 0) {
       const [k] = tx.insert(keuanganTable).values({
         usahaId,
-        tanggal: String(tanggal),
+        tanggal,
         tipe: "keluar",
         kategori: "Pembelian Bahan",
-        keterangan: keterangan ? String(keterangan).trim() : `Beli ${barang.nama} ${jml} ${barang.satuan}`,
+        keterangan: keterangan || `Beli ${barang.nama} ${jumlah} ${barang.satuan}`,
         jumlah: String(total),
       }).returning().all();
       keuanganId = k.id;
@@ -192,17 +235,17 @@ router.post("/stok/masuk", requireAuth, requireLicense, async (req, res): Promis
     const [transaksi] = tx.insert(transaksiStokTable).values({
       usahaId,
       barangId: barang.id,
-      tanggal: String(tanggal),
+      tanggal,
       tipe: "masuk",
-      jumlah: String(jml),
+      jumlah: String(jumlah),
       hargaSatuan: String(harga),
-      keterangan: keterangan ? String(keterangan).trim() : null,
+      keterangan: keterangan || null,
       keuanganId,
     }).returning().all();
 
     tx.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id)).run();
 
-    return { transaksi, keuanganId };
+    return { transaksi };
   });
 
   res.status(201).json({
@@ -217,36 +260,37 @@ router.post("/stok/keluar", requireAuth, requireLicense, async (req, res): Promi
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const { barang_id, tanggal, jumlah, harga_satuan, keterangan } = req.body;
-  if (!barang_id || !tanggal || !jumlah) {
-    res.status(400).json({ error: "barang_id, tanggal, dan jumlah wajib diisi" }); return;
+  const parsed = StokKeluarSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid" });
+    return;
   }
 
-  const [barang] = await db.select().from(barangTable).where(and(eq(barangTable.id, parseInt(barang_id)), eq(barangTable.usahaId, usahaId)));
+  const { barang_id, tanggal, jumlah, harga_satuan, keterangan } = parsed.data;
+
+  const [barang] = await db.select().from(barangTable)
+    .where(and(eq(barangTable.id, barang_id), eq(barangTable.usahaId, usahaId)));
   if (!barang) { res.status(404).json({ error: "Barang tidak ditemukan" }); return; }
 
-  const jml = parseFloat(String(jumlah));
-  const harga = parseFloat(String(harga_satuan ?? barang.hargaJual));
-  if (isNaN(jml) || jml <= 0) { res.status(400).json({ error: "Jumlah harus lebih dari 0" }); return; }
-
   const stokSaat = parseFloat(barang.stok);
-  if (jml > stokSaat) {
-    res.status(400).json({ error: `Stok tidak cukup. Stok saat ini: ${stokSaat} ${barang.satuan}` }); return;
+  if (jumlah > stokSaat) {
+    res.status(400).json({ error: `Stok tidak cukup. Stok saat ini: ${stokSaat} ${barang.satuan}` });
+    return;
   }
 
-  const total = jml * harga;
-  const stokBaru = stokSaat - jml;
+  const harga = harga_satuan ?? parseFloat(barang.hargaJual);
+  const total = jumlah * harga;
+  const stokBaru = stokSaat - jumlah;
 
-  // Semua operasi tulis dalam satu transaction agar atomik
   const { transaksi } = db.transaction((tx) => {
     let keuanganId: number | null = null;
     if (total > 0) {
       const [k] = tx.insert(keuanganTable).values({
         usahaId,
-        tanggal: String(tanggal),
+        tanggal,
         tipe: "masuk",
         kategori: "Penjualan",
-        keterangan: keterangan ? String(keterangan).trim() : `Jual ${barang.nama} ${jml} ${barang.satuan}`,
+        keterangan: keterangan || `Jual ${barang.nama} ${jumlah} ${barang.satuan}`,
         jumlah: String(total),
       }).returning().all();
       keuanganId = k.id;
@@ -255,11 +299,11 @@ router.post("/stok/keluar", requireAuth, requireLicense, async (req, res): Promi
     const [transaksi] = tx.insert(transaksiStokTable).values({
       usahaId,
       barangId: barang.id,
-      tanggal: String(tanggal),
+      tanggal,
       tipe: "keluar",
-      jumlah: String(jml),
+      jumlah: String(jumlah),
       hargaSatuan: String(harga),
-      keterangan: keterangan ? String(keterangan).trim() : null,
+      keterangan: keterangan || null,
       keuanganId,
     }).returning().all();
 
@@ -296,7 +340,6 @@ router.delete("/stok/transaksi/:id", requireAuth, requireLicense, async (req, re
   const stokSaat = parseFloat(barang.stok);
   const stokBaru = transaksi.tipe === "masuk" ? stokSaat - jumlah : stokSaat + jumlah;
 
-  // Semua operasi tulis dalam satu transaction agar atomik
   db.transaction((tx) => {
     if (transaksi.keuanganId) {
       tx.delete(keuanganTable).where(eq(keuanganTable.id, transaksi.keuanganId)).run();

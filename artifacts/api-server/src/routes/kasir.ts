@@ -2,69 +2,83 @@ import { Router, type IRouter } from "express";
 import { db, barangTable, transaksiStokTable, keuanganTable, transaksiKasirTable, transaksiKasirItemTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth, requireLicense } from "../middlewares/auth";
+import { z } from "zod";
 
 const router: IRouter = Router();
+
+// ─── Zod Schemas ──────────────────────────────────────────────────────────────
+
+const KasirItemSchema = z.object({
+  barang_id: z.coerce.number({ error: "barang_id harus berupa angka" }).int().positive("barang_id tidak valid"),
+  jumlah: z.coerce.number({ error: "Jumlah harus berupa angka" }).positive("Jumlah harus lebih dari 0"),
+  harga_satuan: z.coerce.number({ error: "Harga satuan harus berupa angka" }).min(0).optional(),
+});
+
+const KasirTransaksiSchema = z.object({
+  tanggal: z.string().min(1, "Tanggal wajib diisi").regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal tidak valid (YYYY-MM-DD)"),
+  uang_bayar: z.coerce.number({ error: "Uang bayar harus berupa angka" }).positive("Uang bayar harus lebih dari 0"),
+  catatan: z.string().trim().optional(),
+  items: z.array(KasirItemSchema).min(1, "Minimal 1 item harus dimasukkan"),
+});
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
 
 // POST /api/kasir/transaksi — selesaikan transaksi kasir (multi-item)
 router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const { tanggal, items, uang_bayar, catatan } = req.body;
-
-  if (!tanggal || !Array.isArray(items) || items.length === 0) {
-    res.status(400).json({ error: "tanggal dan items wajib diisi" }); return;
-  }
-  if (!uang_bayar || isNaN(parseFloat(uang_bayar))) {
-    res.status(400).json({ error: "uang_bayar wajib diisi" }); return;
+  const parsed = KasirTransaksiSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Data tidak valid" });
+    return;
   }
 
-  // Validasi semua barang dan cek stok (di luar transaksi — hanya baca)
+  const { tanggal, uang_bayar, catatan, items } = parsed.data;
+
+  // Validasi stok semua barang (di luar transaksi — hanya baca)
   const barangList: Array<typeof barangTable.$inferSelect> = [];
   for (const item of items) {
-    const { barang_id, jumlah } = item;
-    if (!barang_id || !jumlah || isNaN(parseFloat(jumlah)) || parseFloat(jumlah) <= 0) {
-      res.status(400).json({ error: "Setiap item harus punya barang_id dan jumlah yang valid" }); return;
-    }
     const [barang] = await db.select().from(barangTable)
-      .where(and(eq(barangTable.id, parseInt(barang_id)), eq(barangTable.usahaId, usahaId)));
+      .where(and(eq(barangTable.id, item.barang_id), eq(barangTable.usahaId, usahaId)));
     if (!barang) {
-      res.status(404).json({ error: `Barang ID ${barang_id} tidak ditemukan` }); return;
+      res.status(404).json({ error: `Barang ID ${item.barang_id} tidak ditemukan` });
+      return;
     }
     const stokSaat = parseFloat(barang.stok);
-    const jml = parseFloat(String(jumlah));
-    if (jml > stokSaat) {
-      res.status(400).json({ error: `Stok ${barang.nama} tidak cukup. Stok: ${stokSaat} ${barang.satuan}` }); return;
+    if (item.jumlah > stokSaat) {
+      res.status(400).json({ error: `Stok ${barang.nama} tidak cukup. Stok: ${stokSaat} ${barang.satuan}` });
+      return;
     }
     barangList.push(barang);
   }
 
   // Hitung total
   let total = 0;
-  const itemsCalc = items.map((item: Record<string, string | number>, i: number) => {
+  const itemsCalc = items.map((item, i) => {
     const barang = barangList[i];
-    const jml = parseFloat(String(item.jumlah));
-    const harga = parseFloat(String(item.harga_satuan ?? barang.hargaJual));
-    const subtotal = jml * harga;
+    const harga = item.harga_satuan ?? parseFloat(barang.hargaJual);
+    const subtotal = item.jumlah * harga;
     total += subtotal;
-    return { barang, jml, harga, subtotal };
+    return { barang, jml: item.jumlah, harga, subtotal };
   });
 
-  const uangBayarNum = parseFloat(String(uang_bayar));
-  if (uangBayarNum < total) {
-    res.status(400).json({ error: `Uang bayar kurang. Total: ${total}, Uang bayar: ${uangBayarNum}` }); return;
+  if (uang_bayar < total) {
+    res.status(400).json({ error: `Uang bayar kurang. Total: ${total}, Uang bayar: ${uang_bayar}` });
+    return;
   }
-  const kembalian = uangBayarNum - total;
+
+  const kembalian = uang_bayar - total;
   const namaBarangList = itemsCalc.map(i => i.barang.nama).join(", ");
 
   // Semua operasi tulis dalam satu database transaction agar atomik
   const { kasir, kasirItems } = db.transaction((tx) => {
     const [keuangan] = tx.insert(keuanganTable).values({
       usahaId,
-      tanggal: String(tanggal),
+      tanggal,
       tipe: "masuk",
       kategori: "Penjualan Kasir",
-      keterangan: catatan ? String(catatan).trim() : `Kasir: ${namaBarangList.slice(0, 100)}`,
+      keterangan: catatan || `Kasir: ${namaBarangList.slice(0, 100)}`,
       jumlah: String(total),
     }).returning().all();
 
@@ -74,22 +88,22 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
       tx.insert(transaksiStokTable).values({
         usahaId,
         barangId: barang.id,
-        tanggal: String(tanggal),
+        tanggal,
         tipe: "keluar",
         jumlah: String(jml),
         hargaSatuan: String(harga),
-        keterangan: catatan ? String(catatan).trim() : `Kasir`,
+        keterangan: catatan || `Kasir`,
         keuanganId: keuangan.id,
       }).run();
     }
 
     const [kasir] = tx.insert(transaksiKasirTable).values({
       usahaId,
-      tanggal: String(tanggal),
+      tanggal,
       total: String(total),
-      uangBayar: String(uangBayarNum),
+      uangBayar: String(uang_bayar),
       kembalian: String(kembalian),
-      catatan: catatan ? String(catatan).trim() : null,
+      catatan: catatan || null,
     }).returning().all();
 
     const kasirItems: Array<typeof transaksiKasirItemTable.$inferSelect> = [];
@@ -113,7 +127,7 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
     id: kasir.id,
     tanggal: kasir.tanggal,
     total,
-    uang_bayar: uangBayarNum,
+    uang_bayar,
     kembalian,
     catatan: kasir.catatan ?? null,
     items: kasirItems.map(ki => ({
