@@ -35,8 +35,6 @@ jobs:
         run: pnpm --filter @workspace/electron-app run build:main
         working-directory: artifacts/electron-app
 
-      - name: Build installer Windows (.exe) dan upload ke Release
-        run: pnpm run dist:win
+      - name: Build installer Windows (.exe)
+        run: pnpm run dist:win --publish never
         working-directory: artifacts/electron-app
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
