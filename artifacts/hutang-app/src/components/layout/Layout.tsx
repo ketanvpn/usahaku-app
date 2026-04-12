@@ -17,7 +17,8 @@ import {
   BookOpen,
   Package,
   ShoppingBag,
-  RefreshCw
+  RefreshCw,
+  X
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -38,9 +39,21 @@ export function Layout({ children }: { children: ReactNode }) {
   const [appVersion, setAppVersion] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState<string | null>(null);
+  const [backupReminderDismissed, setBackupReminderDismissed] = useState(false);
+  const [daysWithoutBackup, setDaysWithoutBackup] = useState<number | null>(null);
 
   useEffect(() => {
     window.electronApp?.getVersion().then(setAppVersion).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const lastBackup = localStorage.getItem("lastBackupDate");
+    if (!lastBackup) {
+      setDaysWithoutBackup(999);
+      return;
+    }
+    const selisih = Math.floor((Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24));
+    if (selisih >= 7) setDaysWithoutBackup(selisih);
   }, []);
 
   const handleCheckUpdate = async () => {
@@ -198,6 +211,30 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col md:pl-64 min-w-0">
         <UpdateBanner />
+        {/* Banner pengingat backup */}
+        {!isSuperAdmin && !backupReminderDismissed && daysWithoutBackup !== null && location !== "/backup" && (
+          <div className="flex items-center gap-3 px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm no-print">
+            <DatabaseBackup className="h-4 w-4 flex-shrink-0 text-amber-600" />
+            <span className="flex-1">
+              {daysWithoutBackup >= 999
+                ? "Anda belum pernah melakukan backup data."
+                : `Backup terakhir ${daysWithoutBackup} hari lalu.`}
+              {" "}Segera backup agar data tidak hilang.
+            </span>
+            <Link href="/backup">
+              <Button size="sm" variant="outline" className="h-7 text-xs border-amber-400 text-amber-700 hover:bg-amber-100 flex-shrink-0">
+                Backup Sekarang
+              </Button>
+            </Link>
+            <button
+              onClick={() => setBackupReminderDismissed(true)}
+              className="text-amber-500 hover:text-amber-700 flex-shrink-0"
+              aria-label="Tutup"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between p-4 border-b bg-card no-print h-16 sticky top-0 z-10">
           <div>

@@ -47,6 +47,7 @@ export default function BackupPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
+      localStorage.setItem("lastBackupDate", new Date().toISOString());
       toast({ title: "Backup berhasil diunduh" });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Gagal export", description: error.message });
