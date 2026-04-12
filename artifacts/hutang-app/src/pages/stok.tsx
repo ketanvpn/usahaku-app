@@ -222,19 +222,25 @@ export default function StokPage() {
 
       {/* Peringatan Stok */}
       {peringatan.length > 0 && (
-        <Card className="border-orange-300 bg-orange-50 dark:bg-orange-950/20">
+        <Card className="border-red-300 bg-red-50 dark:bg-red-950/20">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-orange-700 dark:text-orange-400 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" /> {peringatan.length} Barang Stok Hampir Habis
+            <CardTitle className="text-sm text-red-700 dark:text-red-400 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" /> {peringatan.length} Barang Perlu Perhatian
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {peringatan.map(b => (
-                <Badge key={b.id} variant="outline" className="border-orange-400 text-orange-700 bg-orange-100">
-                  {b.nama} — sisa {b.stok} {b.satuan}
-                </Badge>
-              ))}
+              {peringatan.map(b => {
+                const habis = b.stok === 0;
+                return (
+                  <Badge key={b.id} variant="outline"
+                    className={habis
+                      ? "border-red-400 text-red-700 bg-red-100"
+                      : "border-orange-400 text-orange-700 bg-orange-100"}>
+                    {b.nama} — {habis ? "Stok Habis" : `sisa ${b.stok} ${b.satuan}`}
+                  </Badge>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -295,13 +301,15 @@ export default function StokPage() {
                         <TableCell className="text-right text-sm">{formatRupiah(b.harga_beli)}</TableCell>
                         <TableCell className="text-right text-sm">{formatRupiah(b.harga_jual)}</TableCell>
                         <TableCell className="text-center font-bold">
-                          <span className={b.peringatan ? "text-orange-600" : "text-green-700"}>{b.stok}</span>
+                          <span className={b.stok === 0 ? "text-red-600" : b.peringatan ? "text-orange-600" : "text-green-700"}>{b.stok}</span>
                         </TableCell>
                         <TableCell className="text-center text-muted-foreground">{b.stok_minimum}</TableCell>
                         <TableCell className="text-center">
-                          {b.peringatan
-                            ? <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100"><AlertTriangle className="h-3 w-3 mr-1" />Hampir Habis</Badge>
-                            : <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Aman</Badge>}
+                          {b.stok === 0
+                            ? <Badge className="bg-red-100 text-red-800 hover:bg-red-100"><AlertTriangle className="h-3 w-3 mr-1" />Stok Habis</Badge>
+                            : b.peringatan
+                              ? <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100"><AlertTriangle className="h-3 w-3 mr-1" />Hampir Habis</Badge>
+                              : <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Aman</Badge>}
                         </TableCell>
                         <TableCell>
                           <div className="flex justify-center gap-1">
