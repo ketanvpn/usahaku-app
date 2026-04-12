@@ -447,6 +447,13 @@ async function loadApp(appUrl: string): Promise<void> {
     );
     app.quit();
   });
+
+  // Pastikan keyboard focus aktif setelah navigasi selesai
+  // Di Windows, Electron kadang tidak otomatis memindahkan focus ke webContents
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.focus();
+    mainWindow.webContents.focus();
+  }
 }
 
 app.whenReady().then(async () => {
