@@ -164,6 +164,22 @@ router.get("/lisensi/status", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  const hariIniStr = new Date().toISOString().slice(0, 10);
+
+  if (usaha.lastSeenDate && hariIniStr < usaha.lastSeenDate) {
+    res.json({
+      aktif: false,
+      expires_at: usaha.licenseExpiresAt,
+      sisa_hari: 0,
+      jam_dimanipulasi: true,
+    });
+    return;
+  }
+
+  await db.update(usahaTable)
+    .set({ lastSeenDate: hariIniStr })
+    .where(eq(usahaTable.id, usahaId));
+
   const expiresAt = new Date(usaha.licenseExpiresAt);
   const now = new Date();
   const aktif = expiresAt > now;
@@ -173,6 +189,7 @@ router.get("/lisensi/status", requireAuth, async (req, res): Promise<void> => {
     aktif,
     expires_at: usaha.licenseExpiresAt,
     sisa_hari: aktif ? sisaHari : 0,
+    jam_dimanipulasi: false,
   });
 });
 

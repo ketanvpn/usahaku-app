@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ShieldCheck, ShieldAlert, ShieldOff, KeyRound } from "lucide-react";
+import { Loader2, ShieldCheck, ShieldAlert, ShieldOff, KeyRound, AlertTriangle } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -13,6 +13,7 @@ interface LicenseStatus {
   aktif: boolean;
   expires_at: string | null;
   sisa_hari: number;
+  jam_dimanipulasi?: boolean;
 }
 
 async function fetchStatus(): Promise<LicenseStatus> {
@@ -75,6 +76,25 @@ export default function LisensiPage() {
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : (
         <>
+          {status?.jam_dimanipulasi && (
+            <Card className="border-2 border-yellow-400 bg-yellow-50">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-6 w-6 text-yellow-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-yellow-800">Tanggal & Waktu PC Tidak Valid</p>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Sistem mendeteksi tanggal di komputer ini dimundurkan. Lisensi dinonaktifkan sementara sebagai tindakan keamanan.
+                    </p>
+                    <p className="text-sm text-yellow-700 mt-1 font-medium">
+                      Betulkan tanggal dan waktu Windows ke tanggal yang benar, lalu buka ulang aplikasi.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className={`border-2 ${status?.aktif ? (isNearExpiry ? "border-orange-300" : "border-green-300") : "border-red-300"}`}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">

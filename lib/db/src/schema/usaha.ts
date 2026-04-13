@@ -9,6 +9,7 @@ export const usahaTable = sqliteTable("usaha", {
   telepon: text("telepon"),
   catatan: text("catatan"),
   licenseExpiresAt: text("license_expires_at"),
+  lastSeenDate: text("last_seen_date"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 
