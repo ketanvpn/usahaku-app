@@ -277,7 +277,7 @@ export default function PembayaranPage() {
                 value={formPelangganId?.toString() || ""}
               >
                 <SelectTrigger><SelectValue placeholder="Pilih pelanggan..." /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[200px]" collisionPadding={8}>
                   {pelangganList?.map(p => (
                     <SelectItem key={p.id} value={p.id.toString()}>{p.nama}</SelectItem>
                   ))}
@@ -303,7 +303,7 @@ export default function PembayaranPage() {
                         <FormControl>
                           <SelectTrigger><SelectValue placeholder="Pilih nota hutang..." /></SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="max-h-[200px]" collisionPadding={8}>
                           {!hutangAktifList || hutangAktifList.length === 0 ? (
                             <SelectItem value="0" disabled>Tidak ada hutang aktif</SelectItem>
                           ) : (
