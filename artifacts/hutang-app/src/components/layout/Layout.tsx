@@ -26,7 +26,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { useLogout } from "@workspace/api-client-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -49,11 +49,13 @@ export function Layout({ children }: { children: ReactNode }) {
   const { isSuperAdmin, logout } = useAuth();
   const [location] = useLocation();
   const logoutMutation = useLogout();
+  const qc = useQueryClient();
   const [appVersion, setAppVersion] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState<string | null>(null);
   const [backupReminderDismissed, setBackupReminderDismissed] = useState(false);
   const [daysWithoutBackup, setDaysWithoutBackup] = useState<number | null>(null);
+  const [recheckingLisensi, setRecheckingLisensi] = useState(false);
 
   const { data: licenseStatus } = useQuery<LicenseStatus>({
     queryKey: ["lisensi-status"],
@@ -63,10 +65,16 @@ export function Layout({ children }: { children: ReactNode }) {
       return r.json();
     },
     enabled: !isSuperAdmin,
-    staleTime: 60 * 1000,
+    staleTime: 10 * 1000,
     refetchOnWindowFocus: true,
-    refetchInterval: 2 * 60 * 1000,
+    refetchInterval: 60 * 1000,
   });
+
+  const handleRecheckLisensi = async () => {
+    setRecheckingLisensi(true);
+    await qc.invalidateQueries({ queryKey: ["lisensi-status"] });
+    setRecheckingLisensi(false);
+  };
 
   const showLisensiBanner = !isSuperAdmin && licenseStatus && location !== "/lisensi";
   const lisensiNearExpiry = licenseStatus?.aktif && (licenseStatus?.sisa_hari ?? 0) <= 7;
@@ -253,13 +261,27 @@ export function Layout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3 px-4 py-2 bg-red-50 border-b border-red-200 text-red-800 text-sm no-print">
             <ShieldOff className="h-4 w-4 flex-shrink-0 text-red-600" />
             <span className="flex-1">
-              Lisensi tidak aktif — fitur tambah, edit, dan hapus data tidak tersedia.
+              {licenseStatus?.jam_dimanipulasi
+                ? "Tanggal sistem terdeteksi dimundurkan. Betulkan tanggal lalu klik Cek Ulang."
+                : "Lisensi tidak aktif — fitur tambah, edit, dan hapus data tidak tersedia."}
             </span>
-            <Link href="/lisensi">
-              <Button size="sm" variant="outline" className="h-7 text-xs border-red-400 text-red-700 hover:bg-red-100 flex-shrink-0">
-                Aktivasi Sekarang
-              </Button>
-            </Link>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs border-red-400 text-red-700 hover:bg-red-100 flex-shrink-0"
+              onClick={handleRecheckLisensi}
+              disabled={recheckingLisensi}
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${recheckingLisensi ? "animate-spin" : ""}`} />
+              Cek Ulang
+            </Button>
+            {!licenseStatus?.jam_dimanipulasi && (
+              <Link href="/lisensi">
+                <Button size="sm" variant="outline" className="h-7 text-xs border-red-400 text-red-700 hover:bg-red-100 flex-shrink-0">
+                  Aktivasi Sekarang
+                </Button>
+              </Link>
+            )}
           </div>
         )}
         {showLisensiBanner && lisensiNearExpiry && (
