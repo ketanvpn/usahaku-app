@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, hutangTable, pelangganTable } from "@workspace/db";
-import { eq, and, desc, asc } from "drizzle-orm";
+import { db, hutangTable, pelangganTable, pembayaranTable, keuanganTable } from "@workspace/db";
+import { eq, and, desc, asc, inArray } from "drizzle-orm";
 import {
   CreateHutangBody,
   GetHutangListQueryParams,
@@ -9,7 +9,6 @@ import {
   UpdateHutangBody,
   DeleteHutangParams,
 } from "@workspace/api-zod";
-import { pembayaranTable } from "@workspace/db";
 import { requireAuth, requireLicense } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -238,8 +237,23 @@ router.delete("/hutang/:id", requireAuth, requireLicense, async (req, res): Prom
     return;
   }
 
-  await db.delete(pembayaranTable).where(eq(pembayaranTable.hutangId, params.data.id));
-  await db.delete(hutangTable).where(eq(hutangTable.id, params.data.id));
+  // Ambil semua pembayaran terkait untuk cari keuangan yang harus ikut dihapus
+  const pembayaranTerkait = await db.select({ id: pembayaranTable.id, keuanganId: pembayaranTable.keuanganId })
+    .from(pembayaranTable)
+    .where(eq(pembayaranTable.hutangId, params.data.id));
+
+  const keuanganIds = pembayaranTerkait
+    .map((p) => p.keuanganId)
+    .filter((id): id is number => id !== null && id !== undefined);
+
+  // Hapus keuangan, pembayaran, dan hutang dalam satu transaction
+  db.transaction((tx) => {
+    if (keuanganIds.length > 0) {
+      tx.delete(keuanganTable).where(inArray(keuanganTable.id, keuanganIds)).run();
+    }
+    tx.delete(pembayaranTable).where(eq(pembayaranTable.hutangId, params.data.id)).run();
+    tx.delete(hutangTable).where(eq(hutangTable.id, params.data.id)).run();
+  });
 
   res.json({ message: "Hutang berhasil dihapus." });
 });

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { 
   useGetHutangList, useCreateHutang, useUpdateHutang, useDeleteHutang, useGetPelangganList,
-  getGetHutangListQueryKey, getGetPembayaranListQueryKey, Hutang, GetHutangListStatus 
+  getGetHutangListQueryKey, getGetPembayaranListQueryKey, getGetOwnerDashboardQueryKey, Hutang, GetHutangListStatus 
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -130,6 +130,9 @@ export default function HutangPage() {
           toast({ title: "Hutang berhasil dihapus" });
           queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetPembayaranListQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetOwnerDashboardQueryKey() });
+          queryClient.invalidateQueries({ queryKey: ["keuangan"] });
+          queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
           setIsDeleteDialogOpen(false);
         },
         onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })

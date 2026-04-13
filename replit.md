@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.24**
+**Current version: 1.0.26**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -22,7 +22,7 @@ Key features:
 - "Lupa username?" — pelanggan bisa lihat daftar akun owner di halaman login
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.24)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.26)
 
 ### v1.0.21 — Brute Force & License Enforcement
 **Brute force login (per-username → lanjut ke v1.0.22):**
@@ -53,6 +53,19 @@ Key features:
 - Ditambahkan tombol **"Cek Ulang"** di banner "Lisensi tidak aktif" → langsung `invalidateQueries(["lisensi-status"])`
 - Pesan banner berubah jadi spesifik: "Tanggal sistem terdeteksi dimundurkan. Betulkan tanggal lalu klik Cek Ulang."
 - `staleTime` dikurangi 1 menit → 10 detik, `refetchInterval` 2 menit → 1 menit
+
+### v1.0.25 — Fix Cascade Delete Keuangan saat Pembayaran Dihapus
+**Masalah:** Saat pembayaran dihapus, entri keuangan "Pelunasan Hutang" tidak ikut terhapus jika `keuanganId` null (terjadi pada data lama sebelum kolom `keuangan_id` ditambahkan).
+- **Fix:** Tambahkan fallback di `DELETE /pembayaran/:id`: jika `keuanganId` null, cari keuangan berdasarkan `tanggal + jumlah + kategori "Pelunasan Hutang" + tipe "masuk"` — hanya hapus jika ditemukan **tepat 1 data** (aman, tidak salah hapus)
+- File: `artifacts/api-server/src/routes/pembayaran.ts`
+
+### v1.0.26 — Fix Cascade Delete Keuangan saat Hutang Dihapus
+**Masalah (lebih besar dari v1.0.25):** Saat hutang dihapus, pembayaran-pembayarannya ikut dihapus — TAPI entri keuangan dari setiap pembayaran tersebut **tidak ikut terhapus** (jadi orphan/data mengambang).
+- **Fix:** Route `DELETE /hutang/:id` sekarang: (1) ambil semua pembayaran terkait + `keuanganId`-nya, (2) hapus semua keuangan terkait, (3) hapus pembayaran, (4) hapus hutang — semua dalam satu transaction atomik
+- File: `artifacts/api-server/src/routes/hutang.ts`
+
+**Frontend fix:** Setelah hapus hutang, query keuangan dan dashboard sekarang ikut di-invalidate agar tampilan langsung refresh
+- File: `artifacts/hutang-app/src/pages/hutang.tsx`
 
 ### v1.0.24 — Toleransi 1 Hari Deteksi Manipulasi Jam
 **Masalah:** `lastSeenDate` bisa "terkontaminasi" jika sistem pernah berjalan di tanggal besok (e.g., April 14). Saat dikembalikan ke tanggal asli (April 13), dianggap manipulasi karena `"2026-04-13" < "2026-04-14"`.
