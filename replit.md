@@ -22,7 +22,13 @@ Key features:
 - "Lupa username?" — pelanggan bisa lihat daftar akun owner di halaman login
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.28)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.29)
+
+### v1.0.29 — Bug Fix: Kasir Delete, Cache Invalidation
+- **Bug fix (penting)**: Hapus kasir sebelumnya mencocokkan keuangan dengan tanggal+total yang tidak unik → bisa hapus keuangan transaksi lain. Sekarang `transaksi_kasir` menyimpan `keuangan_id` langsung (migration + schema update), hapus kasir pakai ID persis.
+- **Bug fix**: `selesaikanMutation` sekarang juga invalidate `kasir-riwayat`, semua laporan kasir, dan `keuangan-rekap` agar semua halaman langsung sinkron setelah transaksi baru
+- **Bug fix**: `hapusMutation` sekarang juga invalidate `laporan-kasir-bulanan`, `keuangan`, `keuangan-rekap`
+- Migration DB: `ALTER TABLE transaksi_kasir ADD COLUMN keuangan_id INTEGER`
 
 ### v1.0.28 — Hapus Transaksi Kasir (Void)
 - Ditambahkan `DELETE /api/kasir/transaksi/:id` di backend: hapus transaksi kasir beserta item, keuangan, transaksi_stok terkait; restore stok jika barang masih ada — semua atomic dalam satu transaction

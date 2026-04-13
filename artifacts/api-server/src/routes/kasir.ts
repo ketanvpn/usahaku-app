@@ -113,6 +113,7 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
       uangBayar: String(uang_bayar),
       kembalian: String(kembalian),
       catatan: catatan || null,
+      keuanganId: keuangan.id,
     }).returning().all();
 
     const kasirItems: Array<typeof transaksiKasirItemTable.$inferSelect> = [];
@@ -210,19 +211,10 @@ router.delete("/kasir/transaksi/:id", requireAuth, requireLicense, async (req, r
     .where(eq(transaksiKasirItemTable.transaksiKasirId, id));
 
   db.transaction((tx) => {
-    // Cari keuangan terkait: kategori "Penjualan Kasir", tanggal & jumlah sama
-    const keuanganList = tx.select().from(keuanganTable)
-      .where(and(
-        eq(keuanganTable.usahaId, usahaId),
-        eq(keuanganTable.tanggal, kasir.tanggal),
-        eq(keuanganTable.kategori, "Penjualan Kasir"),
-        eq(keuanganTable.jumlah, kasir.total),
-      )).all();
-
-    // Hapus transaksi_stok + keuangan terkait
-    for (const keu of keuanganList) {
-      tx.delete(transaksiStokTable).where(eq(transaksiStokTable.keuanganId, keu.id)).run();
-      tx.delete(keuanganTable).where(eq(keuanganTable.id, keu.id)).run();
+    // Hapus transaksi_stok + keuangan via keuanganId yang tersimpan langsung
+    if (kasir.keuanganId) {
+      tx.delete(transaksiStokTable).where(eq(transaksiStokTable.keuanganId, kasir.keuanganId)).run();
+      tx.delete(keuanganTable).where(eq(keuanganTable.id, kasir.keuanganId)).run();
     }
 
     // Restore stok barang jika barang masih ada

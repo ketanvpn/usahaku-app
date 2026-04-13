@@ -158,8 +158,11 @@ export default function KasirPage() {
       toast({ title: "Transaksi dihapus", description: "Riwayat, stok, dan keuangan telah diperbarui." });
       refetchRiwayat();
       queryClient.invalidateQueries({ queryKey: ["barang"] });
+      queryClient.invalidateQueries({ queryKey: ["keuangan"] });
+      queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
       queryClient.invalidateQueries({ queryKey: ["laporan-kasir-ringkasan"] });
       queryClient.invalidateQueries({ queryKey: ["laporan-kasir-harian"] });
+      queryClient.invalidateQueries({ queryKey: ["laporan-kasir-bulanan"] });
       queryClient.invalidateQueries({ queryKey: ["laporan-kasir-top"] });
     },
     onError: (e: Error) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
@@ -284,6 +287,12 @@ export default function KasirPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["barang"] });
       queryClient.invalidateQueries({ queryKey: ["keuangan"] });
+      queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
+      queryClient.invalidateQueries({ queryKey: ["kasir-riwayat"] });
+      queryClient.invalidateQueries({ queryKey: ["laporan-kasir-ringkasan"] });
+      queryClient.invalidateQueries({ queryKey: ["laporan-kasir-harian"] });
+      queryClient.invalidateQueries({ queryKey: ["laporan-kasir-bulanan"] });
+      queryClient.invalidateQueries({ queryKey: ["laporan-kasir-top"] });
       setHasil(data);
       setShowHasil(true);
     },

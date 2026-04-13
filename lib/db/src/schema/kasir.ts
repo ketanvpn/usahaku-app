@@ -10,6 +10,7 @@ export const transaksiKasirTable = sqliteTable("transaksi_kasir", {
   uangBayar: text("uang_bayar").notNull().default("0"),
   kembalian: text("kembalian").notNull().default("0"),
   catatan: text("catatan"),
+  keuanganId: integer("keuangan_id"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 
