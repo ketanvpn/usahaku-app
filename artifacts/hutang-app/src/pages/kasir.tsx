@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, Loader2, Receipt, Printer, Tag } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, Loader2, Receipt, Printer, Tag, History, ChevronDown, ChevronUp } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
 import { useLicense } from "@/context/license-context";
 
@@ -106,6 +108,16 @@ interface HasilTransaksi {
   items: Array<{ nama_barang: string; jumlah: number; satuan: string; harga_satuan: number; subtotal: number }>;
 }
 
+interface RiwayatTransaksi {
+  id: number;
+  tanggal: string;
+  total: number;
+  diskon: number;
+  catatan: string | null;
+  created_at: string;
+  items: Array<{ nama_barang: string; jumlah: number; satuan: string; subtotal: number }>;
+}
+
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -124,6 +136,34 @@ export default function KasirPage() {
   const [diskonMode, setDiskonMode] = useState<"persen" | "nominal">("persen");
   const [hasil, setHasil] = useState<HasilTransaksi | null>(null);
   const [showHasil, setShowHasil] = useState(false);
+  const [showRiwayat, setShowRiwayat] = useState(false);
+  const [hapusId, setHapusId] = useState<number | null>(null);
+
+  const { data: riwayatList = [], refetch: refetchRiwayat } = useQuery<RiwayatTransaksi[]>({
+    queryKey: ["kasir-riwayat"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/kasir/transaksi`, { credentials: "include" });
+      if (!r.ok) return [];
+      return r.json();
+    },
+    enabled: showRiwayat,
+  });
+
+  const hapusMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const r = await fetch(`${BASE}/api/kasir/transaksi/${id}`, { method: "DELETE", credentials: "include" });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Gagal menghapus"); }
+    },
+    onSuccess: () => {
+      toast({ title: "Transaksi dihapus", description: "Riwayat, stok, dan keuangan telah diperbarui." });
+      refetchRiwayat();
+      queryClient.invalidateQueries({ queryKey: ["barang"] });
+      queryClient.invalidateQueries({ queryKey: ["laporan-kasir-ringkasan"] });
+      queryClient.invalidateQueries({ queryKey: ["laporan-kasir-harian"] });
+      queryClient.invalidateQueries({ queryKey: ["laporan-kasir-top"] });
+    },
+    onError: (e: Error) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
+  });
 
   const { data: barangList = [], isLoading } = useQuery<Barang[]>({
     queryKey: ["barang"],
@@ -473,6 +513,77 @@ export default function KasirPage() {
           )}
         </div>
       </div>
+
+      {/* Section Riwayat Penjualan */}
+      <div className="mt-4 border rounded-lg overflow-hidden">
+        <button
+          className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted transition-colors text-sm font-medium"
+          onClick={() => setShowRiwayat(v => !v)}
+        >
+          <span className="flex items-center gap-2"><History className="h-4 w-4" /> Riwayat Penjualan (50 terakhir)</span>
+          {showRiwayat ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+        {showRiwayat && (
+          <div className="p-0">
+            {riwayatList.length === 0 ? (
+              <p className="text-center text-muted-foreground text-sm py-6">Belum ada transaksi.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">#</TableHead>
+                    <TableHead>Tanggal</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="w-16"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {riwayatList.map(t => (
+                    <TableRow key={t.id}>
+                      <TableCell className="text-muted-foreground text-xs">{String(t.id).padStart(4, "0")}</TableCell>
+                      <TableCell className="text-sm">{new Date(t.tanggal + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{t.items.map(i => `${i.nama_barang} ×${i.jumlah}`).join(", ")}</TableCell>
+                      <TableCell className="text-right font-medium text-sm">{formatRupiah(t.total)}</TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm" variant="ghost"
+                          className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          disabled={!lisensiAktif || hapusMutation.isPending}
+                          onClick={() => setHapusId(t.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Konfirmasi Hapus Transaksi */}
+      <AlertDialog open={hapusId !== null} onOpenChange={(open) => { if (!open) setHapusId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Transaksi Kasir?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Transaksi #{String(hapusId ?? 0).padStart(4, "0")} akan dihapus permanen. Data keuangan terkait juga ikut dihapus. Stok barang akan dikembalikan jika barang masih ada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (hapusId !== null) { hapusMutation.mutate(hapusId); setHapusId(null); } }}
+            >
+              Ya, Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Modal Hasil Transaksi */}
       <Dialog open={showHasil} onOpenChange={(open) => { if (!open) { setShowHasil(false); resetKasir(); } }}>

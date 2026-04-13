@@ -22,7 +22,13 @@ Key features:
 - "Lupa username?" — pelanggan bisa lihat daftar akun owner di halaman login
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.27)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.28)
+
+### v1.0.28 — Hapus Transaksi Kasir (Void)
+- Ditambahkan `DELETE /api/kasir/transaksi/:id` di backend: hapus transaksi kasir beserta item, keuangan, transaksi_stok terkait; restore stok jika barang masih ada — semua atomic dalam satu transaction
+- Ditambahkan section "Riwayat Penjualan (50 terakhir)" di halaman Kasir — collapsible, tampilkan tabel transaksi dengan tombol hapus
+- Konfirmasi AlertDialog sebelum hapus
+- Setelah hapus: invalidate cache laporan kasir (ringkasan, harian, top produk) + barang list
 
 ### v1.0.27 — PelangganCombobox: Pencarian Pelanggan di Hutang & Pembayaran
 - Dibuat komponen `PelangganCombobox` (`artifacts/hutang-app/src/components/pelanggan-combobox.tsx`) menggunakan Popover + Command (shadcn/ui pattern) — bisa search/filter nama pelanggan secara real-time

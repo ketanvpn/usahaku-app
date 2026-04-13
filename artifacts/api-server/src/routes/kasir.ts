@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, barangTable, transaksiStokTable, keuanganTable, transaksiKasirTable, transaksiKasirItemTable, usahaTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { requireAuth, requireLicense } from "../middlewares/auth";
 import { z } from "zod";
 
@@ -189,6 +189,58 @@ router.get("/kasir/transaksi", requireAuth, async (req, res): Promise<void> => {
   }));
 
   res.json(result);
+});
+
+// DELETE /api/kasir/transaksi/:id — hapus/void transaksi kasir
+router.delete("/kasir/transaksi/:id", requireAuth, requireLicense, async (req, res): Promise<void> => {
+  const usahaId = req.session.usahaId;
+  if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "ID tidak valid" }); return; }
+
+  // Pastikan transaksi milik usaha ini
+  const [kasir] = await db.select().from(transaksiKasirTable)
+    .where(and(eq(transaksiKasirTable.id, id), eq(transaksiKasirTable.usahaId, usahaId)));
+
+  if (!kasir) { res.status(404).json({ error: "Transaksi tidak ditemukan" }); return; }
+
+  // Ambil item-item transaksi
+  const items = await db.select().from(transaksiKasirItemTable)
+    .where(eq(transaksiKasirItemTable.transaksiKasirId, id));
+
+  db.transaction((tx) => {
+    // Cari keuangan terkait: kategori "Penjualan Kasir", tanggal & jumlah sama
+    const keuanganList = tx.select().from(keuanganTable)
+      .where(and(
+        eq(keuanganTable.usahaId, usahaId),
+        eq(keuanganTable.tanggal, kasir.tanggal),
+        eq(keuanganTable.kategori, "Penjualan Kasir"),
+        eq(keuanganTable.jumlah, kasir.total),
+      )).all();
+
+    // Hapus transaksi_stok + keuangan terkait
+    for (const keu of keuanganList) {
+      tx.delete(transaksiStokTable).where(eq(transaksiStokTable.keuanganId, keu.id)).run();
+      tx.delete(keuanganTable).where(eq(keuanganTable.id, keu.id)).run();
+    }
+
+    // Restore stok barang jika barang masih ada
+    for (const item of items) {
+      const [barang] = tx.select().from(barangTable)
+        .where(and(eq(barangTable.id, item.barangId), eq(barangTable.usahaId, usahaId))).all();
+      if (barang) {
+        const stokBaru = parseFloat(barang.stok) + parseFloat(item.jumlah);
+        tx.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id)).run();
+      }
+    }
+
+    // Hapus item & header kasir
+    tx.delete(transaksiKasirItemTable).where(eq(transaksiKasirItemTable.transaksiKasirId, id)).run();
+    tx.delete(transaksiKasirTable).where(eq(transaksiKasirTable.id, id)).run();
+  });
+
+  res.json({ success: true });
 });
 
 export default router;
