@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PelangganCombobox } from "@/components/pelanggan-combobox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -272,17 +273,15 @@ export default function PembayaranPage() {
           <div className="space-y-4 pt-2">
             <div className="space-y-2 border-b pb-4 border-border">
               <label className="text-sm font-medium">1. Pilih Pelanggan</label>
-              <Select
-                onValueChange={(v) => { setFormPelangganId(parseInt(v)); form.setValue("hutang_id", 0); }}
-                value={formPelangganId?.toString() || ""}
-              >
-                <SelectTrigger><SelectValue placeholder="Pilih pelanggan..." /></SelectTrigger>
-                <SelectContent className="max-h-[200px]" collisionPadding={8}>
-                  {pelangganList?.map(p => (
-                    <SelectItem key={p.id} value={p.id.toString()}>{p.nama}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <PelangganCombobox
+                value={formPelangganId}
+                onValueChange={(id) => {
+                  setFormPelangganId(id);
+                  form.setValue("hutang_id", 0);
+                }}
+                pelangganList={pelangganList}
+                placeholder="Cari atau pilih pelanggan..."
+              />
             </div>
 
             {formPelangganId && (

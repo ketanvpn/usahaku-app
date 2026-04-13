@@ -22,7 +22,13 @@ Key features:
 - "Lupa username?" — pelanggan bisa lihat daftar akun owner di halaman login
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.26)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.27)
+
+### v1.0.27 — PelangganCombobox: Pencarian Pelanggan di Hutang & Pembayaran
+- Dibuat komponen `PelangganCombobox` (`artifacts/hutang-app/src/components/pelanggan-combobox.tsx`) menggunakan Popover + Command (shadcn/ui pattern) — bisa search/filter nama pelanggan secara real-time
+- Diintegrasikan di `pembayaran.tsx` (Step 1 "Pilih Pelanggan" di dialog Terima Pembayaran)
+- Diintegrasikan di `hutang.tsx` (field Pelanggan di dialog tambah hutang baru)
+- Props: `value: number|null`, `onValueChange: (id: number|null) => void`, `pelangganList?: Pelanggan[]`, `placeholder?`, `disabled?`, `className?`
 
 ### v1.0.21 — Brute Force & License Enforcement
 **Brute force login (per-username → lanjut ke v1.0.22):**
