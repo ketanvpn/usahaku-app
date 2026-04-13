@@ -13,6 +13,16 @@ const router: IRouter = Router();
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_DURATION_MS = 15 * 60 * 1000;
 
+type MemEntry = { attempts: number; lockedUntil: number | null };
+const memStore = new Map<string, MemEntry>();
+
+function getMemEntry(username: string): MemEntry {
+  if (!memStore.has(username)) {
+    memStore.set(username, { attempts: 0, lockedUntil: null });
+  }
+  return memStore.get(username)!;
+}
+
 router.post("/auth/login", async (req, res): Promise<void> => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
@@ -21,11 +31,44 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   }
 
   const { username, password } = parsed.data;
+  const now = Date.now();
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username));
 
   if (!user) {
-    res.status(401).json({ error: "Username atau password salah." });
+    const mem = getMemEntry(username);
+
+    if (mem.lockedUntil && now < mem.lockedUntil) {
+      const sisaMenit = Math.ceil((mem.lockedUntil - now) / 60000);
+      res.status(429).json({
+        error: `Terlalu banyak percobaan login yang gagal. Coba lagi dalam ${sisaMenit} menit.`,
+        locked: true,
+        sisa_menit: sisaMenit,
+      });
+      return;
+    }
+
+    if (mem.lockedUntil && now >= mem.lockedUntil) {
+      mem.attempts = 0;
+      mem.lockedUntil = null;
+    }
+
+    mem.attempts += 1;
+
+    if (mem.attempts >= MAX_FAILED_ATTEMPTS) {
+      mem.lockedUntil = now + LOCK_DURATION_MS;
+      res.status(429).json({
+        error: `Terlalu banyak percobaan login yang gagal. Akun dikunci selama 15 menit.`,
+        locked: true,
+        sisa_menit: 15,
+      });
+    } else {
+      const sisaCoba = MAX_FAILED_ATTEMPTS - mem.attempts;
+      res.status(401).json({
+        error: `Username atau password salah. Sisa percobaan: ${sisaCoba}.`,
+        sisa_percobaan: sisaCoba,
+      });
+    }
     return;
   }
 
@@ -33,8 +76,6 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     res.status(401).json({ error: "Akun Anda tidak aktif. Hubungi administrator." });
     return;
   }
-
-  const now = Date.now();
 
   if (user.lockedUntil) {
     const lockedUntilMs = new Date(user.lockedUntil).getTime();
