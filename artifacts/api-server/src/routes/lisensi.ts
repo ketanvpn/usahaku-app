@@ -8,6 +8,14 @@ const router: IRouter = Router();
 
 const VALID_TIPE = ["1bulan", "3bulan", "6bulan", "1tahun"] as const;
 
+function hitungSisaHari(expiresAt: Date): number {
+  const hariIni = new Date();
+  hariIni.setHours(0, 0, 0, 0);
+  const hariExpiry = new Date(expiresAt);
+  hariExpiry.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.round((hariExpiry.getTime() - hariIni.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
 router.post("/lisensi/generate", requireSuperAdmin, async (req, res): Promise<void> => {
   const { tipe } = req.body ?? {};
   if (!tipe || !VALID_TIPE.includes(tipe)) {
@@ -129,7 +137,7 @@ router.post("/lisensi/aktivasi", requireOwner, async (req, res): Promise<void> =
 
   await db.update(usahaTable).set({ licenseExpiresAt: newExpiresAt.toISOString() }).where(eq(usahaTable.id, usahaId));
 
-  const sisaHari = Math.ceil((newExpiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const sisaHari = hitungSisaHari(newExpiresAt);
   const pesan = isStillActive
     ? `Lisensi diperpanjang! Sekarang aktif sampai ${newExpiresAt.toLocaleDateString("id-ID")} (${sisaHari} hari).`
     : "Lisensi berhasil diaktifkan!";
@@ -159,8 +167,7 @@ router.get("/lisensi/status", requireAuth, async (req, res): Promise<void> => {
   const expiresAt = new Date(usaha.licenseExpiresAt);
   const now = new Date();
   const aktif = expiresAt > now;
-  const sisaMs = expiresAt.getTime() - now.getTime();
-  const sisaHari = Math.ceil(sisaMs / (1000 * 60 * 60 * 24));
+  const sisaHari = hitungSisaHari(expiresAt);
 
   res.json({
     aktif,

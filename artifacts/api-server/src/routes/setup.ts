@@ -78,7 +78,9 @@ router.post("/setup", async (req, res): Promise<void> => {
     });
   }
 
-  const sisaHari = Math.ceil((licenseResult.expiresAt!.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const hariIni = new Date(); hariIni.setHours(0, 0, 0, 0);
+  const hariExpiry = new Date(licenseResult.expiresAt!); hariExpiry.setHours(0, 0, 0, 0);
+  const sisaHari = Math.max(0, Math.round((hariExpiry.getTime() - hariIni.getTime()) / (1000 * 60 * 60 * 24)));
 
   res.status(201).json({
     message: "Setup berhasil! Silakan login dengan akun yang telah dibuat.",
