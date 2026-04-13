@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.20**
+**Current version: 1.0.24**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -21,6 +21,57 @@ Key features:
 - Remote password reset via signed code (RST-XXXX-XXXX-XXXX-XXXX, 24-hour expiry, no auth required)
 - "Lupa username?" — pelanggan bisa lihat daftar akun owner di halaman login
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
+
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.24)
+
+### v1.0.21 — Brute Force & License Enforcement
+**Brute force login (per-username → lanjut ke v1.0.22):**
+- Sebelumnya hanya melacak percobaan gagal untuk username yang ADA di DB. Username yang tidak ada tidak terlindungi.
+- Ditambahkan `memStore` (Map) untuk semua username (ada maupun tidak ada): 5 percobaan gagal → dikunci 15 menit dengan countdown.
+
+**License enforcement — frontend button disable:**
+- Dibuat `LicenseContext` di `artifacts/hutang-app/src/context/license-context.tsx`
+- `Layout.tsx` menyediakan context `lisensiAktif` + `jamDimanipulasi` via `LicenseContext.Provider`
+- Semua tombol write (tambah/edit/hapus) di semua halaman dinonaktifkan saat `lisensiAktif = false`:
+  - `pelanggan.tsx`, `hutang.tsx`, `pembayaran.tsx`, `keuangan.tsx`, `stok.tsx`, `kasir.tsx`
+- **Backend**: `requireLicense` middleware di `auth.ts` cek `lastSeenDate` — jika `today < lastSeenDate` (v1.0.21) → 403 JAM_DIMANIPULASI, blokir semua write API
+
+### v1.0.22 — Brute Force Per-Device & License Context Fix
+**Brute force diperbaiki lagi — per-device (bukan per-username):**
+- Masalah: dikunci username "abc" → ganti ke username benar → bisa masuk bebas
+- Fix: `deviceStore` (Map keyed by IP/remoteAddress) melacak SEMUA percobaan gagal dari satu perangkat
+- Setelah 5 percobaan gagal (username apapun) → perangkat dikunci 15 menit
+- Login berhasil → reset device counter
+- Kode di: `artifacts/api-server/src/routes/auth.ts`
+
+**License context fix:**
+- `lisensiAktif` sekarang juga `false` jika `jam_dimanipulasi: true`
+- `staleTime` dikurangi 5 menit → 1 menit, `refetchOnWindowFocus: true`, `refetchInterval: 2 menit`
+
+### v1.0.23 — Banner "Cek Ulang" & Cache Fix
+**Masalah:** Setelah tanggal dikembalikan ke benar, license masih muncul tidak aktif karena cache React Query belum expired.
+- Ditambahkan tombol **"Cek Ulang"** di banner "Lisensi tidak aktif" → langsung `invalidateQueries(["lisensi-status"])`
+- Pesan banner berubah jadi spesifik: "Tanggal sistem terdeteksi dimundurkan. Betulkan tanggal lalu klik Cek Ulang."
+- `staleTime` dikurangi 1 menit → 10 detik, `refetchInterval` 2 menit → 1 menit
+
+### v1.0.24 — Toleransi 1 Hari Deteksi Manipulasi Jam
+**Masalah:** `lastSeenDate` bisa "terkontaminasi" jika sistem pernah berjalan di tanggal besok (e.g., April 14). Saat dikembalikan ke tanggal asli (April 13), dianggap manipulasi karena `"2026-04-13" < "2026-04-14"`.
+- **Fix:** Toleransi 1 hari — hanya flag manipulasi jika mundur **lebih dari 1 hari**
+- Rumus: `selisihHari = (lastSeenDate - today) / 1 hari`. Flag jika `selisihHari > 1`
+- Toleransi ini juga mengatasi edge case timezone UTC vs WIB (bisa selisih 1 hari di string tanggal)
+- Fix diterapkan di dua tempat: `artifacts/api-server/src/routes/lisensi.ts` + `artifacts/api-server/src/middlewares/auth.ts`
+
+## Catatan Penting untuk Sesi Berikutnya
+
+- **GitHub repo**: `https://github.com/ketanvpn/usahaku-app` (PUBLIC)
+- **Auto-update**: GitHub Actions build `.exe` saat tag `vX.X.X` di-push. Workflow di `.github/workflows/`
+- **Admin default**: username `admin`, password `maduTJ150` — seeded di setiap install (risiko yang diterima karena repo public)
+- **License key format**: `BUKU-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX` (HMAC-SHA256)
+- **Tier codes**: 1bulan=1, 3bulan=2, 6bulan=3, 1tahun=4
+- **Generator tools** (offline HTML): `artifacts/hutang-app/public/license-generator.html` + `password-reset-generator.html`
+- **User preference**: Selalu tampilkan perintah `git add`, `git commit`, `git push`, `git tag`, `git push --tags` setelah setiap perubahan
+- **User preference**: JANGAN install npm package baru yang native (bisa merusak .exe build)
+- **Database migrations**: Inline di `lib/db/src/index.ts` — kolom `failed_attempts`, `locked_until`, `last_seen_date` sudah ada
 
 ## User Preferences
 
