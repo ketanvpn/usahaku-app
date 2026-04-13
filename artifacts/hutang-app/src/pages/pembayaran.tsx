@@ -21,6 +21,7 @@ import * as z from "zod";
 import { formatRupiah, formatDate } from "@/lib/format";
 import { Loader2, Plus, Trash2, Filter, Printer } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { useLicense } from "@/context/license-context";
 
 type PembayaranFull = Pembayaran & {
   nomor_kwitansi?: string;
@@ -161,6 +162,7 @@ export default function PembayaranPage() {
   const queryClient = useQueryClient();
   const createMutation = useCreatePembayaran();
   const deleteMutation = useDeletePembayaran();
+  const { lisensiAktif } = useLicense();
 
   const pembayaranSchema = z.object({
     hutang_id: z.coerce.number().min(1, { message: "Pilih nota hutang" }),
@@ -232,7 +234,7 @@ export default function PembayaranPage() {
           <h2 className="text-3xl font-bold tracking-tight text-primary">Pembayaran</h2>
           <p className="text-muted-foreground">Catat penerimaan pembayaran hutang.</p>
         </div>
-        <Button onClick={handleOpenDialog}>
+        <Button onClick={handleOpenDialog} disabled={!lisensiAktif}>
           <Plus className="mr-2 h-4 w-4" />
           Terima Pembayaran
         </Button>
@@ -462,6 +464,7 @@ export default function PembayaranPage() {
                             onClick={() => { setSelectedPembayaran(p); setIsDeleteDialogOpen(true); }}
                             title="Hapus/Batal"
                             className="text-destructive"
+                            disabled={!lisensiAktif}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

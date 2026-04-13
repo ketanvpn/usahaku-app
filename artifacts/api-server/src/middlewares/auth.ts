@@ -54,11 +54,25 @@ export async function requireLicense(req: Request, res: Response, next: NextFunc
     return;
   }
 
-  const [usaha] = await db.select({ licenseExpiresAt: usahaTable.licenseExpiresAt }).from(usahaTable).where(eq(usahaTable.id, usahaId));
+  const [usaha] = await db
+    .select({ licenseExpiresAt: usahaTable.licenseExpiresAt, lastSeenDate: usahaTable.lastSeenDate })
+    .from(usahaTable)
+    .where(eq(usahaTable.id, usahaId));
 
   if (!usaha?.licenseExpiresAt) {
     res.status(403).json({ error: "LISENSI_TIDAK_AKTIF", message: "Lisensi tidak aktif. Silakan aktivasi lisensi terlebih dahulu." });
     return;
+  }
+
+  if (usaha.lastSeenDate) {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (todayStr < usaha.lastSeenDate) {
+      res.status(403).json({
+        error: "JAM_DIMANIPULASI",
+        message: "Tanggal sistem terdeteksi dimundurkan. Betulkan tanggal dan waktu ke tanggal yang benar, lalu buka ulang aplikasi.",
+      });
+      return;
+    }
   }
 
   const expiresAt = new Date(usaha.licenseExpiresAt);

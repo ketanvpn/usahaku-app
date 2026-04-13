@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, Plus, Edit, Trash2, Eye, Search } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { useLicense } from "@/context/license-context";
 
 const pelangganSchema = z.object({
   nama: z.string().min(1, { message: "Nama wajib diisi" }),
@@ -41,6 +42,7 @@ export default function PelangganPage() {
   const createMutation = useCreatePelanggan();
   const updateMutation = useUpdatePelanggan();
   const deleteMutation = useDeletePelanggan();
+  const { lisensiAktif } = useLicense();
 
   const form = useForm<PelangganFormValues>({
     resolver: zodResolver(pelangganSchema),
@@ -119,7 +121,7 @@ export default function PelangganPage() {
           <h2 className="text-3xl font-bold tracking-tight text-primary">Daftar Pelanggan</h2>
           <p className="text-muted-foreground">Kelola daftar pelanggan Anda.</p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
+        <Button onClick={() => handleOpenDialog()} disabled={!lisensiAktif}>
           <Plus className="mr-2 h-4 w-4" />
           Tambah Pelanggan
         </Button>
@@ -231,10 +233,10 @@ export default function PelangganPage() {
                               <Eye className="h-4 w-4" />
                             </Button>
                           </Link>
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(p)} title="Edit">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(p)} title="Edit" disabled={!lisensiAktif}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedPelanggan(p); setIsDeleteDialogOpen(true); }} title="Hapus" className="text-destructive">
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedPelanggan(p); setIsDeleteDialogOpen(true); }} title="Hapus" className="text-destructive" disabled={!lisensiAktif}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

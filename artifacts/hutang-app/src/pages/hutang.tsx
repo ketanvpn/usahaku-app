@@ -22,6 +22,7 @@ import { formatRupiah, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Loader2, Plus, Edit, Trash2, Eye, Filter, Search, FileText } from "lucide-react";
+import { useLicense } from "@/context/license-context";
 
 const hutangSchema = z.object({
   pelanggan_id: z.coerce.number().min(1, { message: "Pilih pelanggan" }),
@@ -59,6 +60,7 @@ export default function HutangPage() {
   const createMutation = useCreateHutang();
   const updateMutation = useUpdateHutang();
   const deleteMutation = useDeleteHutang();
+  const { lisensiAktif } = useLicense();
 
   const form = useForm<z.infer<typeof hutangSchema>>({
     resolver: zodResolver(hutangSchema),
@@ -142,7 +144,7 @@ export default function HutangPage() {
           <h2 className="text-3xl font-bold tracking-tight text-primary">Data Hutang</h2>
           <p className="text-muted-foreground">Catat dan pantau hutang pelanggan.</p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
+        <Button onClick={() => handleOpenDialog()} disabled={!lisensiAktif}>
           <Plus className="mr-2 h-4 w-4" />
           Catat Hutang Baru
         </Button>
@@ -331,7 +333,7 @@ export default function HutangPage() {
                           {search ? `Tidak ditemukan hasil untuk "${search}"` : "Belum ada data hutang."}
                         </p>
                         {!search && (
-                          <Button variant="outline" size="sm" className="mt-1" onClick={() => handleOpenDialog()}>
+                          <Button variant="outline" size="sm" className="mt-1" onClick={() => handleOpenDialog()} disabled={!lisensiAktif}>
                             <Plus className="h-3 w-3 mr-1" /> Catat Hutang Pertama
                           </Button>
                         )}
@@ -365,10 +367,10 @@ export default function HutangPage() {
                               <Eye className="h-4 w-4" />
                             </Button>
                           </Link>
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(h)} title="Edit">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(h)} title="Edit" disabled={!lisensiAktif}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedHutang(h); setIsDeleteDialogOpen(true); }} title="Hapus" className="text-destructive">
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedHutang(h); setIsDeleteDialogOpen(true); }} title="Hapus" className="text-destructive" disabled={!lisensiAktif}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, Loader2, Receipt, Printer, Tag } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
+import { useLicense } from "@/context/license-context";
 
 function escHtml(s: string | number): string {
   return String(s)
@@ -112,6 +113,7 @@ function todayStr() {
 export default function KasirPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { lisensiAktif } = useLicense();
 
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -441,6 +443,7 @@ export default function KasirPage() {
             className="w-full"
             size="lg"
             disabled={
+              !lisensiAktif ||
               cart.length === 0 ||
               uangBayarNum < total ||
               total === 0 ||

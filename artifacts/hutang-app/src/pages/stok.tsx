@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Loader2, Plus, Edit, Trash2, Package, AlertTriangle, ArrowDownCircle, ArrowUpCircle, RefreshCw, Upload, FileSpreadsheet, CheckCircle2 } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { useLicense } from "@/context/license-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -92,6 +93,7 @@ async function apiFetch(path: string, options?: RequestInit) {
 export default function StokPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { lisensiAktif } = useLicense();
   const now = new Date();
 
   const [barangDialog, setBarangDialog] = useState(false);
@@ -299,16 +301,16 @@ export default function StokPage() {
           <p className="text-muted-foreground text-sm mt-1">Kelola stok dan catat transaksi barang masuk/keluar</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" className="border-green-500 text-green-700 hover:bg-green-50" onClick={() => openTransaksi("masuk")}>
+          <Button variant="outline" className="border-green-500 text-green-700 hover:bg-green-50" onClick={() => openTransaksi("masuk")} disabled={!lisensiAktif}>
             <ArrowDownCircle className="h-4 w-4 mr-2" /> Barang Masuk
           </Button>
-          <Button variant="outline" className="border-red-500 text-red-700 hover:bg-red-50" onClick={() => openTransaksi("keluar")}>
+          <Button variant="outline" className="border-red-500 text-red-700 hover:bg-red-50" onClick={() => openTransaksi("keluar")} disabled={!lisensiAktif}>
             <ArrowUpCircle className="h-4 w-4 mr-2" /> Barang Keluar
           </Button>
           <Button variant="outline" onClick={() => { setImportRows([]); setImportError(""); setImportDialog(true); }}>
             <Upload className="h-4 w-4 mr-2" /> Import Excel
           </Button>
-          <Button onClick={openTambahBarang}>
+          <Button onClick={openTambahBarang} disabled={!lisensiAktif}>
             <Plus className="h-4 w-4 mr-2" /> Tambah Barang
           </Button>
         </div>
@@ -432,10 +434,10 @@ export default function StokPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex justify-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditBarang(b)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditBarang(b)} disabled={!lisensiAktif}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteBarangId(b.id)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteBarangId(b.id)} disabled={!lisensiAktif}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>

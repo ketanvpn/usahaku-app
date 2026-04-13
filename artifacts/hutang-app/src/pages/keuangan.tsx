@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Edit, Trash2, TrendingUp, TrendingDown, Wallet, Download, Printer, BarChart3 } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { useLicense } from "@/context/license-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -212,6 +213,7 @@ export default function KeuanganPage() {
   const { user } = useAuth();
   const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, { query: { enabled: !!user?.usaha_id, queryKey: getGetUsahaQueryKey(user?.usaha_id ?? 0) } });
   const namaUsaha = usahaData?.nama_usaha ?? "Usahaku";
+  const { lisensiAktif } = useLicense();
 
   const filterParams = { bulan: filterBulan, tahun: filterTahun, tipe: filterTipe };
   const rekapParams = { bulan: filterBulan, tahun: filterTahun };
@@ -310,7 +312,7 @@ export default function KeuanganPage() {
           <Button variant="outline" size="sm" onClick={() => handlePrint(items, rekap, filterBulan, filterTahun, namaUsaha)} disabled={items.length === 0}>
             <Printer className="h-4 w-4 mr-2" /> Cetak
           </Button>
-          <Button onClick={openCreate}>
+          <Button onClick={openCreate} disabled={!lisensiAktif}>
             <Plus className="h-4 w-4 mr-2" /> Tambah Transaksi
           </Button>
         </div>
@@ -479,7 +481,7 @@ export default function KeuanganPage() {
             <div className="text-center py-12 text-muted-foreground">
               <Wallet className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p>Belum ada transaksi untuk periode ini</p>
-              <Button variant="outline" size="sm" className="mt-3" onClick={openCreate}>Tambah Transaksi</Button>
+              <Button variant="outline" size="sm" className="mt-3" onClick={openCreate} disabled={!lisensiAktif}>Tambah Transaksi</Button>
             </div>
           ) : (
             <Table>
@@ -511,10 +513,10 @@ export default function KeuanganPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(item)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(item)} disabled={!lisensiAktif}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(item.id)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(item.id)} disabled={!lisensiAktif}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

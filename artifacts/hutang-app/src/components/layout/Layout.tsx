@@ -1,4 +1,5 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useMemo } from "react";
+import { LicenseContext } from "@/context/license-context";
 import { UpdateBanner } from "./UpdateBanner";
 import { Link, useLocation } from "wouter";
 import { 
@@ -69,6 +70,11 @@ export function Layout({ children }: { children: ReactNode }) {
   const showLisensiBanner = !isSuperAdmin && licenseStatus && location !== "/lisensi";
   const lisensiNearExpiry = licenseStatus?.aktif && (licenseStatus?.sisa_hari ?? 0) <= 7;
   const lisensiMati = licenseStatus && !licenseStatus.aktif;
+
+  const licenseContextValue = useMemo(() => ({
+    lisensiAktif: isSuperAdmin ? true : (licenseStatus?.aktif ?? true),
+    jamDimanipulasi: licenseStatus?.jam_dimanipulasi ?? false,
+  }), [isSuperAdmin, licenseStatus]);
 
   useEffect(() => {
     window.electronApp?.getVersion().then(setAppVersion).catch(() => {});
@@ -316,7 +322,9 @@ export function Layout({ children }: { children: ReactNode }) {
 
         {/* Page Content */}
         <div className="flex-1 p-4 md:p-6 overflow-auto">
-          {children}
+          <LicenseContext.Provider value={licenseContextValue}>
+            {children}
+          </LicenseContext.Provider>
         </div>
       </main>
     </div>
