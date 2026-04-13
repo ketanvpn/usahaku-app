@@ -66,7 +66,11 @@ export async function requireLicense(req: Request, res: Response, next: NextFunc
 
   if (usaha.lastSeenDate) {
     const todayStr = new Date().toISOString().slice(0, 10);
-    if (todayStr < usaha.lastSeenDate) {
+    const lastSeenMs = new Date(usaha.lastSeenDate + "T12:00:00Z").getTime();
+    const todayMs = new Date(todayStr + "T12:00:00Z").getTime();
+    const selisihHari = (lastSeenMs - todayMs) / (24 * 60 * 60 * 1000);
+    // Flag manipulasi hanya jika mundur LEBIH DARI 1 hari (toleransi 1 hari)
+    if (selisihHari > 1) {
       res.status(403).json({
         error: "JAM_DIMANIPULASI",
         message: "Tanggal sistem terdeteksi dimundurkan. Betulkan tanggal dan waktu ke tanggal yang benar, lalu buka ulang aplikasi.",

@@ -166,14 +166,21 @@ router.get("/lisensi/status", requireAuth, async (req, res): Promise<void> => {
 
   const hariIniStr = new Date().toISOString().slice(0, 10);
 
-  if (usaha.lastSeenDate && hariIniStr < usaha.lastSeenDate) {
-    res.json({
-      aktif: false,
-      expires_at: usaha.licenseExpiresAt,
-      sisa_hari: 0,
-      jam_dimanipulasi: true,
-    });
-    return;
+  if (usaha.lastSeenDate) {
+    const lastSeenMs = new Date(usaha.lastSeenDate + "T12:00:00Z").getTime();
+    const todayMs = new Date(hariIniStr + "T12:00:00Z").getTime();
+    const selisihHari = (lastSeenMs - todayMs) / (24 * 60 * 60 * 1000);
+    // Flag manipulasi hanya jika mundur LEBIH DARI 1 hari
+    // Toleransi 1 hari untuk mencegah false positive (timezone, koreksi jam, dll)
+    if (selisihHari > 1) {
+      res.json({
+        aktif: false,
+        expires_at: usaha.licenseExpiresAt,
+        sisa_hari: 0,
+        jam_dimanipulasi: true,
+      });
+      return;
+    }
   }
 
   await db.update(usahaTable)
