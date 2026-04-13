@@ -22,7 +22,11 @@ Key features:
 - "Lupa username?" — pelanggan bisa lihat daftar akun owner di halaman login
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.29)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.30)
+
+### v1.0.30 — Bug Fix: Fallback Keuangan untuk Transaksi Kasir Lama
+- Hapus kasir untuk transaksi lama (keuangan_id = NULL, sebelum v1.0.29): sekarang ada fallback aman — cari keuangan via tanggal+jumlah+kategori, hapus HANYA jika tepat 1 match (tidak ada risiko hapus keuangan transaksi orang lain)
+- Kalau match > 1 (2 transaksi total sama di hari yang sama): keuangan tidak auto-hapus → user hapus manual dari halaman Keuangan
 
 ### v1.0.29 — Bug Fix: Kasir Delete, Cache Invalidation
 - **Bug fix (penting)**: Hapus kasir sebelumnya mencocokkan keuangan dengan tanggal+total yang tidak unik → bisa hapus keuangan transaksi lain. Sekarang `transaksi_kasir` menyimpan `keuangan_id` langsung (migration + schema update), hapus kasir pakai ID persis.

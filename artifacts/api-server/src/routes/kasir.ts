@@ -211,10 +211,25 @@ router.delete("/kasir/transaksi/:id", requireAuth, requireLicense, async (req, r
     .where(eq(transaksiKasirItemTable.transaksiKasirId, id));
 
   db.transaction((tx) => {
-    // Hapus transaksi_stok + keuangan via keuanganId yang tersimpan langsung
-    if (kasir.keuanganId) {
-      tx.delete(transaksiStokTable).where(eq(transaksiStokTable.keuanganId, kasir.keuanganId)).run();
-      tx.delete(keuanganTable).where(eq(keuanganTable.id, kasir.keuanganId)).run();
+    // Cari keuangan terkait
+    let keuanganIdToDelete: number | null = kasir.keuanganId ?? null;
+
+    if (!keuanganIdToDelete) {
+      // Fallback untuk transaksi lama (sebelum v1.0.29): cari via tanggal+jumlah+kategori
+      // Hanya hapus jika tepat 1 match ditemukan — aman dari false match
+      const matches = tx.select({ id: keuanganTable.id }).from(keuanganTable)
+        .where(and(
+          eq(keuanganTable.usahaId, usahaId),
+          eq(keuanganTable.tanggal, kasir.tanggal),
+          eq(keuanganTable.kategori, "Penjualan Kasir"),
+          eq(keuanganTable.jumlah, kasir.total),
+        )).all();
+      if (matches.length === 1) keuanganIdToDelete = matches[0].id;
+    }
+
+    if (keuanganIdToDelete) {
+      tx.delete(transaksiStokTable).where(eq(transaksiStokTable.keuanganId, keuanganIdToDelete)).run();
+      tx.delete(keuanganTable).where(eq(keuanganTable.id, keuanganIdToDelete)).run();
     }
 
     // Restore stok barang jika barang masih ada
