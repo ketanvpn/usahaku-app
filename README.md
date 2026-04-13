@@ -587,7 +587,7 @@ Database akan dibuat ulang dengan data seed otomatis.
 |---------------|--------|-----------|
 | Database (desktop) | `C:\Users\{nama}\AppData\Roaming\Usahaku\app.db` | Data utama |
 | Auto-backup | `C:\Users\{nama}\AppData\Roaming\Usahaku\UsahakuBackup\` | Backup otomatis saat tutup app (default) |
-| Log aplikasi | `C:\Users\{nama}\AppData\Roaming\Usahaku\buku-hutang.log` | Log error & info |
+| Log aplikasi | `C:\Users\{nama}\AppData\Roaming\Usahaku\usahaku.log` | Log error & info |
 | Database (dev) | `artifacts/api-server/data/app.db` | Data development |
 | File Backup JSON | Pilihan user saat export | Hasil klik "Simpan File Backup" |
 | Export Excel | Folder Unduhan | Hasil klik "Export Excel" di Laporan |
