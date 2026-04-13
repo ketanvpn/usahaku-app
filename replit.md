@@ -4,13 +4,13 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.26**
+**Current version: 1.0.30**
 
 Key features:
 - CRUD for customers, debts, payments
 - Keuangan (income/expense) with auto-integration
 - Stok barang with low-stock alerts and auto-keuangan
-- Kasir (POS) with multi-item cart, receipt modal, auto-stok decrement
+- Kasir (POS) with multi-item cart, receipt modal, auto-stok decrement, hapus transaksi kasir (void) via Riwayat Penjualan
 - Laporan: tab Penjualan Kasir (harian/bulanan chart, top produk, export CSV/PDF), Hutang, Keuangan, Stok
 - Dashboard: kasir summary cards (hari ini & bulan ini), tren keuangan chart
 - Backup/restore (v1.2 format includes kasir tables)
@@ -21,6 +21,7 @@ Key features:
 - Remote password reset via signed code (RST-XXXX-XXXX-XXXX-XXXX, 24-hour expiry, no auth required)
 - "Lupa username?" — pelanggan bisa lihat daftar akun owner di halaman login
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
+- PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
 ## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.30)
 
@@ -161,9 +162,11 @@ The application is built as a pnpm workspace monorepo.
     - Error messages are user-friendly and localized (Indonesian).
     - `SESSION_SECRET` is derived from `userData` path for uniqueness.
 - **Data Integrity — Database Transactions**:
-    - `POST /kasir/transaksi`: All writes (keuangan, stok update, transaksi_stok, transaksi_kasir, transaksi_kasir_item) wrapped in a single `db.transaction()` to prevent partial state on failure.
+    - `POST /kasir/transaksi`: All writes (keuangan, stok update, transaksi_stok, transaksi_kasir, transaksi_kasir_item) wrapped in a single `db.transaction()`. Menyimpan `keuangan_id` di `transaksi_kasir` sejak v1.0.29.
+    - `DELETE /kasir/transaksi/:id`: hapus kasir_item + kasir + keuangan + transaksi_stok + restore stok, atomik. Gunakan `keuangan_id` langsung (v1.0.29+); fallback fuzzy match (1 result only) untuk transaksi lama.
     - `POST /pembayaran`: keuangan insert + pembayaran insert + hutang update wrapped atomically.
-    - `DELETE /pembayaran/:id`: hutang update + keuangan delete + pembayaran delete wrapped atomically.
+    - `DELETE /pembayaran/:id`: hutang update + keuangan delete + pembayaran delete wrapped atomically. Fallback fuzzy match untuk keuangan lama (null keuangan_id).
+    - `DELETE /hutang/:id`: collect semua keuangan dari pembayaran → hapus keuangan → hapus pembayaran → hapus hutang, satu transaction.
     - `POST /stok/masuk` & `POST /stok/keluar`: keuangan insert + transaksi_stok insert + barang stok update wrapped atomically.
     - `DELETE /stok/transaksi/:id`: keuangan delete + transaksi_stok delete + barang stok update wrapped atomically.
 
