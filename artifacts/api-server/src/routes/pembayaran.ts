@@ -197,6 +197,23 @@ router.delete("/pembayaran/:id", requireAuth, requireLicense, async (req, res): 
 
   const [hutang] = await db.select().from(hutangTable).where(eq(hutangTable.id, pembayaran.hutangId));
 
+  // Cari keuangan ID yang harus dihapus (fallback jika keuanganId tidak tersimpan di record lama)
+  let keuanganIdToDelete: number | null = pembayaran.keuanganId ?? null;
+  if (!keuanganIdToDelete) {
+    const matched = await db.select({ id: keuanganTable.id })
+      .from(keuanganTable)
+      .where(and(
+        eq(keuanganTable.usahaId, usahaId),
+        eq(keuanganTable.tanggal, pembayaran.tanggalBayar),
+        eq(keuanganTable.jumlah, pembayaran.nominalBayar),
+        eq(keuanganTable.kategori, "Pelunasan Hutang"),
+        eq(keuanganTable.tipe, "masuk"),
+      ));
+    if (matched.length === 1) {
+      keuanganIdToDelete = matched[0]!.id;
+    }
+  }
+
   // Semua operasi tulis dalam satu transaction agar atomik
   db.transaction((tx) => {
     if (hutang) {
@@ -210,8 +227,8 @@ router.delete("/pembayaran/:id", requireAuth, requireLicense, async (req, res): 
       }).where(eq(hutangTable.id, hutang.id)).run();
     }
 
-    if (pembayaran.keuanganId) {
-      tx.delete(keuanganTable).where(eq(keuanganTable.id, pembayaran.keuanganId)).run();
+    if (keuanganIdToDelete) {
+      tx.delete(keuanganTable).where(eq(keuanganTable.id, keuanganIdToDelete)).run();
     }
 
     tx.delete(pembayaranTable).where(eq(pembayaranTable.id, params.data.id)).run();
