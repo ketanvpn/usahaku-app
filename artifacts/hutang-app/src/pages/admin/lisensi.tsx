@@ -15,7 +15,7 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 interface LicenseKey {
   id: number;
   key: string;
-  tipe: "harian" | "bulanan" | "tahunan";
+  tipe: "1bulan" | "3bulan" | "6bulan" | "1tahun";
   expires_at: string;
   is_used: boolean;
   used_at: string | null;
@@ -23,15 +23,17 @@ interface LicenseKey {
 }
 
 const TIPE_LABEL: Record<string, string> = {
-  harian: "Harian (1 hari)",
-  bulanan: "Bulanan (30 hari)",
-  tahunan: "Tahunan (365 hari)",
+  "1bulan": "1 Bulan (30 hari)",
+  "3bulan": "3 Bulan (90 hari)",
+  "6bulan": "6 Bulan (180 hari)",
+  "1tahun": "1 Tahun (365 hari)",
 };
 
 const TIPE_COLOR: Record<string, string> = {
-  harian: "bg-orange-100 text-orange-700 border-orange-200",
-  bulanan: "bg-blue-100 text-blue-700 border-blue-200",
-  tahunan: "bg-purple-100 text-purple-700 border-purple-200",
+  "1bulan": "bg-blue-100 text-blue-700 border-blue-200",
+  "3bulan": "bg-cyan-100 text-cyan-700 border-cyan-200",
+  "6bulan": "bg-violet-100 text-violet-700 border-violet-200",
+  "1tahun": "bg-purple-100 text-purple-700 border-purple-200",
 };
 
 function formatDate(iso: string) {
@@ -75,7 +77,7 @@ export default function AdminLisensiPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  const [tipe, setTipe] = useState<string>("bulanan");
+  const [tipe, setTipe] = useState<string>("1bulan");
   const [newKey, setNewKey] = useState<LicenseKey | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LicenseKey | null>(null);
 
@@ -168,9 +170,10 @@ export default function AdminLisensiPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="harian">Harian (1 hari)</SelectItem>
-                <SelectItem value="bulanan">Bulanan (30 hari)</SelectItem>
-                <SelectItem value="tahunan">Tahunan (365 hari)</SelectItem>
+                <SelectItem value="1bulan">1 Bulan (30 hari)</SelectItem>
+                <SelectItem value="3bulan">3 Bulan (90 hari)</SelectItem>
+                <SelectItem value="6bulan">6 Bulan (180 hari)</SelectItem>
+                <SelectItem value="1tahun">1 Tahun (365 hari)</SelectItem>
               </SelectContent>
             </Select>
             <Button onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending}>
@@ -218,8 +221,8 @@ export default function AdminLisensiPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${TIPE_COLOR[k.tipe]}`}>
-                          {k.tipe}
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${TIPE_COLOR[k.tipe] ?? "bg-gray-100 text-gray-700"}`}>
+                          {TIPE_LABEL[k.tipe] ?? k.tipe}
                         </span>
                       </TableCell>
                       <TableCell className="text-sm">{formatDate(k.expires_at)}</TableCell>

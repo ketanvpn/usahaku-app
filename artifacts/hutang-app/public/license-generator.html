@@ -69,7 +69,7 @@
 
     .tipe-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 10px;
       margin-bottom: 28px;
     }
@@ -279,19 +279,24 @@
 
     <div class="section-label">Tipe Lisensi</div>
     <div class="tipe-grid">
-      <button class="tipe-btn" data-tipe="harian" onclick="pilihTipe('harian')">
+      <button class="tipe-btn active" data-tipe="1bulan" onclick="pilihTipe('1bulan')">
         <div class="tipe-icon">📅</div>
-        <div class="tipe-name">Harian</div>
-        <div class="tipe-durasi">1 hari</div>
-      </button>
-      <button class="tipe-btn active" data-tipe="bulanan" onclick="pilihTipe('bulanan')">
-        <div class="tipe-icon">📆</div>
-        <div class="tipe-name">Bulanan</div>
+        <div class="tipe-name">1 Bulan</div>
         <div class="tipe-durasi">30 hari</div>
       </button>
-      <button class="tipe-btn" data-tipe="tahunan" onclick="pilihTipe('tahunan')">
+      <button class="tipe-btn" data-tipe="3bulan" onclick="pilihTipe('3bulan')">
+        <div class="tipe-icon">📆</div>
+        <div class="tipe-name">3 Bulan</div>
+        <div class="tipe-durasi">90 hari</div>
+      </button>
+      <button class="tipe-btn" data-tipe="6bulan" onclick="pilihTipe('6bulan')">
         <div class="tipe-icon">🗓️</div>
-        <div class="tipe-name">Tahunan</div>
+        <div class="tipe-name">6 Bulan</div>
+        <div class="tipe-durasi">180 hari</div>
+      </button>
+      <button class="tipe-btn" data-tipe="1tahun" onclick="pilihTipe('1tahun')">
+        <div class="tipe-icon">⭐</div>
+        <div class="tipe-name">1 Tahun</div>
         <div class="tipe-durasi">365 hari</div>
       </button>
     </div>
@@ -326,10 +331,10 @@
     const SECRET = "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE";
     // ============================================================
 
-    const TIPE_CODE = { harian: 1, bulanan: 2, tahunan: 3 };
-    const DURASI_HARI = { harian: 1, bulanan: 30, tahunan: 365 };
+    const TIPE_CODE = { "1bulan": 1, "3bulan": 2, "6bulan": 3, "1tahun": 4 };
+    const DURASI_HARI = { "1bulan": 30, "3bulan": 90, "6bulan": 180, "1tahun": 365 };
 
-    let tipeAktif = "bulanan";
+    let tipeAktif = "1bulan";
     let jumlah = 1;
     let hasilList = [];
 
@@ -406,7 +411,7 @@
     }
 
     function tipeLabel(tipe) {
-      return { harian: "Harian", bulanan: "Bulanan", tahunan: "Tahunan" }[tipe];
+      return { "1bulan": "1 Bulan", "3bulan": "3 Bulan", "6bulan": "6 Bulan", "1tahun": "1 Tahun" }[tipe];
     }
 
     async function generate() {

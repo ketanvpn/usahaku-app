@@ -2,24 +2,34 @@ import { createHmac, randomBytes } from "crypto";
 
 const SECRET = process.env.LICENSE_SECRET ?? "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE";
 
-export type LicenseTipe = "harian" | "bulanan" | "tahunan";
+export type LicenseTipe = "1bulan" | "3bulan" | "6bulan" | "1tahun";
 
 const TIPE_CODE: Record<LicenseTipe, number> = {
-  harian: 1,
-  bulanan: 2,
-  tahunan: 3,
+  "1bulan": 1,
+  "3bulan": 2,
+  "6bulan": 3,
+  "1tahun": 4,
 };
 
 const CODE_TIPE: Record<number, LicenseTipe> = {
-  1: "harian",
-  2: "bulanan",
-  3: "tahunan",
+  1: "1bulan",
+  2: "3bulan",
+  3: "6bulan",
+  4: "1tahun",
 };
 
 export const DURASI_HARI: Record<LicenseTipe, number> = {
-  harian: 1,
-  bulanan: 30,
-  tahunan: 365,
+  "1bulan":  30,
+  "3bulan":  90,
+  "6bulan": 180,
+  "1tahun": 365,
+};
+
+export const TIPE_LABEL: Record<LicenseTipe, string> = {
+  "1bulan": "1 Bulan",
+  "3bulan": "3 Bulan",
+  "6bulan": "6 Bulan",
+  "1tahun": "1 Tahun",
 };
 
 export function calcExpiresAt(tipe: LicenseTipe, from: Date = new Date()): Date {

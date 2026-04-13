@@ -6,7 +6,7 @@ import { generateLicenseKey, verifyLicenseKey, DURASI_HARI, type LicenseTipe } f
 
 const router: IRouter = Router();
 
-const VALID_TIPE = ["harian", "bulanan", "tahunan"] as const;
+const VALID_TIPE = ["1bulan", "3bulan", "6bulan", "1tahun"] as const;
 
 router.post("/lisensi/generate", requireSuperAdmin, async (req, res): Promise<void> => {
   const { tipe } = req.body ?? {};

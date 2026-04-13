@@ -80,9 +80,10 @@ export default function SetupPage() {
   };
 
   const TIPE_LABEL: Record<string, string> = {
-    harian: "Harian",
-    bulanan: "Bulanan (30 hari)",
-    tahunan: "Tahunan (365 hari)",
+    "1bulan": "1 Bulan (30 hari)",
+    "3bulan": "3 Bulan (90 hari)",
+    "6bulan": "6 Bulan (180 hari)",
+    "1tahun": "1 Tahun (365 hari)",
   };
 
   if (done) {
