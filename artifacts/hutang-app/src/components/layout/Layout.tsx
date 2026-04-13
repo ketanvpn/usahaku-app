@@ -63,8 +63,9 @@ export function Layout({ children }: { children: ReactNode }) {
       return r.json();
     },
     enabled: !isSuperAdmin,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 2 * 60 * 1000,
   });
 
   const showLisensiBanner = !isSuperAdmin && licenseStatus && location !== "/lisensi";
@@ -72,7 +73,9 @@ export function Layout({ children }: { children: ReactNode }) {
   const lisensiMati = licenseStatus && !licenseStatus.aktif;
 
   const licenseContextValue = useMemo(() => ({
-    lisensiAktif: isSuperAdmin ? true : (licenseStatus?.aktif ?? true),
+    lisensiAktif: isSuperAdmin
+      ? true
+      : ((licenseStatus?.aktif ?? true) && !(licenseStatus?.jam_dimanipulasi ?? false)),
     jamDimanipulasi: licenseStatus?.jam_dimanipulasi ?? false,
   }), [isSuperAdmin, licenseStatus]);
 
