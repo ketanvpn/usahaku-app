@@ -11,6 +11,8 @@ export const usersTable = sqliteTable("users", {
   role: text("role").notNull().$type<"super_admin" | "owner">(),
   usahaId: integer("usaha_id").references(() => usahaTable.id),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  failedAttempts: integer("failed_attempts").notNull().default(0),
+  lockedUntil: text("locked_until"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 

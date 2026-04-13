@@ -88,6 +88,8 @@ sqlite.exec(`
 
 try { sqlite.exec(`ALTER TABLE usaha ADD COLUMN license_expires_at TEXT`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE usaha ADD COLUMN last_seen_date TEXT`); } catch { /* column already exists */ }
+try { sqlite.exec(`ALTER TABLE users ADD COLUMN failed_attempts INTEGER NOT NULL DEFAULT 0`); } catch { /* column already exists */ }
+try { sqlite.exec(`ALTER TABLE users ADD COLUMN locked_until TEXT`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE barang ADD COLUMN kategori TEXT NOT NULL DEFAULT ''`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE pembayaran ADD COLUMN nomor_kwitansi TEXT`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE pembayaran ADD COLUMN sisa_hutang_setelah TEXT`); } catch { /* column already exists */ }

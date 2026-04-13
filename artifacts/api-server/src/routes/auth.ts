@@ -10,6 +10,9 @@ const RESET_SECRET = process.env.LICENSE_SECRET ?? "BUKUHUTANG_LICENSE_SECRET_V1
 
 const router: IRouter = Router();
 
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCK_DURATION_MS = 15 * 60 * 1000;
+
 router.post("/auth/login", async (req, res): Promise<void> => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
@@ -31,11 +34,55 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
+  const now = Date.now();
+
+  if (user.lockedUntil) {
+    const lockedUntilMs = new Date(user.lockedUntil).getTime();
+    if (now < lockedUntilMs) {
+      const sisaMenit = Math.ceil((lockedUntilMs - now) / 60000);
+      res.status(429).json({
+        error: `Akun dikunci sementara karena terlalu banyak percobaan login yang gagal. Coba lagi dalam ${sisaMenit} menit.`,
+        locked: true,
+        sisa_menit: sisaMenit,
+      });
+      return;
+    }
+    await db.update(usersTable)
+      .set({ failedAttempts: 0, lockedUntil: null })
+      .where(eq(usersTable.id, user.id));
+    user.failedAttempts = 0;
+    user.lockedUntil = null;
+  }
+
   const passwordMatch = await bcrypt.compare(password, user.passwordHash);
   if (!passwordMatch) {
-    res.status(401).json({ error: "Username atau password salah." });
+    const newAttempts = (user.failedAttempts ?? 0) + 1;
+    if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+      const lockedUntil = new Date(now + LOCK_DURATION_MS).toISOString();
+      await db.update(usersTable)
+        .set({ failedAttempts: newAttempts, lockedUntil })
+        .where(eq(usersTable.id, user.id));
+      res.status(429).json({
+        error: `Terlalu banyak percobaan login yang gagal. Akun dikunci selama 15 menit.`,
+        locked: true,
+        sisa_menit: 15,
+      });
+    } else {
+      await db.update(usersTable)
+        .set({ failedAttempts: newAttempts })
+        .where(eq(usersTable.id, user.id));
+      const sisaCoba = MAX_FAILED_ATTEMPTS - newAttempts;
+      res.status(401).json({
+        error: `Username atau password salah. Sisa percobaan: ${sisaCoba}.`,
+        sisa_percobaan: sisaCoba,
+      });
+    }
     return;
   }
+
+  await db.update(usersTable)
+    .set({ failedAttempts: 0, lockedUntil: null })
+    .where(eq(usersTable.id, user.id));
 
   req.session.userId = user.id;
   req.session.role = user.role;

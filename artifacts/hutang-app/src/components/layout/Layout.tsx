@@ -18,11 +18,23 @@ import {
   Package,
   ShoppingBag,
   RefreshCw,
-  X
+  X,
+  ShieldAlert,
+  ShieldOff
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { useLogout } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+interface LicenseStatus {
+  aktif: boolean;
+  sisa_hari: number;
+  expires_at: string | null;
+  jam_dimanipulasi?: boolean;
+}
 import {
   Sheet,
   SheetContent,
@@ -41,6 +53,22 @@ export function Layout({ children }: { children: ReactNode }) {
   const [checkResult, setCheckResult] = useState<string | null>(null);
   const [backupReminderDismissed, setBackupReminderDismissed] = useState(false);
   const [daysWithoutBackup, setDaysWithoutBackup] = useState<number | null>(null);
+
+  const { data: licenseStatus } = useQuery<LicenseStatus>({
+    queryKey: ["lisensi-status"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/lisensi/status`, { credentials: "include" });
+      if (!r.ok) throw new Error("Gagal");
+      return r.json();
+    },
+    enabled: !isSuperAdmin,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const showLisensiBanner = !isSuperAdmin && licenseStatus && location !== "/lisensi";
+  const lisensiNearExpiry = licenseStatus?.aktif && (licenseStatus?.sisa_hari ?? 0) <= 7;
+  const lisensiMati = licenseStatus && !licenseStatus.aktif;
 
   useEffect(() => {
     window.electronApp?.getVersion().then(setAppVersion).catch(() => {});
@@ -211,6 +239,33 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col md:pl-64 min-w-0">
         <UpdateBanner />
+        {/* Banner status lisensi */}
+        {showLisensiBanner && lisensiMati && (
+          <div className="flex items-center gap-3 px-4 py-2 bg-red-50 border-b border-red-200 text-red-800 text-sm no-print">
+            <ShieldOff className="h-4 w-4 flex-shrink-0 text-red-600" />
+            <span className="flex-1">
+              Lisensi tidak aktif — fitur tambah, edit, dan hapus data tidak tersedia.
+            </span>
+            <Link href="/lisensi">
+              <Button size="sm" variant="outline" className="h-7 text-xs border-red-400 text-red-700 hover:bg-red-100 flex-shrink-0">
+                Aktivasi Sekarang
+              </Button>
+            </Link>
+          </div>
+        )}
+        {showLisensiBanner && lisensiNearExpiry && (
+          <div className="flex items-center gap-3 px-4 py-2 bg-orange-50 border-b border-orange-200 text-orange-800 text-sm no-print">
+            <ShieldAlert className="h-4 w-4 flex-shrink-0 text-orange-600" />
+            <span className="flex-1">
+              Lisensi habis dalam <strong>{licenseStatus?.sisa_hari} hari</strong>. Segera perpanjang agar fitur tetap berjalan.
+            </span>
+            <Link href="/lisensi">
+              <Button size="sm" variant="outline" className="h-7 text-xs border-orange-400 text-orange-700 hover:bg-orange-100 flex-shrink-0">
+                Perpanjang
+              </Button>
+            </Link>
+          </div>
+        )}
         {/* Banner pengingat backup */}
         {!isSuperAdmin && !backupReminderDismissed && daysWithoutBackup !== null && location !== "/backup" && (
           <div className="flex items-center gap-3 px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm no-print">
