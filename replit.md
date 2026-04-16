@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.39**
+**Current version: 1.0.40**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -23,7 +23,11 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.39)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.40)
+
+### v1.0.40 — Re-release: Restore JSON Selalu Gagal (v1.0.39 dibuild sebelum fix di-push)
+**Masalah:** v1.0.39 dibuild dan di-tag di GitHub SEBELUM fix backup.ts di-push ke repo, sehingga binary yang ter-release masih berisi kode lama `db.transaction(async ...)`. v1.0.40 adalah re-release dengan kode yang sudah benar.
+**Isi fix (sama dengan v1.0.39):** `sqliteRaw.transaction()` sinkron, error dialog besar, threshold 8 KB.
 
 ### v1.0.39 — Fix Bug: Restore JSON Selalu Gagal (Transaction function cannot return a promise)
 **Root cause:** `db.transaction(async (tx) => { await ... })` tidak valid di Drizzle + better-sqlite3. better-sqlite3 bersifat SINKRON; Drizzle mendeteksi callback async (returns Promise) dan throw error "Transaction function cannot return a promise". Bug ini menyebabkan restore JSON **selalu gagal** sejak fitur pertama dibuat.
