@@ -892,18 +892,7 @@ async function tryGDriveAutoBackup(): Promise<void> {
     return;
   }
 
-  const settings = readSettings();
-  const lastBackupAt = settings.lastDriveBackupAt as string | undefined;
   const dbPath = getDbPath();
-  if (lastBackupAt && fs.existsSync(dbPath)) {
-    const dbMtime = fs.statSync(dbPath).mtimeMs;
-    const lastMs = new Date(lastBackupAt).getTime();
-    if (dbMtime < lastMs) {
-      writeLog("[gdrive] Auto-backup: data belum berubah, dilewati");
-      return;
-    }
-  }
-
   const accessToken = await getValidAccessToken();
   if (!accessToken) return;
 
