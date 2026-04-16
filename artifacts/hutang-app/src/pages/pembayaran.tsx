@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "wouter";
-import { 
-  useGetPembayaranList, useCreatePembayaran, useDeletePembayaran, useGetPelangganList, useGetHutangList,
-  getGetPembayaranListQueryKey, getGetHutangListQueryKey, Pembayaran
+import {
+  useGetPembayaranList, useDeletePembayaran, useGetPelangganList, useGetHutangList,
+  getGetPembayaranListQueryKey, getGetHutangListQueryKey, Pembayaran, Hutang
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,15 +12,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { PelangganCombobox } from "@/components/pelanggan-combobox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { formatRupiah, formatDate } from "@/lib/format";
-import { Loader2, Plus, Trash2, Filter, Printer } from "lucide-react";
+import { Loader2, Plus, Trash2, Filter, Printer, ArrowRight, CheckCircle2, Clock } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useLicense } from "@/context/license-context";
 
@@ -32,7 +30,54 @@ type PembayaranFull = Pembayaran & {
   sisa_hutang_setelah?: number;
 };
 
-// ─── Format helpers (untuk HTML string, bukan React) ──────────────────────────
+type BatchResult = {
+  pembayaran_list: Array<{
+    id: number;
+    hutang_id: number;
+    hutang_tanggal: string;
+    hutang_keterangan: string | null;
+    hutang_nominal: number;
+    nominal_bayar: number;
+    sisa_hutang_setelah: number;
+    nomor_kwitansi: string;
+    status_baru: "lunas" | "aktif";
+  }>;
+  pelanggan_nama: string;
+  pelanggan_id: number;
+  nama_usaha: string;
+  total_dibayar: number;
+  tanggal_bayar: string;
+  catatan: string | null;
+};
+
+type DistribusiItem = {
+  hutang: Hutang;
+  bayar: number;
+  sisaSetelah: number;
+  statusBaru: "lunas" | "aktif";
+};
+
+function hitungDistribusiFIFO(hutangs: Hutang[], nominalTotal: number): DistribusiItem[] {
+  const sorted = [...hutangs].sort((a, b) => a.tanggal_hutang.localeCompare(b.tanggal_hutang));
+  let remaining = nominalTotal;
+  const result: DistribusiItem[] = [];
+  for (const h of sorted) {
+    if (remaining <= 0.001) break;
+    const sisa = h.sisa_hutang;
+    const bayar = Math.min(sisa, remaining);
+    if (bayar > 0) {
+      result.push({
+        hutang: h,
+        bayar,
+        sisaSetelah: Math.max(0, sisa - bayar),
+        statusBaru: sisa - bayar <= 0 ? "lunas" : "aktif",
+      });
+      remaining -= bayar;
+    }
+  }
+  return result;
+}
+
 function fmtRupiah(n: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 }
@@ -40,23 +85,37 @@ function fmtDate(iso: string) {
   return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
 }
 
-// ─── Kwitansi HTML builder (A5 Portrait) ──────────────────────────────────────
-function buildKwitansiHtml(p: PembayaranFull): string {
-  const nomorKwitansi = p.nomor_kwitansi || `KWT-${p.id}`;
-  const namaUsaha     = p.nama_usaha || "Usaha";
-  const pelangganNama = p.pelanggan_nama;
-  const tanggal       = fmtDate(p.tanggal_bayar);
-  const keterangan    = p.hutang_keterangan || "—";
-  const nominalBayar  = p.nominal_bayar;
-  const hutangNominal = p.hutang_nominal ?? 0;
-  const sisaHutang    = p.sisa_hutang_setelah ?? 0;
-  const catatan       = p.catatan || "";
+function buildKwitansiGabunganHtml(batch: BatchResult): string {
+  const namaUsaha = batch.nama_usaha || "Usaha";
+  const pelangganNama = batch.pelanggan_nama;
+  const tanggal = fmtDate(batch.tanggal_bayar);
+  const totalDibayar = batch.total_dibayar;
+  const catatan = batch.catatan || "";
+  const nomorPertama = batch.pembayaran_list[0]?.nomor_kwitansi || "KWT-?";
+  const nomorLabel = batch.pembayaran_list.length === 1
+    ? nomorPertama
+    : `${nomorPertama} s/d ${batch.pembayaran_list[batch.pembayaran_list.length - 1]?.nomor_kwitansi}`;
+
+  const rowsHtml = batch.pembayaran_list.map(p => {
+    const label = p.hutang_keterangan
+      ? `${fmtDate(p.hutang_tanggal)} — ${p.hutang_keterangan}`
+      : fmtDate(p.hutang_tanggal);
+    const statusHtml = p.status_baru === "lunas"
+      ? `<span class="green">✓ LUNAS</span>`
+      : `Sisa ${fmtRupiah(p.sisa_hutang_setelah)}`;
+    return `
+      <tr>
+        <td>${label}</td>
+        <td class="right">${fmtRupiah(p.nominal_bayar)}</td>
+        <td class="right">${statusHtml}</td>
+      </tr>`;
+  }).join("");
 
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8"/>
-<title>Kwitansi ${nomorKwitansi}</title>
+<title>Kwitansi ${nomorLabel}</title>
 <style>
 @page { size: A5 portrait; margin: 12mm; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -74,9 +133,11 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; 
 .nominal-label { font-size: 8pt; font-weight: 600; color: #555; letter-spacing: 1.5px; text-transform: uppercase; }
 .nominal-nilai { font-size: 20pt; font-weight: bold; color: #1a5c2a; margin-top: 2px; }
 .detail-tbl { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 8px 0; }
+.detail-tbl th { padding: 4px 6px; border-bottom: 2px solid #999; text-align: left; font-size: 8.5pt; }
+.detail-tbl th.right { text-align: right; }
 .detail-tbl td { padding: 3px 6px; border-bottom: 1px solid #eee; }
-.detail-tbl .right { text-align: right; }
-.detail-tbl .total-row td { font-weight: bold; border-top: 2px solid #999; border-bottom: none; padding-top: 5px; }
+.detail-tbl td.right { text-align: right; }
+.total-row td { font-weight: bold; border-top: 2px solid #999; border-bottom: none; padding-top: 5px; }
 .green { color: #1a7a4a; } .orange { color: #b45309; }
 .catatan-box { font-size: 9pt; color: #555; font-style: italic; margin: 6px 4px; }
 .ttd-area { display: flex; justify-content: flex-end; margin-top: 14px; }
@@ -92,26 +153,36 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; 
   <div class="header">
     <div class="nama-usaha">${namaUsaha}</div>
     <div class="judul-kwt">KWITANSI PEMBAYARAN HUTANG</div>
-    <div class="nomor-kwt">No: ${nomorKwitansi} &nbsp;&bull;&nbsp; Tanggal: ${tanggal}</div>
+    <div class="nomor-kwt">No: ${nomorLabel} &nbsp;&bull;&nbsp; Tanggal: ${tanggal}</div>
   </div>
 
   <table class="info-tbl">
     <tr><td class="lbl">Diterima dari</td><td class="sep">:</td><td><strong>${pelangganNama}</strong></td></tr>
-    <tr><td class="lbl">Keterangan Hutang</td><td class="sep">:</td><td>${keterangan}</td></tr>
   </table>
 
   <div class="nominal-box">
-    <div class="nominal-label">Jumlah Dibayar</div>
-    <div class="nominal-nilai">${fmtRupiah(nominalBayar)}</div>
+    <div class="nominal-label">Total Dibayar</div>
+    <div class="nominal-nilai">${fmtRupiah(totalDibayar)}</div>
   </div>
 
   <table class="detail-tbl">
-    <tr><td>Hutang Awal</td><td class="right">${fmtRupiah(hutangNominal)}</td></tr>
-    <tr><td>Dibayar Kali Ini</td><td class="right green">+ ${fmtRupiah(nominalBayar)}</td></tr>
-    <tr class="total-row">
-      <td>Sisa Hutang</td>
-      <td class="right ${sisaHutang <= 0 ? "green" : "orange"}">${sisaHutang <= 0 ? "✓ LUNAS" : fmtRupiah(sisaHutang)}</td>
-    </tr>
+    <thead>
+      <tr>
+        <th>Nota Hutang</th>
+        <th class="right">Dibayar</th>
+        <th class="right">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsHtml}
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td>Total</td>
+        <td class="right green">${fmtRupiah(totalDibayar)}</td>
+        <td></td>
+      </tr>
+    </tfoot>
   </table>
 
   ${catatan ? `<div class="catatan-box">Catatan: ${catatan}</div>` : ""}
@@ -130,9 +201,8 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; 
 </html>`;
 }
 
-// ─── Open kwitansi in browser / Electron ──────────────────────────────────────
-function openKwitansi(p: PembayaranFull) {
-  const html = buildKwitansiHtml(p);
+function openKwitansiGabungan(batch: BatchResult) {
+  const html = buildKwitansiGabunganHtml(batch);
   if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
     window.electronApp.openInBrowser(html);
   } else {
@@ -143,14 +213,78 @@ function openKwitansi(p: PembayaranFull) {
   }
 }
 
-// ─── Page Component ───────────────────────────────────────────────────────────
+function openKwitansiLama(p: PembayaranFull) {
+  const nomorKwitansi = p.nomor_kwitansi || `KWT-${p.id}`;
+  const namaUsaha = p.nama_usaha || "Usaha";
+  const tanggal = fmtDate(p.tanggal_bayar);
+  const nominalBayar = p.nominal_bayar;
+  const hutangNominal = p.hutang_nominal ?? 0;
+  const sisaHutang = p.sisa_hutang_setelah ?? 0;
+  const catatan = p.catatan || "";
+  const keterangan = p.hutang_keterangan || "—";
+
+  const html = `<!DOCTYPE html>
+<html lang="id"><head><meta charset="UTF-8"/>
+<title>Kwitansi ${nomorKwitansi}</title>
+<style>
+@page{size:A5 portrait;margin:12mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:10pt;color:#111}
+.kwt{border:2px solid #333;padding:12px}.header{text-align:center;border-bottom:1px dashed #888;padding-bottom:8px;margin-bottom:10px}
+.nama-usaha{font-size:14pt;font-weight:bold}.judul-kwt{font-size:11pt;font-weight:bold;letter-spacing:1px;margin-top:3px}
+.nomor-kwt{font-size:8.5pt;color:#555;margin-top:2px}.info-tbl{width:100%;border-collapse:collapse;margin:8px 0;font-size:9.5pt}
+.info-tbl td{padding:2px 4px;vertical-align:top}.info-tbl .lbl{width:40%;font-weight:600}.info-tbl .sep{width:6px}
+.nominal-box{background:#f5f5f5;border:1px solid #999;border-radius:3px;padding:8px 10px;margin:10px 0;text-align:center}
+.nominal-label{font-size:8pt;font-weight:600;color:#555;letter-spacing:1.5px;text-transform:uppercase}
+.nominal-nilai{font-size:20pt;font-weight:bold;color:#1a5c2a;margin-top:2px}
+.detail-tbl{width:100%;border-collapse:collapse;font-size:9pt;margin:8px 0}
+.detail-tbl td{padding:3px 6px;border-bottom:1px solid #eee}.detail-tbl .right{text-align:right}
+.detail-tbl .total-row td{font-weight:bold;border-top:2px solid #999;border-bottom:none;padding-top:5px}
+.green{color:#1a7a4a}.orange{color:#b45309}
+.ttd-area{display:flex;justify-content:flex-end;margin-top:14px}.ttd-box{text-align:center;width:110px;font-size:9pt}
+.ttd-space{height:38px}.ttd-line{border-top:1px solid #333;padding-top:3px;font-size:8pt}
+.footer-kwt{text-align:center;font-size:7.5pt;color:#888;border-top:1px dashed #ccc;padding-top:6px;margin-top:10px}
+</style>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},600);});<\/script>
+</head><body><div class="kwt">
+<div class="header"><div class="nama-usaha">${namaUsaha}</div>
+<div class="judul-kwt">KWITANSI PEMBAYARAN HUTANG</div>
+<div class="nomor-kwt">No: ${nomorKwitansi} &bull; Tanggal: ${tanggal}</div></div>
+<table class="info-tbl">
+<tr><td class="lbl">Diterima dari</td><td class="sep">:</td><td><strong>${p.pelanggan_nama}</strong></td></tr>
+<tr><td class="lbl">Keterangan Hutang</td><td class="sep">:</td><td>${keterangan}</td></tr>
+</table>
+<div class="nominal-box"><div class="nominal-label">Jumlah Dibayar</div><div class="nominal-nilai">${fmtRupiah(nominalBayar)}</div></div>
+<table class="detail-tbl">
+<tr><td>Hutang Awal</td><td class="right">${fmtRupiah(hutangNominal)}</td></tr>
+<tr><td>Dibayar Kali Ini</td><td class="right green">+ ${fmtRupiah(nominalBayar)}</td></tr>
+<tr class="total-row"><td>Sisa Hutang</td><td class="right ${sisaHutang<=0?"green":"orange"}">${sisaHutang<=0?"✓ LUNAS":fmtRupiah(sisaHutang)}</td></tr>
+</table>
+${catatan?`<div style="font-size:9pt;color:#555;font-style:italic;margin:6px 4px">Catatan: ${catatan}</div>`:""}
+<div class="ttd-area"><div class="ttd-box"><div>Penerima,</div><div class="ttd-space"></div><div class="ttd-line">(________________)</div></div></div>
+<div class="footer-kwt">Terima kasih atas pembayarannya &bull; Simpan kwitansi ini sebagai bukti pembayaran</div>
+</div></body></html>`;
+
+  if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
+    window.electronApp.openInBrowser(html);
+  } else {
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const tab = window.open(url, "_blank");
+    if (tab) tab.addEventListener("load", () => setTimeout(() => URL.revokeObjectURL(url), 2000));
+  }
+}
+
 export default function PembayaranPage() {
   const [filterPelanggan, setFilterPelanggan] = useState<number | undefined>(undefined);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPembayaran, setSelectedPembayaran] = useState<Pembayaran | null>(null);
-  const [kwitansiSetelahBayar, setKwitansiSetelahBayar] = useState<PembayaranFull | null>(null);
+  const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
+
   const [formPelangganId, setFormPelangganId] = useState<number | null>(null);
+  const [selectedHutangIds, setSelectedHutangIds] = useState<Set<number>>(new Set());
+  const [nominalTotal, setNominalTotal] = useState<string>("");
+  const [tanggalBayar, setTanggalBayar] = useState(new Date().toISOString().split("T")[0]!);
+  const [catatan, setCatatan] = useState("");
 
   const { data: pembayaranList, isLoading } = useGetPembayaranList({ pelanggan_id: filterPelanggan });
   const { data: pelangganList } = useGetPelangganList();
@@ -161,52 +295,110 @@ export default function PembayaranPage() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const createMutation = useCreatePembayaran();
   const deleteMutation = useDeletePembayaran();
   const { lisensiAktif } = useLicense();
 
-  const pembayaranSchema = z.object({
-    hutang_id: z.coerce.number().min(1, { message: "Pilih nota hutang" }),
-    tanggal_bayar: z.string().min(1, { message: "Tanggal wajib diisi" }),
-    nominal_bayar: z.coerce.number().min(1, { message: "Nominal harus lebih dari 0" }),
-    catatan: z.string().optional(),
-  });
+  const hutangDipilih = useMemo(() => {
+    if (!hutangAktifList) return [];
+    return hutangAktifList.filter(h => selectedHutangIds.has(h.id));
+  }, [hutangAktifList, selectedHutangIds]);
 
-  const form = useForm<z.infer<typeof pembayaranSchema>>({
-    resolver: zodResolver(pembayaranSchema),
-    defaultValues: { hutang_id: 0, tanggal_bayar: new Date().toISOString().split("T")[0], nominal_bayar: 0, catatan: "" },
-  });
+  const totalSisaDipilih = useMemo(() => {
+    return hutangDipilih.reduce((sum, h) => sum + h.sisa_hutang, 0);
+  }, [hutangDipilih]);
 
-  const selectedHutangId = form.watch("hutang_id");
-  const selectedHutang = hutangAktifList?.find(h => h.id === selectedHutangId);
+  const nominalAngka = useMemo(() => {
+    const n = parseFloat(nominalTotal);
+    return isNaN(n) ? 0 : n;
+  }, [nominalTotal]);
+
+  const distribusiPreview = useMemo(() => {
+    if (hutangDipilih.length === 0 || nominalAngka <= 0) return [];
+    return hitungDistribusiFIFO(hutangDipilih, nominalAngka);
+  }, [hutangDipilih, nominalAngka]);
+
+  const batchMutation = useMutation({
+    mutationFn: async (body: { hutang_ids: number[]; tanggal_bayar: string; nominal_total: number; catatan?: string }) => {
+      const res = await fetch("/api/pembayaran/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Terjadi kesalahan");
+      return data as BatchResult;
+    },
+    onSuccess: (data) => {
+      toast({ title: "Pembayaran berhasil dicatat" });
+      queryClient.invalidateQueries({ queryKey: getGetPembayaranListQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ["keuangan"] });
+      queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
+      setIsDialogOpen(false);
+      setBatchResult(data);
+    },
+    onError: (err: Error) => {
+      toast({ variant: "destructive", title: "Gagal", description: err.message });
+    },
+  });
 
   const handleOpenDialog = () => {
     setFormPelangganId(null);
-    form.reset({ hutang_id: 0, tanggal_bayar: new Date().toISOString().split("T")[0], nominal_bayar: 0, catatan: "" });
+    setSelectedHutangIds(new Set());
+    setNominalTotal("");
+    setTanggalBayar(new Date().toISOString().split("T")[0]!);
+    setCatatan("");
     setIsDialogOpen(true);
   };
 
-  const onSubmit = (values: z.infer<typeof pembayaranSchema>) => {
-    if (selectedHutang && values.nominal_bayar > selectedHutang.sisa_hutang) {
-      form.setError("nominal_bayar", { type: "manual", message: "Nominal melebihi sisa hutang!" });
+  const toggleHutang = (id: number, sisaHutang: number) => {
+    setSelectedHutangIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      const newHutangs = hutangAktifList?.filter(h => next.has(h.id)) ?? [];
+      const newTotal = newHutangs.reduce((s, h) => s + h.sisa_hutang, 0);
+      setNominalTotal(newTotal > 0 ? newTotal.toString() : "");
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (!hutangAktifList) return;
+    if (selectedHutangIds.size === hutangAktifList.length) {
+      setSelectedHutangIds(new Set());
+      setNominalTotal("");
+    } else {
+      const allIds = new Set(hutangAktifList.map(h => h.id));
+      setSelectedHutangIds(allIds);
+      const total = hutangAktifList.reduce((s, h) => s + h.sisa_hutang, 0);
+      setNominalTotal(total.toString());
+    }
+  };
+
+  const handleSubmit = () => {
+    if (selectedHutangIds.size === 0) {
+      toast({ variant: "destructive", title: "Pilih minimal 1 nota hutang" });
       return;
     }
-    createMutation.mutate(
-      { data: values },
-      {
-        onSuccess: (data) => {
-          toast({ title: "Pembayaran berhasil dicatat" });
-          queryClient.invalidateQueries({ queryKey: getGetPembayaranListQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
-          queryClient.invalidateQueries({ queryKey: ["keuangan"] });
-          queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
-          setIsDialogOpen(false);
-          setKwitansiSetelahBayar(data as unknown as PembayaranFull);
-        },
-        onError: (err: any) =>
-          toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" }),
-      }
-    );
+    if (nominalAngka <= 0) {
+      toast({ variant: "destructive", title: "Nominal harus lebih dari 0" });
+      return;
+    }
+    if (nominalAngka > totalSisaDipilih + 0.01) {
+      toast({ variant: "destructive", title: "Nominal melebihi total sisa hutang yang dipilih" });
+      return;
+    }
+    batchMutation.mutate({
+      hutang_ids: Array.from(selectedHutangIds),
+      tanggal_bayar: tanggalBayar,
+      nominal_total: nominalAngka,
+      catatan: catatan || undefined,
+    });
   };
 
   const handleDelete = () => {
@@ -227,6 +419,9 @@ export default function PembayaranPage() {
       }
     );
   };
+
+  const isAllSelected = !!hutangAktifList && hutangAktifList.length > 0 && selectedHutangIds.size === hutangAktifList.length;
+  const isFormValid = selectedHutangIds.size > 0 && nominalAngka > 0 && nominalAngka <= totalSisaDipilih + 0.01;
 
   return (
     <div className="space-y-6">
@@ -264,101 +459,185 @@ export default function PembayaranPage() {
         </CardContent>
       </Card>
 
-      {/* Form Dialog */}
+      {/* Dialog Terima Pembayaran */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Terima Pembayaran</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div className="space-y-2 border-b pb-4 border-border">
-              <label className="text-sm font-medium">1. Pilih Pelanggan</label>
+
+          <div className="space-y-5 pt-1">
+            {/* Step 1: Pilih Pelanggan */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">1. Pilih Pelanggan</label>
               <PelangganCombobox
                 value={formPelangganId}
                 onValueChange={(id) => {
                   setFormPelangganId(id);
-                  form.setValue("hutang_id", 0);
+                  setSelectedHutangIds(new Set());
+                  setNominalTotal("");
                 }}
                 pelangganList={pelangganList}
                 placeholder="Cari atau pilih pelanggan..."
               />
             </div>
 
+            {/* Step 2: Pilih Nota Hutang */}
             {formPelangganId && (
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField control={form.control} name="hutang_id" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>2. Pilih Nota Hutang Aktif</FormLabel>
-                      <Select
-                        onValueChange={(v) => {
-                          const hId = parseInt(v);
-                          field.onChange(hId);
-                          const h = hutangAktifList?.find(x => x.id === hId);
-                          if (h) form.setValue("nominal_bayar", h.sisa_hutang);
-                        }}
-                        value={field.value ? field.value.toString() : ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger><SelectValue placeholder="Pilih nota hutang..." /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="max-h-[200px]" collisionPadding={8}>
-                          {!hutangAktifList || hutangAktifList.length === 0 ? (
-                            <SelectItem value="0" disabled>Tidak ada hutang aktif</SelectItem>
-                          ) : (
-                            hutangAktifList.map(h => (
-                              <SelectItem key={h.id} value={h.id.toString()}>
-                                {formatDate(h.tanggal_hutang)} — Sisa: {formatRupiah(h.sisa_hutang)}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-
-                  {selectedHutang && (
-                    <>
-                      <FormField control={form.control} name="tanggal_bayar" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tanggal Bayar</FormLabel>
-                          <FormControl><Input type="date" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={form.control} name="nominal_bayar" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nominal Pembayaran (Rp)</FormLabel>
-                          <FormControl>
-                            <Input type="number" min="1" max={selectedHutang.sisa_hutang} {...field} />
-                          </FormControl>
-                          <FormDescription>Sisa hutang: {formatRupiah(selectedHutang.sisa_hutang)}</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={form.control} name="catatan" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Catatan (Opsional)</FormLabel>
-                          <FormControl><Textarea placeholder="Contoh: Transfer BCA" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <Button type="submit" className="w-full" disabled={createMutation.isPending || !selectedHutang}>
-                        {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Simpan Pembayaran
-                      </Button>
-                    </>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold">2. Pilih Nota Hutang Aktif</label>
+                  {hutangAktifList && hutangAktifList.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={handleSelectAll}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      {isAllSelected ? "Batal Pilih Semua" : "Pilih Semua"}
+                    </button>
                   )}
-                </form>
-              </Form>
+                </div>
+
+                {!hutangAktifList || hutangAktifList.length === 0 ? (
+                  <div className="text-sm text-muted-foreground py-3 text-center border rounded-md">
+                    Tidak ada hutang aktif
+                  </div>
+                ) : (
+                  <div className="border rounded-md divide-y max-h-[180px] overflow-y-auto">
+                    {hutangAktifList.map(h => (
+                      <label
+                        key={h.id}
+                        className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        <Checkbox
+                          checked={selectedHutangIds.has(h.id)}
+                          onCheckedChange={() => toggleHutang(h.id, h.sisa_hutang)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">{formatDate(h.tanggal_hutang)}</div>
+                          {h.keterangan && (
+                            <div className="text-xs text-muted-foreground truncate">{h.keterangan}</div>
+                          )}
+                        </div>
+                        <div className="text-sm font-semibold text-orange-600 shrink-0">
+                          {formatRupiah(h.sisa_hutang)}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {selectedHutangIds.size > 0 && (
+                  <div className="flex items-center justify-between text-sm px-1">
+                    <span className="text-muted-foreground">{selectedHutangIds.size} nota dipilih</span>
+                    <span className="font-semibold">Total sisa: {formatRupiah(totalSisaDipilih)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Nominal Bayar */}
+            {selectedHutangIds.size > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">3. Nominal Bayar (Rp)</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={totalSisaDipilih}
+                  value={nominalTotal}
+                  onChange={e => setNominalTotal(e.target.value)}
+                  placeholder="Masukkan jumlah yang dibayar..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Maksimal: {formatRupiah(totalSisaDipilih)} — boleh dikurangi, sistem akan otomatis distribusikan dari hutang terlama
+                </p>
+                {nominalAngka > totalSisaDipilih + 0.01 && (
+                  <p className="text-xs text-destructive font-medium">
+                    Nominal melebihi total sisa hutang yang dipilih!
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Preview Distribusi Realtime */}
+            {distribusiPreview.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-semibold flex items-center gap-1.5">
+                  <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                  Distribusi Otomatis (dari hutang terlama):
+                </label>
+                <div className="border rounded-md divide-y bg-muted/20">
+                  {distribusiPreview.map(d => (
+                    <div key={d.hutang.id} className="flex items-center gap-3 px-3 py-2">
+                      {d.statusBaru === "lunas" ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                      ) : (
+                        <Clock className="h-4 w-4 text-orange-400 shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm">{formatDate(d.hutang.tanggal_hutang)}{d.hutang.keterangan ? ` — ${d.hutang.keterangan}` : ""}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Dibayar: <span className="text-emerald-600 font-medium">{formatRupiah(d.bayar)}</span>
+                          {d.statusBaru === "aktif" && (
+                            <> &bull; Sisa: <span className="text-orange-500">{formatRupiah(d.sisaSetelah)}</span></>
+                          )}
+                        </div>
+                      </div>
+                      <Badge variant={d.statusBaru === "lunas" ? "default" : "secondary"} className="shrink-0 text-xs">
+                        {d.statusBaru === "lunas" ? "LUNAS" : "Sebagian"}
+                      </Badge>
+                    </div>
+                  ))}
+                  {/* Hutang yang tidak terkena */}
+                  {hutangDipilih
+                    .filter(h => !distribusiPreview.find(d => d.hutang.id === h.id))
+                    .map(h => (
+                      <div key={h.id} className="flex items-center gap-3 px-3 py-2 opacity-40">
+                        <Clock className="h-4 w-4 shrink-0" />
+                        <div className="flex-1 text-sm">{formatDate(h.tanggal_hutang)}{h.keterangan ? ` — ${h.keterangan}` : ""}</div>
+                        <Badge variant="outline" className="shrink-0 text-xs">Belum terkena</Badge>
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
+
+            {/* Tanggal & Catatan */}
+            {selectedHutangIds.size > 0 && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">Tanggal Bayar</label>
+                  <Input
+                    type="date"
+                    value={tanggalBayar}
+                    onChange={e => setTanggalBayar(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">Catatan (Opsional)</label>
+                  <Textarea
+                    value={catatan}
+                    onChange={e => setCatatan(e.target.value)}
+                    placeholder="Contoh: Transfer BCA, Tunai, dll."
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handleSubmit}
+                  disabled={!isFormValid || batchMutation.isPending}
+                >
+                  {batchMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Simpan Pembayaran
+                </Button>
+              </>
             )}
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Cetak kwitansi setelah bayar */}
-      <Dialog open={!!kwitansiSetelahBayar} onOpenChange={(open) => { if (!open) setKwitansiSetelahBayar(null); }}>
+      {/* Dialog: Cetak kwitansi gabungan setelah bayar */}
+      <Dialog open={!!batchResult} onOpenChange={(open) => { if (!open) setBatchResult(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -366,22 +645,22 @@ export default function PembayaranPage() {
               Pembayaran Berhasil!
             </DialogTitle>
           </DialogHeader>
-          {kwitansiSetelahBayar && (
+          {batchResult && (
             <div className="space-y-3 py-2">
-              <div className="text-sm text-muted-foreground">
-                <p>No. Kwitansi: <span className="font-semibold text-foreground">{kwitansiSetelahBayar.nomor_kwitansi}</span></p>
-                <p>Pelanggan: <span className="font-semibold text-foreground">{kwitansiSetelahBayar.pelanggan_nama}</span></p>
-                <p>Dibayar: <span className="font-semibold text-emerald-600">{formatRupiah(kwitansiSetelahBayar.nominal_bayar)}</span></p>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p>Pelanggan: <span className="font-semibold text-foreground">{batchResult.pelanggan_nama}</span></p>
+                <p>Total Dibayar: <span className="font-semibold text-emerald-600">{formatRupiah(batchResult.total_dibayar)}</span></p>
+                <p>{batchResult.pembayaran_list.length} nota hutang diproses</p>
               </div>
               <p className="text-sm">Cetak kwitansi pembayaran untuk diberikan ke pelanggan?</p>
             </div>
           )}
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setKwitansiSetelahBayar(null)}>Nanti Saja</Button>
+            <Button variant="outline" onClick={() => setBatchResult(null)}>Nanti Saja</Button>
             <Button
               onClick={() => {
-                if (kwitansiSetelahBayar) openKwitansi(kwitansiSetelahBayar);
-                setKwitansiSetelahBayar(null);
+                if (batchResult) openKwitansiGabungan(batchResult);
+                setBatchResult(null);
               }}
             >
               <Printer className="mr-2 h-4 w-4" />
@@ -452,7 +731,7 @@ export default function PembayaranPage() {
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost" size="icon"
-                            onClick={() => openKwitansi(p)}
+                            onClick={() => openKwitansiLama(p)}
                             title="Cetak Kwitansi"
                             className="text-primary"
                           >

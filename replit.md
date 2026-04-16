@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.30**
+**Current version: 1.0.31**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -23,7 +23,18 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.30)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.31)
+
+### v1.0.31 — Multi-Pilih Nota Hutang saat Terima Pembayaran
+- Dialog "Terima Pembayaran" sekarang menggunakan **checkbox list** (bukan dropdown tunggal) — user bisa pilih lebih dari 1 nota hutang sekaligus
+- Ada tombol **"Pilih Semua"** untuk centang semua nota hutang aktif pelanggan sekaligus
+- Nominal bayar otomatis terisi total sisa dari nota yang dipilih, tapi bisa dikurangi
+- **Preview distribusi realtime**: setiap kali nominal diubah, langsung tampil hutang mana yang kena berapa (sistem FIFO — hutang terlama didahulukan)
+- **Kwitansi gabungan**: 1 kwitansi berisi semua nota hutang yang dibayar dalam 1 transaksi
+- Backend: endpoint baru `POST /api/pembayaran/batch` yang memproses semua pembayaran dalam 1 database transaction (atomik)
+- Hapus pembayaran tetap per baris (tidak berubah)
+
+
 
 ### v1.0.30 — Bug Fix: Fallback Keuangan untuk Transaksi Kasir Lama
 - Hapus kasir untuk transaksi lama (keuangan_id = NULL, sebelum v1.0.29): sekarang ada fallback aman — cari keuangan via tanggal+jumlah+kategori, hapus HANYA jika tepat 1 match (tidak ada risiko hapus keuangan transaksi orang lain)

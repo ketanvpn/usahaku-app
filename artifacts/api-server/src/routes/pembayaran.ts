@@ -1,11 +1,12 @@
 import { Router, type IRouter } from "express";
 import { db, pembayaranTable, hutangTable, pelangganTable, usahaTable, keuanganTable } from "@workspace/db";
-import { eq, and, desc, like } from "drizzle-orm";
+import { eq, and, desc, like, inArray } from "drizzle-orm";
 import {
   CreatePembayaranBody,
   GetPembayaranListQueryParams,
   DeletePembayaranParams,
 } from "@workspace/api-zod";
+import { z } from "zod";
 import { requireAuth, requireLicense } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -171,6 +172,148 @@ router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promis
     sisa_hutang_setelah: sisaSetelah,
     nama_usaha: usaha?.namaUsaha ?? "",
     created_at: pembayaran.createdAt.toISOString(),
+  });
+});
+
+const BatchPembayaranBody = z.object({
+  hutang_ids: z.array(z.number().int().positive()).min(1, "Pilih minimal 1 nota hutang"),
+  tanggal_bayar: z.string().min(1, "Tanggal wajib diisi"),
+  nominal_total: z.number().positive("Nominal harus lebih dari 0"),
+  catatan: z.string().optional(),
+});
+
+router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): Promise<void> => {
+  const usahaId = req.session.usahaId;
+  if (!usahaId) {
+    res.status(403).json({ error: "Akses ditolak." });
+    return;
+  }
+
+  const parsed = BatchPembayaranBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { hutang_ids, tanggal_bayar, nominal_total, catatan } = parsed.data;
+
+  // Ambil semua hutang yang dipilih, pastikan milik usaha ini
+  const hutangs = await db.select().from(hutangTable)
+    .where(and(eq(hutangTable.usahaId, usahaId), inArray(hutangTable.id, hutang_ids)));
+
+  if (hutangs.length !== hutang_ids.length) {
+    res.status(404).json({ error: "Satu atau lebih nota hutang tidak ditemukan." });
+    return;
+  }
+
+  const hutangLunas = hutangs.filter(h => h.status === "lunas");
+  if (hutangLunas.length > 0) {
+    res.status(400).json({ error: "Satu atau lebih nota hutang sudah lunas." });
+    return;
+  }
+
+  // Urutkan dari tanggal terlama (FIFO)
+  hutangs.sort((a, b) => a.tanggalHutang.localeCompare(b.tanggalHutang));
+
+  const totalSisa = hutangs.reduce((sum, h) => sum + parseFloat(h.sisaHutang), 0);
+  if (nominal_total > totalSisa + 0.01) {
+    res.status(400).json({ error: `Nominal melebihi total sisa hutang (${totalSisa}).` });
+    return;
+  }
+
+  const pelangganId = hutangs[0]!.pelangganId;
+  const [pelanggan] = await db.select().from(pelangganTable).where(eq(pelangganTable.id, pelangganId));
+  const [usaha] = await db.select().from(usahaTable).where(eq(usahaTable.id, usahaId));
+
+  // Generate nomor kwitansi berurutan
+  const tahun = new Date().getFullYear();
+  const existingKwitansi = await db.select({ nomor: pembayaranTable.nomorKwitansi })
+    .from(pembayaranTable)
+    .where(and(eq(pembayaranTable.usahaId, usahaId), like(pembayaranTable.nomorKwitansi, `KWT-${tahun}-%`)));
+  let maxUrut = 0;
+  for (const k of existingKwitansi) {
+    if (k.nomor) {
+      const parts = k.nomor.split("-");
+      const urut = parseInt(parts[parts.length - 1] || "0");
+      if (!isNaN(urut) && urut > maxUrut) maxUrut = urut;
+    }
+  }
+
+  // Distribusi FIFO
+  let remaining = nominal_total;
+  const distributions: Array<{ hutang: typeof hutangs[0]; bayar: number }> = [];
+  for (const hutang of hutangs) {
+    if (remaining <= 0.001) break;
+    const sisa = parseFloat(hutang.sisaHutang);
+    const bayar = Math.min(sisa, remaining);
+    if (bayar > 0) {
+      distributions.push({ hutang, bayar });
+      remaining -= bayar;
+    }
+  }
+
+  // Semua operasi dalam 1 transaksi
+  const pembayaranList = db.transaction((tx) => {
+    const results = [];
+    for (let i = 0; i < distributions.length; i++) {
+      const { hutang, bayar } = distributions[i]!;
+      const nomorKwitansi = `KWT-${tahun}-${String(maxUrut + i + 1).padStart(4, "0")}`;
+      const sisaSetelah = Math.max(0, parseFloat(hutang.sisaHutang) - bayar);
+      const newTotalDibayar = parseFloat(hutang.totalDibayar) + bayar;
+      const newSisaHutang = parseFloat(hutang.nominalHutang) - newTotalDibayar;
+      const newStatus: "lunas" | "aktif" = newSisaHutang <= 0 ? "lunas" : "aktif";
+
+      const [keuangan] = tx.insert(keuanganTable).values({
+        usahaId,
+        tanggal: tanggal_bayar,
+        tipe: "masuk",
+        kategori: "Pelunasan Hutang",
+        keterangan: `Bayar hutang: ${pelanggan?.nama ?? ""}${hutang.keterangan ? ` (${hutang.keterangan})` : ""}`,
+        jumlah: bayar.toString(),
+      }).returning().all();
+
+      const [pembayaran] = tx.insert(pembayaranTable).values({
+        usahaId,
+        hutangId: hutang.id,
+        pelangganId: hutang.pelangganId,
+        tanggalBayar: tanggal_bayar,
+        nominalBayar: bayar.toString(),
+        catatan: catatan ?? null,
+        nomorKwitansi,
+        sisaHutangSetelah: sisaSetelah.toString(),
+        keuanganId: keuangan!.id,
+      }).returning().all();
+
+      tx.update(hutangTable).set({
+        totalDibayar: newTotalDibayar.toString(),
+        sisaHutang: Math.max(0, newSisaHutang).toString(),
+        status: newStatus,
+        updatedAt: new Date(),
+      }).where(eq(hutangTable.id, hutang.id)).run();
+
+      results.push({
+        id: pembayaran!.id,
+        hutang_id: hutang.id,
+        hutang_tanggal: hutang.tanggalHutang,
+        hutang_keterangan: hutang.keterangan ?? null,
+        hutang_nominal: parseFloat(hutang.nominalHutang),
+        nominal_bayar: bayar,
+        sisa_hutang_setelah: sisaSetelah,
+        nomor_kwitansi: nomorKwitansi,
+        status_baru: newStatus,
+      });
+    }
+    return results;
+  });
+
+  res.status(201).json({
+    pembayaran_list: pembayaranList,
+    pelanggan_nama: pelanggan?.nama ?? "",
+    pelanggan_id: pelangganId,
+    nama_usaha: usaha?.namaUsaha ?? "",
+    total_dibayar: nominal_total,
+    tanggal_bayar,
+    catatan: catatan ?? null,
   });
 });
 
