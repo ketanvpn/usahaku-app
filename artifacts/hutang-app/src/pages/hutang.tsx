@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -22,21 +22,44 @@ import * as z from "zod";
 import { formatRupiah, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { Loader2, Plus, Edit, Trash2, Eye, Filter, Search, FileText } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Eye, Filter, Search, FileText, CalendarClock } from "lucide-react";
 import { useLicense } from "@/context/license-context";
 
 const hutangSchema = z.object({
   pelanggan_id: z.coerce.number().min(1, { message: "Pilih pelanggan" }),
   tanggal_hutang: z.string().min(1, { message: "Tanggal wajib diisi" }),
+  tanggal_jatuh_tempo: z.string().optional().nullable(),
   keterangan: z.string().optional(),
   nominal_hutang: z.coerce.number().min(1, { message: "Nominal harus lebih dari 0" }),
 });
 
 const updateHutangSchema = z.object({
   tanggal_hutang: z.string().min(1, { message: "Tanggal wajib diisi" }),
+  tanggal_jatuh_tempo: z.string().optional().nullable(),
   keterangan: z.string().optional(),
   nominal_hutang: z.coerce.number().min(1, { message: "Nominal harus lebih dari 0" }),
 });
+
+function getJatuhTempoBadge(tanggalJatuhTempo: string | null | undefined, status: string) {
+  if (!tanggalJatuhTempo || status === "lunas") return null;
+  const today = new Date().toISOString().split("T")[0];
+  const sevenDaysLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  if (today > tanggalJatuhTempo) {
+    return (
+      <Badge className="bg-red-100 text-red-800 border-red-200 text-[10px] px-1.5 py-0.5 flex items-center gap-1 w-fit">
+        <CalendarClock className="h-3 w-3" /> Terlambat
+      </Badge>
+    );
+  }
+  if (tanggalJatuhTempo <= sevenDaysLater) {
+    return (
+      <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-[10px] px-1.5 py-0.5 flex items-center gap-1 w-fit">
+        <CalendarClock className="h-3 w-3" /> Segera JT
+      </Badge>
+    );
+  }
+  return null;
+}
 
 export default function HutangPage() {
   const [filterStatus, setFilterStatus] = useState<GetHutangListStatus | undefined>(undefined);
@@ -65,12 +88,12 @@ export default function HutangPage() {
 
   const form = useForm<z.infer<typeof hutangSchema>>({
     resolver: zodResolver(hutangSchema),
-    defaultValues: { pelanggan_id: 0, tanggal_hutang: new Date().toISOString().split('T')[0], keterangan: "", nominal_hutang: 0 },
+    defaultValues: { pelanggan_id: 0, tanggal_hutang: new Date().toISOString().split('T')[0], tanggal_jatuh_tempo: "", keterangan: "", nominal_hutang: 0 },
   });
 
   const updateForm = useForm<z.infer<typeof updateHutangSchema>>({
     resolver: zodResolver(updateHutangSchema),
-    defaultValues: { tanggal_hutang: "", keterangan: "", nominal_hutang: 0 },
+    defaultValues: { tanggal_hutang: "", tanggal_jatuh_tempo: "", keterangan: "", nominal_hutang: 0 },
   });
 
   const handleOpenDialog = (hutang?: Hutang) => {
@@ -78,6 +101,7 @@ export default function HutangPage() {
       setEditingHutang(hutang);
       updateForm.reset({
         tanggal_hutang: hutang.tanggal_hutang.split('T')[0],
+        tanggal_jatuh_tempo: hutang.tanggal_jatuh_tempo ?? "",
         keterangan: hutang.keterangan || "",
         nominal_hutang: hutang.nominal_hutang,
       });
@@ -85,7 +109,8 @@ export default function HutangPage() {
       setEditingHutang(null);
       form.reset({ 
         pelanggan_id: undefined, 
-        tanggal_hutang: new Date().toISOString().split('T')[0], 
+        tanggal_hutang: new Date().toISOString().split('T')[0],
+        tanggal_jatuh_tempo: "",
         keterangan: "", 
         nominal_hutang: 0 
       });
@@ -95,7 +120,7 @@ export default function HutangPage() {
 
   const onCreateSubmit = (values: z.infer<typeof hutangSchema>) => {
     createMutation.mutate(
-      { data: values },
+      { data: { ...values, tanggal_jatuh_tempo: values.tanggal_jatuh_tempo || null } },
       {
         onSuccess: () => {
           toast({ title: "Hutang berhasil dicatat" });
@@ -110,7 +135,7 @@ export default function HutangPage() {
   const onUpdateSubmit = (values: z.infer<typeof updateHutangSchema>) => {
     if (!editingHutang) return;
     updateMutation.mutate(
-      { id: editingHutang.id, data: values },
+      { id: editingHutang.id, data: { ...values, tanggal_jatuh_tempo: values.tanggal_jatuh_tempo || null } },
       {
         onSuccess: () => {
           toast({ title: "Hutang berhasil diperbarui" });
@@ -220,6 +245,15 @@ export default function HutangPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
+                <FormField control={updateForm.control} name="tanggal_jatuh_tempo" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Jatuh Tempo <span className="text-muted-foreground font-normal">(Opsional)</span></FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <FormField control={updateForm.control} name="nominal_hutang" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nominal Hutang (Rp)</FormLabel>
@@ -261,6 +295,15 @@ export default function HutangPage() {
                   <FormItem>
                     <FormLabel>Tanggal Hutang</FormLabel>
                     <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="tanggal_jatuh_tempo" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Jatuh Tempo <span className="text-muted-foreground font-normal">(Opsional)</span></FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} value={field.value ?? ""} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -314,6 +357,7 @@ export default function HutangPage() {
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Pelanggan</TableHead>
                 <TableHead>Keterangan</TableHead>
+                <TableHead>Jatuh Tempo</TableHead>
                 <TableHead className="text-right">Nominal</TableHead>
                 <TableHead className="text-right">Sisa Hutang</TableHead>
                 <TableHead>Status</TableHead>
@@ -321,7 +365,7 @@ export default function HutangPage() {
               </TableRow>
             </TableHeader>
             {isLoading ? (
-              <TableSkeleton cols={7} />
+              <TableSkeleton cols={8} />
             ) : (() => {
               const filtered = (hutangList ?? []).filter(h =>
                 h.pelanggan_nama.toLowerCase().includes(search.toLowerCase()) ||
@@ -330,7 +374,7 @@ export default function HutangPage() {
               return filtered.length === 0 ? (
                 <TableBody>
                   <TableRow>
-                    <TableCell colSpan={7} className="py-16">
+                    <TableCell colSpan={8} className="py-16">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <FileText className="h-10 w-10 opacity-25" />
                         <p className="text-sm font-medium">
@@ -347,40 +391,53 @@ export default function HutangPage() {
                 </TableBody>
               ) : (
                 <TableBody>
-                  {filtered.map((h) => (
-                    <TableRow key={h.id}>
-                      <TableCell className="whitespace-nowrap">{formatDate(h.tanggal_hutang)}</TableCell>
-                      <TableCell className="font-medium">
-                        <Link href={`/pelanggan/${h.pelanggan_id}`} className="hover:underline text-primary">
-                          {h.pelanggan_nama}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="truncate max-w-[200px] text-muted-foreground">{h.keterangan || "-"}</TableCell>
-                      <TableCell className="text-right">{formatRupiah(h.nominal_hutang)}</TableCell>
-                      <TableCell className="text-right font-semibold text-orange-600">{formatRupiah(h.sisa_hutang)}</TableCell>
-                      <TableCell>
-                        <Badge variant={h.status === "lunas" ? "outline" : "default"} 
-                              className={h.status === "aktif" ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-emerald-100 text-emerald-800 border-emerald-200"}>
-                          {h.status === "aktif" ? "Aktif" : "Lunas"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Link href={`/hutang/${h.id}`}>
-                            <Button variant="ghost" size="icon" title="Detail">
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                  {filtered.map((h) => {
+                    const jatuhTempoBadge = getJatuhTempoBadge(h.tanggal_jatuh_tempo, h.status);
+                    return (
+                      <TableRow key={h.id}>
+                        <TableCell className="whitespace-nowrap">{formatDate(h.tanggal_hutang)}</TableCell>
+                        <TableCell className="font-medium">
+                          <Link href={`/pelanggan/${h.pelanggan_id}`} className="hover:underline text-primary">
+                            {h.pelanggan_nama}
                           </Link>
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(h)} title="Edit" disabled={!lisensiAktif}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedHutang(h); setIsDeleteDialogOpen(true); }} title="Hapus" className="text-destructive" disabled={!lisensiAktif}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell className="truncate max-w-[200px] text-muted-foreground">{h.keterangan || "-"}</TableCell>
+                        <TableCell>
+                          {h.tanggal_jatuh_tempo ? (
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs whitespace-nowrap">{formatDate(h.tanggal_jatuh_tempo)}</span>
+                              {jatuhTempoBadge}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">{formatRupiah(h.nominal_hutang)}</TableCell>
+                        <TableCell className="text-right font-semibold text-orange-600">{formatRupiah(h.sisa_hutang)}</TableCell>
+                        <TableCell>
+                          <Badge variant={h.status === "lunas" ? "outline" : "default"} 
+                                className={h.status === "aktif" ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-emerald-100 text-emerald-800 border-emerald-200"}>
+                            {h.status === "aktif" ? "Aktif" : "Lunas"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Link href={`/hutang/${h.id}`}>
+                              <Button variant="ghost" size="icon" title="Detail">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(h)} title="Edit" disabled={!lisensiAktif}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => { setSelectedHutang(h); setIsDeleteDialogOpen(true); }} title="Hapus" className="text-destructive" disabled={!lisensiAktif}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               );
             })()}

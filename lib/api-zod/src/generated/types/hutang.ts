@@ -13,6 +13,7 @@ export interface Hutang {
   pelanggan_id: number;
   pelanggan_nama: string;
   tanggal_hutang: string;
+  tanggal_jatuh_tempo?: string | null;
   keterangan?: string | null;
   nominal_hutang: number;
   total_dibayar: number;

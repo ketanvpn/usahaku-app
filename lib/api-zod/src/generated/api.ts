@@ -256,6 +256,7 @@ export const GetPelangganResponse = zod.object({
       pelanggan_id: zod.number(),
       pelanggan_nama: zod.string(),
       tanggal_hutang: zod.string(),
+      tanggal_jatuh_tempo: zod.string().nullish(),
       keterangan: zod.string().nullish(),
       nominal_hutang: zod.number(),
       total_dibayar: zod.number(),
@@ -332,6 +333,7 @@ export const GetHutangListResponseItem = zod.object({
   pelanggan_id: zod.number(),
   pelanggan_nama: zod.string(),
   tanggal_hutang: zod.string(),
+  tanggal_jatuh_tempo: zod.string().nullish(),
   keterangan: zod.string().nullish(),
   nominal_hutang: zod.number(),
   total_dibayar: zod.number(),
@@ -348,6 +350,7 @@ export const GetHutangListResponse = zod.array(GetHutangListResponseItem);
 export const CreateHutangBody = zod.object({
   pelanggan_id: zod.number(),
   tanggal_hutang: zod.string(),
+  tanggal_jatuh_tempo: zod.string().nullish(),
   keterangan: zod.string().nullish(),
   nominal_hutang: zod.number(),
 });
@@ -365,6 +368,7 @@ export const GetHutangResponse = zod.object({
   pelanggan_id: zod.number(),
   pelanggan_nama: zod.string(),
   tanggal_hutang: zod.string(),
+  tanggal_jatuh_tempo: zod.string().nullish(),
   keterangan: zod.string().nullish(),
   nominal_hutang: zod.number(),
   total_dibayar: zod.number(),
@@ -396,6 +400,7 @@ export const UpdateHutangParams = zod.object({
 
 export const UpdateHutangBody = zod.object({
   tanggal_hutang: zod.string().optional(),
+  tanggal_jatuh_tempo: zod.string().nullish(),
   keterangan: zod.string().nullish(),
   nominal_hutang: zod.number().optional(),
 });
@@ -406,6 +411,7 @@ export const UpdateHutangResponse = zod.object({
   pelanggan_id: zod.number(),
   pelanggan_nama: zod.string(),
   tanggal_hutang: zod.string(),
+  tanggal_jatuh_tempo: zod.string().nullish(),
   keterangan: zod.string().nullish(),
   nominal_hutang: zod.number(),
   total_dibayar: zod.number(),
@@ -595,6 +601,7 @@ export const ExportBackupResponse = zod.object({
       pelanggan_id: zod.number(),
       pelanggan_nama: zod.string(),
       tanggal_hutang: zod.string(),
+      tanggal_jatuh_tempo: zod.string().nullish(),
       keterangan: zod.string().nullish(),
       nominal_hutang: zod.number(),
       total_dibayar: zod.number(),
@@ -652,6 +659,7 @@ export const ImportBackupBody = zod.object({
       pelanggan_id: zod.number(),
       pelanggan_nama: zod.string(),
       tanggal_hutang: zod.string(),
+      tanggal_jatuh_tempo: zod.string().nullish(),
       keterangan: zod.string().nullish(),
       nominal_hutang: zod.number(),
       total_dibayar: zod.number(),

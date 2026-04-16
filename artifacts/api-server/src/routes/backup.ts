@@ -60,6 +60,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       usaha_id: h.usahaId,
       pelanggan_id: h.pelangganId,
       tanggal_hutang: h.tanggalHutang,
+      tanggal_jatuh_tempo: h.tanggalJatuhTempo ?? null,
       keterangan: h.keterangan ?? null,
       nominal_hutang: parseFloat(h.nominalHutang),
       total_dibayar: parseFloat(h.totalDibayar),
@@ -229,13 +230,14 @@ router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
       // ── 4. Restore hutang — bangun peta ID lama → baru ────────────────────
       const hutangIdMap = new Map<number, number>();
       const stmtHutang = sqliteRaw.prepare(
-        "INSERT INTO hutang (usaha_id, pelanggan_id, tanggal_hutang, keterangan, nominal_hutang, total_dibayar, sisa_hutang, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO hutang (usaha_id, pelanggan_id, tanggal_hutang, tanggal_jatuh_tempo, keterangan, nominal_hutang, total_dibayar, sisa_hutang, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
       );
       for (const h of backup.hutang) {
         const newPelangganId = pelangganIdMap.get(h.pelanggan_id) ?? h.pelanggan_id;
         const r = stmtHutang.run(
           usahaId, newPelangganId,
-          h.tanggal_hutang, h.keterangan ?? null,
+          h.tanggal_hutang, h.tanggal_jatuh_tempo ?? null,
+          h.keterangan ?? null,
           String(h.nominal_hutang), String(h.total_dibayar ?? 0),
           String(h.sisa_hutang), h.status ?? "aktif"
         );

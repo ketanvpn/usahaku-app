@@ -4,10 +4,11 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.44**
+**Current version: 1.0.45**
 
 Key features:
 - CRUD for customers, debts, payments
+- Jatuh tempo hutang: field opsional `tanggal_jatuh_tempo` di setiap hutang; badge "Terlambat" (merah) atau "Segera JT" (kuning, ≤7 hari) di tabel hutang; field dibackup/restore
 - Keuangan (income/expense) with auto-integration
 - Stok barang with low-stock alerts and auto-keuangan
 - Kasir (POS) with multi-item cart, receipt modal, auto-stok decrement, hapus transaksi kasir (void) via Riwayat Penjualan
@@ -23,7 +24,16 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.44)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.45)
+
+### v1.0.45 — Fitur Jatuh Tempo Hutang
+**Fitur:** Field opsional `tanggal_jatuh_tempo` ditambahkan ke tabel hutang.
+- **Database:** `ALTER TABLE hutang ADD COLUMN tanggal_jatuh_tempo TEXT` (migrasi inline di `lib/db/src/index.ts`)
+- **Drizzle schema:** `lib/db/src/schema/hutang.ts` — field `tanggalJatuhTempo`
+- **API types:** `lib/api-zod/` + `lib/api-client-react/` — field `tanggal_jatuh_tempo?: string | null` di Hutang, HutangDetail, CreateHutangBody, UpdateHutangBody
+- **Backend route:** `formatHutang()`, POST insert, PUT update — semua tangani `tanggalJatuhTempo`
+- **Backup:** Export + restore mencakup `tanggal_jatuh_tempo` (format backup v1.3 tetap kompatibel)
+- **Frontend:** Form tambah/edit hutang punya field "Jatuh Tempo (Opsional)"; tabel hutang punya kolom "Jatuh Tempo" dengan badge "Terlambat" (merah) jika sudah lewat, atau "Segera JT" (kuning) jika ≤7 hari lagi
 
 ### v1.0.44 — Fix Backup: Field `diskon` & `keuangan_id` Kasir Tidak Ter-export
 **Masalah:** Field `diskon` dan `keuangan_id` di tabel `transaksi_kasir` ada di schema DB tapi tidak disertakan di backup JSON (export/restore). Restore dari backup lama mengabaikan nilai diskon transaksi kasir.

@@ -94,6 +94,7 @@ try { sqlite.exec(`ALTER TABLE barang ADD COLUMN kategori TEXT NOT NULL DEFAULT 
 try { sqlite.exec(`ALTER TABLE pembayaran ADD COLUMN nomor_kwitansi TEXT`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE pembayaran ADD COLUMN sisa_hutang_setelah TEXT`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE pembayaran ADD COLUMN keuangan_id INTEGER`); } catch { /* column already exists */ }
+try { sqlite.exec(`ALTER TABLE hutang ADD COLUMN tanggal_jatuh_tempo TEXT`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE transaksi_kasir ADD COLUMN diskon TEXT NOT NULL DEFAULT '0'`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE transaksi_kasir ADD COLUMN keuangan_id INTEGER`); } catch { /* column already exists */ }
 

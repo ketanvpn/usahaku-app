@@ -20,6 +20,7 @@ function formatHutang(h: typeof hutangTable.$inferSelect, pelangganNama: string)
     pelanggan_id: h.pelangganId,
     pelanggan_nama: pelangganNama,
     tanggal_hutang: h.tanggalHutang,
+    tanggal_jatuh_tempo: h.tanggalJatuhTempo ?? null,
     keterangan: h.keterangan ?? null,
     nominal_hutang: parseFloat(h.nominalHutang),
     total_dibayar: parseFloat(h.totalDibayar),
@@ -93,6 +94,7 @@ router.post("/hutang", requireAuth, requireLicense, async (req, res): Promise<vo
     usahaId,
     pelangganId: parsed.data.pelanggan_id,
     tanggalHutang: parsed.data.tanggal_hutang,
+    tanggalJatuhTempo: parsed.data.tanggal_jatuh_tempo ?? null,
     keterangan: parsed.data.keterangan ?? null,
     nominalHutang: nominalStr,
     totalDibayar: "0",
@@ -180,6 +182,7 @@ router.put("/hutang/:id", requireAuth, requireLicense, async (req, res): Promise
 
   const updateData: Partial<typeof hutangTable.$inferInsert> = {};
   if (parsed.data.tanggal_hutang) updateData.tanggalHutang = parsed.data.tanggal_hutang;
+  if (parsed.data.tanggal_jatuh_tempo !== undefined) updateData.tanggalJatuhTempo = parsed.data.tanggal_jatuh_tempo ?? null;
   if (parsed.data.keterangan !== undefined) updateData.keterangan = parsed.data.keterangan ?? null;
   if (parsed.data.nominal_hutang !== undefined) {
     if (parsed.data.nominal_hutang <= 0) {

@@ -9,6 +9,7 @@
 export interface CreateHutangBody {
   pelanggan_id: number;
   tanggal_hutang: string;
+  tanggal_jatuh_tempo?: string | null;
   keterangan?: string | null;
   nominal_hutang: number;
 }

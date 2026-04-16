@@ -9,6 +9,7 @@ export const hutangTable = sqliteTable("hutang", {
   usahaId: integer("usaha_id").notNull().references(() => usahaTable.id),
   pelangganId: integer("pelanggan_id").notNull().references(() => pelangganTable.id),
   tanggalHutang: text("tanggal_hutang").notNull(),
+  tanggalJatuhTempo: text("tanggal_jatuh_tempo"),
   keterangan: text("keterangan"),
   nominalHutang: text("nominal_hutang").notNull(),
   totalDibayar: text("total_dibayar").notNull().default("0"),
