@@ -25,13 +25,15 @@ Key features:
 
 ## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.32)
 
-### v1.0.32 — Paket & Harga Lisensi di Halaman Lisensi
+### v1.0.32 — Paket & Harga Lisensi di Halaman Lisensi + Fix Keamanan Batch
 - Ditambahkan section "Paket & Harga Lisensi" di halaman Lisensi (bawah kartu aktivasi key)
 - Menampilkan 4 paket: 1 Bulan (Rp19.900), 3 Bulan (Rp54.900), 6 Bulan (Rp99.000), 1 Tahun (Rp179.000)
 - Paket 3 Bulan ditandai badge "Populer"
 - Keterangan harga dapat berubah sewaktu-waktu
-- Tombol "Hubungi Admin via WhatsApp" langsung buka WA ke 082397803813 dengan pesan otomatis
-- File: `artifacts/hutang-app/src/pages/lisensi.tsx`
+- Tombol "Hubungi Admin via WhatsApp" langsung buka WA ke 082397803813 dengan pesan otomatis (di Electron otomatis buka browser sistem via `shell.openExternal`)
+- **Fix keamanan backend**: tambah validasi di `POST /pembayaran/batch` — semua hutang_ids harus milik pelanggan yang sama, tolak dengan 400 jika tidak
+- **Fix kode frontend**: hapus parameter `sisaHutang` yang tidak terpakai dari fungsi `toggleHutang` di `pembayaran.tsx`
+- File: `artifacts/hutang-app/src/pages/lisensi.tsx`, `artifacts/api-server/src/routes/pembayaran.ts`, `artifacts/hutang-app/src/pages/pembayaran.tsx`
 
 ### v1.0.31 — Multi-Pilih Nota Hutang saat Terima Pembayaran
 - Dialog "Terima Pembayaran" sekarang menggunakan **checkbox list** (bukan dropdown tunggal) — user bisa pilih lebih dari 1 nota hutang sekaligus
