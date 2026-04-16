@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.34**
+**Current version: 1.0.35**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -23,7 +23,12 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.34)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.35)
+
+### v1.0.35 — Fix Auto-Backup Google Drive Setelah Connect
+- Bug fix: backup otomatis pertama berjalan 45 detik setelah app dibuka — jika user belum connect Google Drive saat itu, backup dilewati dan baru coba lagi 60 menit kemudian
+- Sekarang: setelah `gdrive:connect` berhasil, backup otomatis langsung dipicu dalam 5 detik
+- File: `artifacts/electron-app/src/main.ts` (handler `gdrive:connect`)
 
 ### v1.0.34 — Fix Credentials Google Drive (Baked-In ke Binary)
 - Perbaikan: credentials `GDRIVE_CLIENT_ID` dan `GDRIVE_CLIENT_SECRET` sebelumnya hanya dibaca dari `process.env` saat runtime (tidak tersedia di .exe hasil build) — sekarang di-inject langsung ke binary saat kompilasi

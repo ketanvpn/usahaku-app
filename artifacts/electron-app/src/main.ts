@@ -1138,7 +1138,14 @@ ipcMain.handle("gdrive:connect", async (): Promise<{ success: boolean; message?:
     return { success: false, message: "Google Drive belum dikonfigurasi. Hubungi pengembang aplikasi." };
   }
   gdriveLastError = "";
-  return await startGDriveOAuthFlow();
+  const result = await startGDriveOAuthFlow();
+  // Langsung backup 5 detik setelah connect berhasil — tidak perlu tunggu 60 menit
+  if (result.success) {
+    setTimeout(() => {
+      tryGDriveAutoBackup().catch((e) => writeLog(`[gdrive] post-connect backup error: ${e}`));
+    }, 5_000);
+  }
+  return result;
 });
 
 ipcMain.handle("gdrive:disconnect", (): void => {
