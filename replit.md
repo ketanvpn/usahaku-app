@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.41**
+**Current version: 1.0.42**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -23,7 +23,15 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.41)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.42)
+
+### v1.0.42 — Redesign UI Halaman Kasir
+**Alasan versi baru:** v1.0.41 sudah ter-release di GitHub dengan konten lama (sebelum perubahan UI). Daripada hapus + force-push tag (berbahaya, auto-updater tidak akan detect sebagai versi baru), lebih aman bump ke v1.0.42.
+**Perubahan UI Kasir:**
+- "Riwayat Penjualan" dipindah dari kolom ketiga yang aneh ke **Dialog** — dibuka via tombol "Riwayat" di sebelah kolom pencarian. Layout utama kini 2 kolom bersih: produk (kiri) + keranjang (kanan).
+- Kartu produk lebih rapi: nama 2 baris penuh (tidak terpotong tiba-tiba), harga lebih menonjol (lebih besar), stok dengan angka tebal, kartu yang masuk keranjang punya border hijau + background hijau tipis + badge pojok.
+- Keranjang: total lebih besar (text-2xl), tombol Selesaikan Transaksi lebih tinggi, kembalian/kurang dengan highlight warna lebih tegas.
+- File: `artifacts/hutang-app/src/pages/kasir.tsx`
 
 ### v1.0.41 — Penguatan Keamanan Backup/Restore .db
 **Masalah yang diperbaiki:**
