@@ -352,7 +352,7 @@ export default function PembayaranPage() {
     setIsDialogOpen(true);
   };
 
-  const toggleHutang = (id: number, sisaHutang: number) => {
+  const toggleHutang = (id: number) => {
     setSelectedHutangIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -511,7 +511,7 @@ export default function PembayaranPage() {
                       >
                         <Checkbox
                           checked={selectedHutangIds.has(h.id)}
-                          onCheckedChange={() => toggleHutang(h.id, h.sisa_hutang)}
+                          onCheckedChange={() => toggleHutang(h.id)}
                         />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium">{formatDate(h.tanggal_hutang)}</div>

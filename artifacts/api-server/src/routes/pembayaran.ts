@@ -212,6 +212,13 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
     return;
   }
 
+  // Validasi semua hutang milik pelanggan yang sama
+  const uniquePelangganIds = new Set(hutangs.map(h => h.pelangganId));
+  if (uniquePelangganIds.size > 1) {
+    res.status(400).json({ error: "Semua nota hutang harus milik pelanggan yang sama." });
+    return;
+  }
+
   // Urutkan dari tanggal terlama (FIFO)
   hutangs.sort((a, b) => a.tanggalHutang.localeCompare(b.tanggalHutang));
 
