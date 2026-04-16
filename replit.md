@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.37**
+**Current version: 1.0.38**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -23,7 +23,14 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.37)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.38)
+
+### v1.0.38 — Fix Kritis: Restore Data Tidak Berubah (SQLite WAL)
+- Bug kritis: setelah restore (lokal maupun Google Drive), data tidak berubah — tampak seperti restore tidak berjalan
+- Penyebab: SQLite WAL mode menyimpan transaksi terbaru di file `.db-wal` dan `.db-shm`. Saat restore mengganti file `.db`, kedua file WAL lama masih ada. Ketika backend restart, SQLite menerapkan WAL lama ke DB yang baru di-restore sehingga data lama "balik lagi"
+- Fix: hapus file `.db-wal` dan `.db-shm` setelah backend dimatikan dan sebelum DB di-replace di fungsi `performRestoreFromFile`
+- Bug ini mempengaruhi SEMUA jenis restore: lokal (.db), maupun dari Google Drive
+- File: `artifacts/electron-app/src/main.ts` (fungsi `performRestoreFromFile`)
 
 ### v1.0.37 — Interval Auto-Backup Google Drive: 60 Menit → 15 Menit
 - Interval backup otomatis dipercepat dari 60 menit menjadi 15 menit

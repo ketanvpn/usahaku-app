@@ -1070,6 +1070,11 @@ async function performRestoreFromFile(sourcePath: string): Promise<{ success: bo
   }
   await new Promise<void>((r) => setTimeout(r, 600));
 
+  // Hapus file WAL dan SHM agar data lama tidak menimpa DB yang akan di-restore
+  // (SQLite WAL mode: jika file .db-wal masih ada, backend akan menerapkannya ke DB baru)
+  try { fs.unlinkSync(dbPath + "-wal"); } catch {}
+  try { fs.unlinkSync(dbPath + "-shm"); } catch {}
+
   try {
     fs.copyFileSync(sourcePath, dbPath);
   } catch (err) {
