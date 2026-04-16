@@ -33,12 +33,18 @@ Key features:
 - Bug ini mempengaruhi SEMUA jenis restore: lokal (.db), maupun dari Google Drive
 - File: `artifacts/electron-app/src/main.ts` (fungsi `performRestoreFromFile`)
 
-**Fix 2 — Backup bisa tidak lengkap:**
+**Fix 2 — Backup Google Drive bisa tidak lengkap:**
 - Bug tersembunyi: backup Google Drive membaca file `.db` mentah secara langsung. Data terbaru yang belum di-flush dari `.db-wal` ke `.db` tidak ikut ter-backup
 - Fix: tambahkan WAL checkpoint (`PRAGMA wal_checkpoint(TRUNCATE)`) via HTTP ke backend sebelum backup, memastikan semua data sudah di file `.db` sebelum dibaca
 - Tambah endpoint internal `POST /api/internal/wal-checkpoint` di backend (tidak perlu auth, hanya localhost)
 - Export `sqliteRaw` dari `lib/db/src/index.ts` untuk akses raw better-sqlite3 instance
 - File: `artifacts/api-server/src/routes/health.ts`, `lib/db/src/index.ts`, `artifacts/electron-app/src/main.ts` (fungsi `walCheckpoint` + `uploadBackupToDrive`)
+
+**Fix 3 — Backup lokal saat tutup aplikasi juga bisa tidak lengkap:**
+- Bug tersembunyi: alur lama = kill backend → tunggu 400ms → copy `.db`. WAL flush saat SIGTERM tidak dijamin 100%
+- Fix: ubah urutan menjadi: checkpoint WAL (selagi backend masih hidup) → kill backend → tunggu 200ms → copy `.db`
+- Urutan baru lebih aman karena WAL di-flush secara eksplisit via HTTP sebelum backend dimatikan
+- File: `artifacts/electron-app/src/main.ts` (handler `mainWindow.on("close")`)
 
 ### v1.0.37 — Interval Auto-Backup Google Drive: 60 Menit → 15 Menit
 - Interval backup otomatis dipercepat dari 60 menit menjadi 15 menit

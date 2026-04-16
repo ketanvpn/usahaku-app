@@ -421,16 +421,23 @@ function createLoadingWindow(): void {
     if (!isDev) {
       e.preventDefault();
       isQuitting = true;
-      // Matikan backend dulu agar SQLite selesai menulis
-      if (backendProcess) {
-        backendProcess.kill();
-        backendProcess = null;
-      }
-      // Beri waktu 400ms agar SQLite flush WAL ke disk
-      setTimeout(() => {
+      (async () => {
+        // 1. Checkpoint WAL dulu selagi backend masih hidup → semua data masuk ke .db
+        await walCheckpoint();
+        // 2. Matikan backend
+        if (backendProcess) {
+          backendProcess.kill();
+          backendProcess = null;
+        }
+        // 3. Tunggu sebentar agar proses benar-benar berhenti
+        await new Promise<void>((r) => setTimeout(r, 200));
+        // 4. Copy .db ke folder backup
         performAutoBackup();
         mainWindow?.destroy();
-      }, 400);
+      })().catch((err) => {
+        writeLog(`[auto-backup close] error: ${err}`);
+        mainWindow?.destroy();
+      });
     }
   });
 
