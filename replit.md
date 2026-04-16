@@ -118,6 +118,24 @@ Key features:
 - Toleransi ini juga mengatasi edge case timezone UTC vs WIB (bisa selisih 1 hari di string tanggal)
 - Fix diterapkan di dua tempat: `artifacts/api-server/src/routes/lisensi.ts` + `artifacts/api-server/src/middlewares/auth.ts`
 
+## Rencana Fitur ke Depan (Backlog)
+
+Fitur-fitur di bawah ini sudah didiskusikan dan dikonfirmasi belum ada, dicatat untuk dikerjakan di sesi mendatang:
+
+1. **Jatuh Tempo Hutang** — Tambah field tanggal jatuh tempo di nota hutang. Tampilkan indikator merah/kuning di daftar hutang untuk yang sudah/hampir jatuh tempo.
+
+2. **Kirim Tagihan ke Pelanggan via WhatsApp** — Tombol di halaman detail pelanggan untuk kirim pesan WA otomatis berisi ringkasan sisa hutang pelanggan tersebut.
+
+3. **Retur Barang di Kasir** — Alur pengembalian barang oleh pelanggan: stok otomatis naik kembali, ada catatan retur, keuangan ter-adjust.
+
+4. **Hutang ke Pemasok / Supplier** — Pencatatan hutang toko ke pemasok (hutang usaha), terpisah dari piutang pelanggan yang sudah ada.
+
+5. **Rekap / Tutup Kasir per Shift** — Fitur tutup shift kasir: ringkasan total transaksi, total uang masuk, dan saldo akhir per kasir/sesi.
+
+6. **Target Omzet di Dashboard** — Owner bisa set target penjualan bulanan, dashboard tampilkan progress bar pencapaian target.
+
+---
+
 ## Catatan Penting untuk Sesi Berikutnya
 
 - **GitHub repo**: `https://github.com/ketanvpn/usahaku-app` (PUBLIC)
