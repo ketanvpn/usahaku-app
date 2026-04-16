@@ -619,7 +619,15 @@ function performAutoBackup(): void {
     const timePart = now.toTimeString().slice(0, 8).replace(/:/g, "-");
     const backupFile = path.join(backupDir, `usahaku_${datePart}_${timePart}.db`);
     fs.copyFileSync(dbPath, backupFile);
-    writeLog(`Auto-backup tersimpan: ${backupFile}`);
+
+    // Validasi file hasil copy — pastikan tidak kosong atau corrupt
+    const check = validateBackupDbFile(backupFile);
+    if (!check.valid) {
+      writeLog(`Auto-backup GAGAL validasi: ${check.reason} — file dihapus`);
+      try { fs.unlinkSync(backupFile); } catch {}
+      return;
+    }
+    writeLog(`Auto-backup tersimpan dan valid: ${backupFile}`);
 
     // Hapus backup lama, simpan maksimal 7 file terbaru
     const allFiles = fs.readdirSync(backupDir)
@@ -1109,7 +1117,47 @@ function validateBackupDbFile(filePath: string): { valid: boolean; reason?: stri
   }
 }
 
-// Fungsi restore DB yang dapat dipakai bersama (lokal maupun Drive)
+// Verifikasi integritas DB melalui backend yang sudah berjalan
+async function dbIntegrityCheck(): Promise<boolean> {
+  try {
+    const ok = await new Promise<boolean>((resolve) => {
+      const req = http.request(
+        { hostname: "127.0.0.1", port: BACKEND_PORT, path: "/api/internal/db-integrity", method: "POST" },
+        (res) => {
+          let body = "";
+          res.on("data", (d: Buffer) => { body += d.toString(); });
+          res.on("end", () => {
+            try { resolve(JSON.parse(body)?.ok === true); } catch { resolve(false); }
+          });
+        }
+      );
+      req.on("error", () => resolve(false));
+      req.end();
+    });
+    writeLog(`[restore] Integrity check: ${ok ? "OK" : "GAGAL"}`);
+    return ok;
+  } catch {
+    writeLog("[restore] Integrity check: exception — dianggap gagal");
+    return false;
+  }
+}
+
+// Coba salin file dengan retry (3 kali, jeda 600ms) — mengatasi file lock di Windows
+async function copyFileWithRetry(src: string, dest: string, maxAttempts = 3): Promise<void> {
+  let lastErr: unknown;
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      fs.copyFileSync(src, dest);
+      return;
+    } catch (err) {
+      lastErr = err;
+      writeLog(`[restore] copyFile percobaan ${i + 1} gagal: ${err} — tunggu 600ms`);
+      await new Promise<void>((r) => setTimeout(r, 600));
+    }
+  }
+  throw lastErr;
+}
+
 async function performRestoreFromFile(sourcePath: string): Promise<{ success: boolean; canceled?: boolean; message?: string }> {
   const dbPath = getDbPath();
   const rollbackPath = dbPath + ".rollback";
@@ -1134,7 +1182,8 @@ async function performRestoreFromFile(sourcePath: string): Promise<{ success: bo
     backendProcess.kill();
     backendProcess = null;
   }
-  await new Promise<void>((r) => setTimeout(r, 600));
+  // 1500ms — lebih aman untuk PC Windows yang lambat melepas file lock
+  await new Promise<void>((r) => setTimeout(r, 1500));
 
   // Hapus file WAL dan SHM agar data lama tidak menimpa DB yang akan di-restore
   // (SQLite WAL mode: jika file .db-wal masih ada, backend akan menerapkannya ke DB baru)
@@ -1142,26 +1191,43 @@ async function performRestoreFromFile(sourcePath: string): Promise<{ success: bo
   try { fs.unlinkSync(dbPath + "-shm"); } catch {}
 
   try {
-    fs.copyFileSync(sourcePath, dbPath);
+    await copyFileWithRetry(sourcePath, dbPath);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    writeLog(`[restore] Semua percobaan copy gagal: ${msg}`);
     try { fs.copyFileSync(rollbackPath, dbPath); } catch {}
     try { fs.unlinkSync(rollbackPath); } catch {}
     startBackend();
     isRestoring = false;
-    return { success: false, message: `Gagal menyalin file: ${msg}` };
+    return { success: false, message: `Gagal menyalin file database: ${msg}` };
   }
 
   try {
     startBackend();
     await waitForBackend(BACKEND_PORT, 20000);
+
+    // Verifikasi integritas DB setelah restore — pastikan data benar-benar valid
+    const healthy = await dbIntegrityCheck();
+    if (!healthy) {
+      writeLog("[restore] Integrity check gagal — rollback ke data sebelumnya");
+      const stuck = backendProcess as Electron.UtilityProcess | null;
+      stuck?.kill();
+      backendProcess = null;
+      await new Promise<void>((r) => setTimeout(r, 500));
+      try { fs.copyFileSync(rollbackPath, dbPath); } catch {}
+      try { fs.unlinkSync(rollbackPath); } catch {}
+      startBackend();
+      isRestoring = false;
+      return { success: false, message: "File backup rusak atau tidak kompatibel (integrity check gagal). Data Anda sudah dikembalikan." };
+    }
+
     try { fs.unlinkSync(rollbackPath); } catch {}
     isRestoring = false;
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.reload();
     return { success: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    writeLog(`[restore] Backend gagal, rollback: ${msg}`);
+    writeLog(`[restore] Backend gagal start, rollback: ${msg}`);
     const stuck = backendProcess as Electron.UtilityProcess | null;
     stuck?.kill();
     backendProcess = null;

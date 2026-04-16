@@ -20,4 +20,20 @@ router.post("/internal/wal-checkpoint", (_req, res) => {
   }
 });
 
+// Endpoint internal: verifikasi integritas database setelah restore
+// Jalankan PRAGMA integrity_check — harus kembali "ok" jika DB valid
+router.post("/internal/db-integrity", (_req, res) => {
+  try {
+    const rows = sqliteRaw.pragma("integrity_check") as Array<{ integrity_check: string }>;
+    const result = rows[0]?.integrity_check ?? "unknown";
+    if (result === "ok") {
+      res.json({ ok: true });
+    } else {
+      res.status(500).json({ ok: false, error: `integrity_check: ${result}` });
+    }
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e) });
+  }
+});
+
 export default router;

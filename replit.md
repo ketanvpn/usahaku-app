@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.40**
+**Current version: 1.0.41**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -23,7 +23,15 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.40)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.41)
+
+### v1.0.41 — Penguatan Keamanan Backup/Restore .db
+**Masalah yang diperbaiki:**
+1. **Delay terlalu pendek (600ms)** — di PC Windows lambat, backend belum melepas file lock saat `copyFileSync` dijalankan → restore gagal dengan EPERM/EBUSY. Fix: naikkan ke 1500ms.
+2. **Tidak ada retry saat copy gagal** — satu kali gagal langsung error. Fix: tambah `copyFileWithRetry` (3 percobaan, jeda 600ms antar percobaan).
+3. **Tidak ada verifikasi integritas setelah restore** — DB bisa ter-copy tapi rusak, baru ketahuan saat user pakai. Fix: tambah endpoint `POST /api/internal/db-integrity` (PRAGMA integrity_check) — dipanggil setelah backend start, sebelum reload window. Jika gagal, otomatis rollback ke data sebelumnya.
+4. **Auto-backup tidak validasi file hasil copy** — backup tersimpan tapi mungkin corrupt tanpa peringatan. Fix: setelah `copyFileSync`, jalankan `validateBackupDbFile` — jika tidak valid, hapus file corrupt dan log peringatan.
+- File: `artifacts/electron-app/src/main.ts`, `artifacts/api-server/src/routes/health.ts`
 
 ### v1.0.40 — Re-release: Restore JSON Selalu Gagal (v1.0.39 dibuild sebelum fix di-push)
 **Masalah:** v1.0.39 dibuild dan di-tag di GitHub SEBELUM fix backup.ts di-push ke repo, sehingga binary yang ter-release masih berisi kode lama `db.transaction(async ...)`. v1.0.40 adalah re-release dengan kode yang sudah benar.
