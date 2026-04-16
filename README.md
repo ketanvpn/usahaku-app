@@ -11,6 +11,7 @@ Usahaku membantu Anda mencatat hutang pelanggan, keuangan masuk/keluar, stok bar
 - [Fitur Utama](#fitur-utama)
 - [Akun Default](#akun-default)
 - [Panduan Pengguna Windows](#panduan-pengguna-windows)
+  - [Backup & Restore Google Drive](#backup--restore-google-drive)
 - [Panduan Build Windows (Langkah per Langkah)](#panduan-build-windows-langkah-per-langkah)
 - [Panduan Developer](#panduan-developer)
 - [Lokasi File Penting](#lokasi-file-penting)
@@ -38,9 +39,11 @@ Usahaku membantu Anda mencatat hutang pelanggan, keuangan masuk/keluar, stok bar
 | Backup JSON | Export semua data ke file JSON untuk cadangan manual |
 | Restore JSON | Pulihkan data dari file backup JSON |
 | Restore Auto-Backup | Pulihkan data dari file auto-backup .db dengan pengaman rollback otomatis |
+| Backup Google Drive | Backup otomatis ke Google Drive setiap 60 menit — file tersimpan aman di cloud |
+| Restore dari Drive | Pulihkan data langsung dari daftar backup yang tersimpan di Google Drive |
 | License Key | Sistem lisensi untuk aktivasi aplikasi |
 | Multi Usaha | Super Admin kelola banyak toko/usaha |
-| Offline 100% | Tidak butuh internet sama sekali |
+| Offline 100% | Tidak butuh internet sama sekali (fitur Google Drive butuh koneksi hanya saat backup) |
 
 ---
 
@@ -233,6 +236,45 @@ Fitur ini dilengkapi **pengaman otomatis** — jika file backup yang dipilih ter
 - Akan muncul pesan error
 - Data Anda saat ini **tidak berubah** — aplikasi otomatis mengembalikan ke kondisi semula
 - Coba pilih file auto-backup yang lain
+
+---
+
+### Backup & Restore Google Drive
+
+Fitur ini memungkinkan data Anda tersimpan aman di Google Drive secara otomatis. Backup berjalan sendiri setiap 60 menit selama aplikasi aktif — Anda tidak perlu melakukan apapun setelah setup awal.
+
+> **Catatan**: Fitur ini membutuhkan koneksi internet hanya saat proses backup/restore berlangsung. Data utama tetap bekerja 100% offline.
+
+**Cara Menghubungkan Google Drive (pertama kali):**
+
+1. Klik menu **Backup** di sidebar
+2. Di bagian **Backup Google Drive**, klik tombol **Hubungkan Google Drive**
+3. Browser akan terbuka otomatis dan menampilkan halaman login Google
+4. Pilih akun Google yang ingin digunakan dan klik **Izinkan**
+5. Setelah berhasil, browser akan menampilkan pesan *"Berhasil! Google Drive berhasil dihubungkan"*
+6. Kembali ke aplikasi — status akan berubah menampilkan email akun Google yang terhubung
+
+**Backup Manual (kapan saja):**
+
+1. Klik menu **Backup** di sidebar
+2. Di bagian **Backup Google Drive**, klik tombol **Backup Sekarang**
+3. Tunggu beberapa detik — akan muncul konfirmasi backup berhasil
+
+**Melihat & Memulihkan Backup dari Drive:**
+
+1. Klik menu **Backup** di sidebar
+2. Di bagian **Backup Google Drive**, klik **Lihat X backup di Drive**
+3. Daftar file backup akan muncul beserta tanggal dan ukurannya
+4. Klik **Pulihkan** di sebelah file yang ingin digunakan
+5. Konfirmasi di dialog yang muncul — data akan dipulihkan dan aplikasi memuat ulang otomatis
+
+> Maksimal **7 file backup** tersimpan di Drive — file terlama dihapus otomatis saat ada backup baru.
+
+**Memutus Koneksi Google Drive:**
+
+1. Klik menu **Backup** di sidebar
+2. Di bagian **Backup Google Drive**, klik **Putuskan Koneksi**
+3. Konfirmasi di dialog — token akses dihapus dari komputer, data di Drive tidak ikut terhapus
 
 ---
 
@@ -587,6 +629,7 @@ Database akan dibuat ulang dengan data seed otomatis.
 |---------------|--------|-----------|
 | Database (desktop) | `C:\Users\{nama}\AppData\Roaming\Usahaku\app.db` | Data utama |
 | Auto-backup | `C:\Users\{nama}\AppData\Roaming\Usahaku\UsahakuBackup\` | Backup otomatis saat tutup app (default) |
+| Token Google Drive | `C:\Users\{nama}\AppData\Roaming\Usahaku\gdrive-tokens.dat` | Token OAuth2 terenkripsi (hapus untuk disconnect manual) |
 | Log aplikasi | `C:\Users\{nama}\AppData\Roaming\Usahaku\usahaku.log` | Log error & info |
 | Database (dev) | `artifacts/api-server/data/app.db` | Data development |
 | File Backup JSON | Pilihan user saat export | Hasil klik "Simpan File Backup" |
@@ -675,6 +718,16 @@ Gunakan checklist ini sebelum mendistribusikan ke pengguna:
 - [ ] Klik "Pilih File Auto-Backup & Restore" → dialog konfirmasi muncul
 - [ ] Pilih file .db → restore berhasil, aplikasi reload otomatis
 - [ ] Jika pilih file .db yang rusak → muncul pesan error, data tidak berubah (auto-rollback)
+
+### Backup Google Drive
+- [ ] Klik "Hubungkan Google Drive" → browser terbuka ke halaman login Google
+- [ ] Login Google + klik Izinkan → halaman sukses muncul di browser
+- [ ] Kembali ke app → email akun Google tampil, status "Terhubung"
+- [ ] Klik "Backup Sekarang" → muncul konfirmasi berhasil
+- [ ] Klik "Lihat X backup di Drive" → daftar file backup tampil dengan tanggal & ukuran
+- [ ] Klik "Pulihkan" + konfirmasi → data dipulihkan, app reload otomatis
+- [ ] Klik "Putuskan Koneksi" → status kembali ke "Belum terhubung", Drive tidak berubah
+- [ ] Biarkan app menyala 45 detik → auto-backup berjalan otomatis (cek log usahaku.log)
 
 ### Persistensi Data
 - [ ] Tutup aplikasi
