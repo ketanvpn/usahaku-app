@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.38**
+**Current version: 1.0.39**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -23,7 +23,15 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.38)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.39)
+
+### v1.0.39 — Fix Bug: Restore JSON Selalu Gagal (Transaction function cannot return a promise)
+**Root cause:** `db.transaction(async (tx) => { await ... })` tidak valid di Drizzle + better-sqlite3. better-sqlite3 bersifat SINKRON; Drizzle mendeteksi callback async (returns Promise) dan throw error "Transaction function cannot return a promise". Bug ini menyebabkan restore JSON **selalu gagal** sejak fitur pertama dibuat.
+**Fix:** Ganti seluruh restore route (`POST /backup/restore`) dari `await db.transaction(async ...)` ke `sqliteRaw.transaction(() => { ... })` — native better-sqlite3 transaction yang sinkron. Menggunakan `.prepare().run()` dan `r.lastInsertRowid` untuk mendapat ID baru.
+**Perubahan lain di v1.0.39:**
+- Error dialog restore JSON: dari toast kecil ke AlertDialog besar dengan teks error lengkap (scrollable), sehingga mudah dibaca/di-screenshot
+- Threshold validasi ukuran backup diturunkan dari 20 KB ke 8 KB (20 KB terlalu tinggi — bisa tolak DB valid yang datanya sedikit)
+- File: `artifacts/api-server/src/routes/backup.ts`, `artifacts/hutang-app/src/pages/backup.tsx`
 
 ### v1.0.38 — Fix Kritis: Restore Data Tidak Berubah + Backup Tidak Lengkap (SQLite WAL)
 **Fix 1 — Restore tidak berubah:**

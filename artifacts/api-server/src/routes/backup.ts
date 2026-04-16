@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, usahaTable, pelangganTable, hutangTable, pembayaranTable, keuanganTable, barangTable, transaksiStokTable, transaksiKasirTable, transaksiKasirItemTable } from "@workspace/db";
+import { db, sqliteRaw, usahaTable, pelangganTable, hutangTable, pembayaranTable, keuanganTable, barangTable, transaksiStokTable, transaksiKasirTable, transaksiKasirItemTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
@@ -156,163 +156,170 @@ router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
   // usaha_id di dalam file backup tidak harus sama dengan usaha aktif —
   // semua data akan di-map ke usaha yang sedang login (mendukung pindah PC / install baru)
 
-  try {
-    await db.transaction(async (tx) => {
-      // Hapus semua data lama (urutan penting karena foreign key)
-      const kasirHeaders = await tx.select({ id: transaksiKasirTable.id }).from(transaksiKasirTable).where(eq(transaksiKasirTable.usahaId, usahaId));
-      for (const kh of kasirHeaders) {
-        await tx.delete(transaksiKasirItemTable).where(eq(transaksiKasirItemTable.transaksiKasirId, kh.id));
-      }
-      await tx.delete(transaksiKasirTable).where(eq(transaksiKasirTable.usahaId, usahaId));
-      await tx.delete(transaksiStokTable).where(eq(transaksiStokTable.usahaId, usahaId));
-      await tx.delete(pembayaranTable).where(eq(pembayaranTable.usahaId, usahaId));
-      await tx.delete(hutangTable).where(eq(hutangTable.usahaId, usahaId));
-      await tx.delete(barangTable).where(eq(barangTable.usahaId, usahaId));
-      await tx.delete(pelangganTable).where(eq(pelangganTable.usahaId, usahaId));
-      await tx.delete(keuanganTable).where(eq(keuanganTable.usahaId, usahaId));
+  // PENTING: Drizzle + better-sqlite3 bersifat SINKRON.
+  // db.transaction(async ...) tidak didukung — akan throw "Transaction function cannot return a promise".
+  // Solusi: gunakan sqliteRaw.transaction() (better-sqlite3 native) dengan callback sinkron.
 
-      // 1. Restore keuangan — bangun peta ID lama → baru
+  try {
+    const transact = sqliteRaw.transaction(() => {
+      // ── Hapus semua data lama (urutan penting karena foreign key) ───────────
+
+      // Hapus item kasir dulu (child dari transaksi_kasir)
+      const kasirIds = (sqliteRaw.prepare(
+        "SELECT id FROM transaksi_kasir WHERE usaha_id = ?"
+      ).all(usahaId) as Array<{ id: number }>);
+      const stmtDelKasirItem = sqliteRaw.prepare(
+        "DELETE FROM transaksi_kasir_item WHERE transaksi_kasir_id = ?"
+      );
+      for (const k of kasirIds) stmtDelKasirItem.run(k.id);
+
+      sqliteRaw.prepare("DELETE FROM transaksi_kasir  WHERE usaha_id = ?").run(usahaId);
+      sqliteRaw.prepare("DELETE FROM transaksi_stok   WHERE usaha_id = ?").run(usahaId);
+      sqliteRaw.prepare("DELETE FROM pembayaran        WHERE usaha_id = ?").run(usahaId);
+      sqliteRaw.prepare("DELETE FROM hutang            WHERE usaha_id = ?").run(usahaId);
+      sqliteRaw.prepare("DELETE FROM barang            WHERE usaha_id = ?").run(usahaId);
+      sqliteRaw.prepare("DELETE FROM pelanggan         WHERE usaha_id = ?").run(usahaId);
+      sqliteRaw.prepare("DELETE FROM keuangan          WHERE usaha_id = ?").run(usahaId);
+
+      // ── 1. Restore keuangan — bangun peta ID lama → baru ──────────────────
       const keuanganIdMap = new Map<number, number>();
       if (Array.isArray(backup.keuangan)) {
+        const stmtKeu = sqliteRaw.prepare(
+          "INSERT INTO keuangan (usaha_id, tanggal, tipe, kategori, keterangan, jumlah) VALUES (?, ?, ?, ?, ?, ?)"
+        );
         for (const k of backup.keuangan) {
-          const [inserted] = await tx.insert(keuanganTable).values({
-            usahaId,
-            tanggal: k.tanggal,
-            tipe: k.tipe,
-            kategori: k.kategori ?? null,
-            keterangan: k.keterangan,
-            jumlah: k.jumlah.toString(),
-          }).returning();
-          keuanganIdMap.set(k.id, inserted.id);
+          const r = stmtKeu.run(
+            usahaId, k.tanggal, k.tipe, k.kategori ?? null, k.keterangan ?? "", String(k.jumlah)
+          );
+          keuanganIdMap.set(k.id, Number(r.lastInsertRowid));
         }
       }
 
-      // 2. Restore pelanggan — bangun peta ID lama → baru
+      // ── 2. Restore pelanggan — bangun peta ID lama → baru ─────────────────
       const pelangganIdMap = new Map<number, number>();
+      const stmtPel = sqliteRaw.prepare(
+        "INSERT INTO pelanggan (usaha_id, nama, telepon, alamat, catatan) VALUES (?, ?, ?, ?, ?)"
+      );
       for (const p of backup.pelanggan) {
-        const [inserted] = await tx.insert(pelangganTable).values({
-          usahaId,
-          nama: p.nama,
-          telepon: p.telepon ?? null,
-          alamat: p.alamat ?? null,
-          catatan: p.catatan ?? null,
-        }).returning();
-        pelangganIdMap.set(p.id, inserted.id);
+        const r = stmtPel.run(
+          usahaId, p.nama, p.telepon ?? null, p.alamat ?? null, p.catatan ?? null
+        );
+        pelangganIdMap.set(p.id, Number(r.lastInsertRowid));
       }
 
-      // 3. Restore barang — bangun peta ID lama → baru
+      // ── 3. Restore barang — bangun peta ID lama → baru ────────────────────
       const barangIdMap = new Map<number, number>();
       if (Array.isArray(backup.barang)) {
+        const stmtBar = sqliteRaw.prepare(
+          "INSERT INTO barang (usaha_id, nama, satuan, harga_beli, harga_jual, stok, stok_minimum, kategori) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        );
         for (const b of backup.barang) {
-          const [inserted] = await tx.insert(barangTable).values({
-            usahaId,
-            nama: b.nama,
-            satuan: b.satuan,
-            hargaBeli: b.harga_beli.toString(),
-            hargaJual: b.harga_jual.toString(),
-            stok: b.stok.toString(),
-            stokMinimum: b.stok_minimum.toString(),
-          }).returning();
-          barangIdMap.set(b.id, inserted.id);
+          const r = stmtBar.run(
+            usahaId, b.nama, b.satuan,
+            String(b.harga_beli), String(b.harga_jual),
+            String(b.stok), String(b.stok_minimum),
+            b.kategori ?? ""
+          );
+          barangIdMap.set(b.id, Number(r.lastInsertRowid));
         }
       }
 
-      // 4. Restore hutang — bangun peta ID lama → baru
+      // ── 4. Restore hutang — bangun peta ID lama → baru ────────────────────
       const hutangIdMap = new Map<number, number>();
+      const stmtHutang = sqliteRaw.prepare(
+        "INSERT INTO hutang (usaha_id, pelanggan_id, tanggal_hutang, keterangan, nominal_hutang, total_dibayar, sisa_hutang, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      );
       for (const h of backup.hutang) {
         const newPelangganId = pelangganIdMap.get(h.pelanggan_id) ?? h.pelanggan_id;
-        const [inserted] = await tx.insert(hutangTable).values({
-          usahaId,
-          pelangganId: newPelangganId,
-          tanggalHutang: h.tanggal_hutang,
-          keterangan: h.keterangan ?? null,
-          nominalHutang: h.nominal_hutang.toString(),
-          totalDibayar: h.total_dibayar.toString(),
-          sisaHutang: h.sisa_hutang.toString(),
-          status: h.status,
-        }).returning();
-        hutangIdMap.set(h.id, inserted.id);
+        const r = stmtHutang.run(
+          usahaId, newPelangganId,
+          h.tanggal_hutang, h.keterangan ?? null,
+          String(h.nominal_hutang), String(h.total_dibayar ?? 0),
+          String(h.sisa_hutang), h.status ?? "aktif"
+        );
+        hutangIdMap.set(h.id, Number(r.lastInsertRowid));
       }
 
-      // 5. Restore pembayaran (dengan nomor kwitansi & link ke keuangan baru)
+      // ── 5. Restore pembayaran ──────────────────────────────────────────────
+      const stmtBayar = sqliteRaw.prepare(
+        "INSERT INTO pembayaran (usaha_id, hutang_id, pelanggan_id, tanggal_bayar, nominal_bayar, catatan, nomor_kwitansi, sisa_hutang_setelah, keuangan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      );
       for (const p of backup.pembayaran) {
         const newHutangId    = hutangIdMap.get(p.hutang_id) ?? p.hutang_id;
         const newPelangganId = pelangganIdMap.get(p.pelanggan_id) ?? p.pelanggan_id;
         const newKeuanganId  = p.keuangan_id != null ? (keuanganIdMap.get(p.keuangan_id) ?? null) : null;
-        await tx.insert(pembayaranTable).values({
-          usahaId,
-          hutangId: newHutangId,
-          pelangganId: newPelangganId,
-          tanggalBayar: p.tanggal_bayar,
-          nominalBayar: p.nominal_bayar.toString(),
-          catatan: p.catatan ?? null,
-          nomorKwitansi: p.nomor_kwitansi ?? null,
-          sisaHutangSetelah: p.sisa_hutang_setelah != null ? p.sisa_hutang_setelah.toString() : null,
-          keuanganId: newKeuanganId,
-        });
+        stmtBayar.run(
+          usahaId, newHutangId, newPelangganId,
+          p.tanggal_bayar, String(p.nominal_bayar),
+          p.catatan ?? null, p.nomor_kwitansi ?? null,
+          p.sisa_hutang_setelah != null ? String(p.sisa_hutang_setelah) : null,
+          newKeuanganId ?? null
+        );
       }
 
-      // 6. Restore transaksi stok (dengan link ke barang & keuangan baru)
+      // ── 6. Restore transaksi stok ──────────────────────────────────────────
       if (Array.isArray(backup.transaksi_stok)) {
+        const stmtStok = sqliteRaw.prepare(
+          "INSERT INTO transaksi_stok (usaha_id, barang_id, tanggal, tipe, jumlah, harga_satuan, keterangan, keuangan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        );
         for (const t of backup.transaksi_stok) {
           const newBarangId   = barangIdMap.get(t.barang_id) ?? t.barang_id;
           const newKeuanganId = t.keuangan_id != null ? (keuanganIdMap.get(t.keuangan_id) ?? null) : null;
-          await tx.insert(transaksiStokTable).values({
-            usahaId,
-            barangId: newBarangId,
-            tanggal: t.tanggal,
-            tipe: t.tipe,
-            jumlah: t.jumlah.toString(),
-            hargaSatuan: t.harga_satuan.toString(),
-            keterangan: t.keterangan ?? null,
-            keuanganId: newKeuanganId,
-          });
+          stmtStok.run(
+            usahaId, newBarangId, t.tanggal, t.tipe,
+            String(t.jumlah), String(t.harga_satuan),
+            t.keterangan ?? null, newKeuanganId ?? null
+          );
         }
       }
 
-      // 7. Restore transaksi kasir — bangun peta ID lama → baru
+      // ── 7. Restore transaksi kasir — bangun peta ID lama → baru ───────────
       const kasirIdMap = new Map<number, number>();
       if (Array.isArray(backup.transaksi_kasir)) {
+        const stmtKasir = sqliteRaw.prepare(
+          "INSERT INTO transaksi_kasir (usaha_id, tanggal, total, uang_bayar, kembalian, catatan) VALUES (?, ?, ?, ?, ?, ?)"
+        );
         for (const k of backup.transaksi_kasir) {
-          const [inserted] = await tx.insert(transaksiKasirTable).values({
-            usahaId,
-            tanggal: k.tanggal,
-            total: k.total.toString(),
-            uangBayar: k.uang_bayar.toString(),
-            kembalian: k.kembalian.toString(),
-            catatan: k.catatan ?? null,
-          }).returning();
-          kasirIdMap.set(k.id, inserted.id);
+          const r = stmtKasir.run(
+            usahaId, k.tanggal,
+            String(k.total), String(k.uang_bayar), String(k.kembalian),
+            k.catatan ?? null
+          );
+          kasirIdMap.set(k.id, Number(r.lastInsertRowid));
         }
       }
 
-      // 8. Restore item kasir (dengan link ke kasir baru & barang baru)
+      // ── 8. Restore item kasir ──────────────────────────────────────────────
       if (Array.isArray(backup.transaksi_kasir_item)) {
+        const stmtKasirItem = sqliteRaw.prepare(
+          "INSERT INTO transaksi_kasir_item (transaksi_kasir_id, barang_id, nama_barang, satuan, jumlah, harga_satuan, subtotal) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        );
         for (const i of backup.transaksi_kasir_item) {
           const newKasirId  = kasirIdMap.get(i.transaksi_kasir_id) ?? i.transaksi_kasir_id;
           const newBarangId = barangIdMap.get(i.barang_id) ?? i.barang_id;
-          await tx.insert(transaksiKasirItemTable).values({
-            transaksiKasirId: newKasirId,
-            barangId: newBarangId,
-            namaBarang: i.nama_barang,
-            satuan: i.satuan,
-            jumlah: i.jumlah.toString(),
-            hargaSatuan: i.harga_satuan.toString(),
-            subtotal: i.subtotal.toString(),
-          });
+          stmtKasirItem.run(
+            newKasirId, newBarangId,
+            i.nama_barang, i.satuan,
+            String(i.jumlah), String(i.harga_satuan), String(i.subtotal)
+          );
         }
       }
 
-      // 9. Perbarui info usaha dari backup (mendukung migrasi PC / install baru)
+      // ── 9. Perbarui info usaha dari backup ────────────────────────────────
       if (backup.usaha && typeof backup.usaha === "object") {
-        await tx.update(usahaTable).set({
-          namaUsaha: backup.usaha.nama_usaha ?? undefined,
-          alamat:    backup.usaha.alamat    ?? null,
-          telepon:   backup.usaha.telepon   ?? null,
-          catatan:   backup.usaha.catatan   ?? null,
-        }).where(eq(usahaTable.id, usahaId));
+        sqliteRaw.prepare(
+          "UPDATE usaha SET nama_usaha = COALESCE(?, nama_usaha), alamat = ?, telepon = ?, catatan = ? WHERE id = ?"
+        ).run(
+          backup.usaha.nama_usaha ?? null,
+          backup.usaha.alamat    ?? null,
+          backup.usaha.telepon   ?? null,
+          backup.usaha.catatan   ?? null,
+          usahaId
+        );
       }
     });
+
+    transact(); // jalankan seluruh transaksi secara sinkron
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[backup/restore] Error dalam transaksi restore:", message, err instanceof Error ? err.stack : "");
