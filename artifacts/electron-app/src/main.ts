@@ -1083,12 +1083,13 @@ function validateBackupDbFile(filePath: string): { valid: boolean; reason?: stri
     const stat = fs.statSync(filePath);
     writeLog(`[restore] Ukuran file backup: ${stat.size} bytes`);
 
-    // DB Usahaku yang sudah punya data setidaknya > 50 KB
-    // DB baru/kosong hanya ~8–16 KB (schema saja, belum ada akun/usaha)
-    if (stat.size < 20 * 1024) {
+    // Tolak file yang sangat kecil — SQLite kosong tanpa schema hanya ~4 KB (1 page)
+    // Schema 10 tabel Usahaku saja sudah butuh minimal 2–3 pages (~8–12 KB)
+    // Threshold 8 KB hanya memblokir file yang benar-benar kosong / bukan DB Usahaku
+    if (stat.size < 8 * 1024) {
       return {
         valid: false,
-        reason: `File backup terlalu kecil (${Math.round(stat.size / 1024)} KB). File ini kemungkinan backup dari aplikasi yang belum disetup atau belum ada data. Pilih file backup yang lebih baru.`,
+        reason: `File backup terlalu kecil (${Math.round(stat.size / 1024)} KB) dan bukan file database Usahaku yang valid. Pastikan Anda memilih file backup yang benar.`,
       };
     }
 
