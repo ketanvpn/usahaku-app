@@ -819,10 +819,30 @@ async function listDriveBackups(accessToken: string, folderId: string): Promise<
   }
 }
 
+async function walCheckpoint(): Promise<void> {
+  // Flush data dari .db-wal ke file .db utama agar backup tidak ketinggalan data terbaru
+  try {
+    await new Promise<void>((resolve) => {
+      const req = http.request(
+        { hostname: "127.0.0.1", port: BACKEND_PORT, path: "/api/internal/wal-checkpoint", method: "POST" },
+        (res) => { res.resume(); res.on("end", resolve); }
+      );
+      req.on("error", () => resolve()); // Abaikan error — backup tetap jalan
+      req.end();
+    });
+    writeLog("[gdrive] WAL checkpoint selesai");
+  } catch {
+    writeLog("[gdrive] WAL checkpoint gagal — backup tetap dilanjutkan");
+  }
+}
+
 async function uploadBackupToDrive(accessToken: string, dbPath: string): Promise<boolean> {
   try {
     const folderId = await getOrCreateDriveFolder(accessToken);
     if (!folderId) return false;
+
+    // Flush WAL ke .db sebelum baca file
+    await walCheckpoint();
 
     const now = new Date();
     const datePart = now.toISOString().slice(0, 10);

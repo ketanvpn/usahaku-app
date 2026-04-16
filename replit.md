@@ -25,12 +25,20 @@ Key features:
 
 ## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.38)
 
-### v1.0.38 — Fix Kritis: Restore Data Tidak Berubah (SQLite WAL)
+### v1.0.38 — Fix Kritis: Restore Data Tidak Berubah + Backup Tidak Lengkap (SQLite WAL)
+**Fix 1 — Restore tidak berubah:**
 - Bug kritis: setelah restore (lokal maupun Google Drive), data tidak berubah — tampak seperti restore tidak berjalan
 - Penyebab: SQLite WAL mode menyimpan transaksi terbaru di file `.db-wal` dan `.db-shm`. Saat restore mengganti file `.db`, kedua file WAL lama masih ada. Ketika backend restart, SQLite menerapkan WAL lama ke DB yang baru di-restore sehingga data lama "balik lagi"
 - Fix: hapus file `.db-wal` dan `.db-shm` setelah backend dimatikan dan sebelum DB di-replace di fungsi `performRestoreFromFile`
 - Bug ini mempengaruhi SEMUA jenis restore: lokal (.db), maupun dari Google Drive
 - File: `artifacts/electron-app/src/main.ts` (fungsi `performRestoreFromFile`)
+
+**Fix 2 — Backup bisa tidak lengkap:**
+- Bug tersembunyi: backup Google Drive membaca file `.db` mentah secara langsung. Data terbaru yang belum di-flush dari `.db-wal` ke `.db` tidak ikut ter-backup
+- Fix: tambahkan WAL checkpoint (`PRAGMA wal_checkpoint(TRUNCATE)`) via HTTP ke backend sebelum backup, memastikan semua data sudah di file `.db` sebelum dibaca
+- Tambah endpoint internal `POST /api/internal/wal-checkpoint` di backend (tidak perlu auth, hanya localhost)
+- Export `sqliteRaw` dari `lib/db/src/index.ts` untuk akses raw better-sqlite3 instance
+- File: `artifacts/api-server/src/routes/health.ts`, `lib/db/src/index.ts`, `artifacts/electron-app/src/main.ts` (fungsi `walCheckpoint` + `uploadBackupToDrive`)
 
 ### v1.0.37 — Interval Auto-Backup Google Drive: 60 Menit → 15 Menit
 - Interval backup otomatis dipercepat dari 60 menit menjadi 15 menit
