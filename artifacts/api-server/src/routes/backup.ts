@@ -35,7 +35,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   const transaksiKasirItemList = allKasirItems.flat();
 
   const backup = {
-    version: "1.2",
+    version: "1.3",
     exported_at: new Date().toISOString(),
     usaha_id: usahaId,
     usaha: {
@@ -119,9 +119,11 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       usaha_id: k.usahaId,
       tanggal: k.tanggal,
       total: parseFloat(k.total),
+      diskon: parseFloat(k.diskon ?? "0"),
       uang_bayar: parseFloat(k.uangBayar),
       kembalian: parseFloat(k.kembalian),
       catatan: k.catatan ?? null,
+      keuangan_id: k.keuanganId ?? null,
       created_at: k.createdAt instanceof Date ? k.createdAt.toISOString() : new Date(k.createdAt).toISOString(),
     })),
     transaksi_kasir_item: transaksiKasirItemList.map((i) => ({
@@ -277,13 +279,15 @@ router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
       const kasirIdMap = new Map<number, number>();
       if (Array.isArray(backup.transaksi_kasir)) {
         const stmtKasir = sqliteRaw.prepare(
-          "INSERT INTO transaksi_kasir (usaha_id, tanggal, total, uang_bayar, kembalian, catatan) VALUES (?, ?, ?, ?, ?, ?)"
+          "INSERT INTO transaksi_kasir (usaha_id, tanggal, total, diskon, uang_bayar, kembalian, catatan, keuangan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         );
         for (const k of backup.transaksi_kasir) {
+          const newKeuanganId = k.keuangan_id != null ? (keuanganIdMap.get(k.keuangan_id) ?? null) : null;
           const r = stmtKasir.run(
             usahaId, k.tanggal,
-            String(k.total), String(k.uang_bayar), String(k.kembalian),
-            k.catatan ?? null
+            String(k.total), String(k.diskon ?? 0),
+            String(k.uang_bayar), String(k.kembalian),
+            k.catatan ?? null, newKeuanganId ?? null
           );
           kasirIdMap.set(k.id, Number(r.lastInsertRowid));
         }

@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.43**
+**Current version: 1.0.44**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -23,7 +23,15 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.43)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.44)
+
+### v1.0.44 — Fix Backup: Field `diskon` & `keuangan_id` Kasir Tidak Ter-export
+**Masalah:** Field `diskon` dan `keuangan_id` di tabel `transaksi_kasir` ada di schema DB tapi tidak disertakan di backup JSON (export/restore). Restore dari backup lama mengabaikan nilai diskon transaksi kasir.
+**Fix:**
+- Export: tambah `diskon` dan `keuangan_id` ke map `transaksi_kasir` di `backup.ts`
+- Restore: UPDATE query INSERT kasir untuk sertakan `diskon` dan `keuangan_id` (dengan ID remapping ke keuangan baru), fallback `diskon ?? 0` untuk kompatibilitas backup lama (v1.2)
+- Versi format backup dinaikkan dari `"1.2"` → `"1.3"`
+- File: `artifacts/api-server/src/routes/backup.ts`
 
 ### v1.0.43 — Fix Badge Jumlah Item Kasir Terpotong
 **Masalah:** Badge angka jumlah item di pojok kanan atas kartu produk terpotong karena posisi `-top-2 -right-2` (di luar batas kartu) diclip oleh `overflow:hidden` milik Card.
