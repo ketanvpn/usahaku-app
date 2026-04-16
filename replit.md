@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.32**
+**Current version: 1.0.33**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -23,7 +23,20 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.32)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.33)
+
+### v1.0.33 — Backup Google Drive (Infrastruktur)
+- Ditambahkan fitur backup otomatis ke Google Drive (Electron only)
+- OAuth2 flow tanpa package tambahan — pakai `https` + `http` bawaan Node.js + Electron `safeStorage` untuk enkripsi token
+- Token disimpan terenkripsi di `userData/gdrive-tokens.dat` (via `safeStorage`, fallback plain jika tidak tersedia)
+- Auto-backup berjalan 45 detik setelah app siap, lalu setiap 60 menit — hanya jika ada internet + data berubah
+- Upload multipart ke Drive, folder "Usahaku Backup", simpan max 7 file terbaru (hapus yang lebih lama otomatis)
+- IPC handlers: `gdrive:getStatus`, `gdrive:connect`, `gdrive:disconnect`, `gdrive:backupNow`, `gdrive:listBackups`, `gdrive:restoreFromDrive`
+- Renderer event: `gdrive:backupDone` (dikirim ke frontend setiap backup selesai)
+- UI di halaman Backup: kartu Google Drive dengan status, email, waktu backup terakhir, daftar file, tombol Backup Sekarang & Pulihkan
+- Fungsi restore DB di-refactor jadi `performRestoreFromFile(sourcePath)` — dipakai bersama oleh restore lokal dan restore dari Drive
+- **PENTING**: Credentials (`GDRIVE_CLIENT_ID`, `GDRIVE_CLIENT_SECRET`) dibaca dari env var. Harus di-set sebelum build — lihat komentar di `main.ts`. Tanpa credentials, fitur tampil tapi muncul pesan "Belum Dikonfigurasi"
+- Files: `artifacts/electron-app/src/main.ts`, `artifacts/electron-app/src/preload.ts`, `artifacts/hutang-app/src/types/electron.d.ts`, `artifacts/hutang-app/src/pages/backup.tsx`
 
 ### v1.0.32 — Paket & Harga Lisensi di Halaman Lisensi + Fix Keamanan Batch
 - Ditambahkan section "Paket & Harga Lisensi" di halaman Lisensi (bawah kartu aktivasi key)

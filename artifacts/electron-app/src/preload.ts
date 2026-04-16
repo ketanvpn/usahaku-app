@@ -29,4 +29,25 @@ contextBridge.exposeInMainWorld("electronApp", {
     restoreDB: (): Promise<{ success: boolean; canceled?: boolean; message?: string }> =>
       ipcRenderer.invoke("backup:restoreDB"),
   },
+  gdrive: {
+    getStatus: (): Promise<{
+      configured: boolean; connected: boolean; email?: string;
+      lastBackupAt?: string; lastError?: string;
+    }> => ipcRenderer.invoke("gdrive:getStatus"),
+    connect: (): Promise<{ success: boolean; message?: string }> =>
+      ipcRenderer.invoke("gdrive:connect"),
+    disconnect: (): Promise<void> =>
+      ipcRenderer.invoke("gdrive:disconnect"),
+    backupNow: (): Promise<{ success: boolean; message?: string }> =>
+      ipcRenderer.invoke("gdrive:backupNow"),
+    listBackups: (): Promise<{ id: string; name: string; createdTime: string; size: string }[]> =>
+      ipcRenderer.invoke("gdrive:listBackups"),
+    restoreFromDrive: (fileId: string): Promise<{ success: boolean; message?: string }> =>
+      ipcRenderer.invoke("gdrive:restoreFromDrive", fileId),
+    onBackupDone: (cb: () => void) => {
+      const handler = () => cb();
+      ipcRenderer.on("gdrive:backupDone", handler);
+      return () => ipcRenderer.removeListener("gdrive:backupDone", handler);
+    },
+  },
 });

@@ -1,12 +1,13 @@
-import { useState, useRef, useEffect } from "react";
-import { getExportBackupUrl, useImportBackup, getGetOwnerDashboardQueryKey } from "@workspace/api-client-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { getExportBackupUrl, useImportBackup } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Loader2, Download, Upload, AlertTriangle, FileJson, Users, ReceiptText, CreditCard, FolderOpen, HardDrive, Database, RotateCcw } from "lucide-react";
+import { Loader2, Download, Upload, AlertTriangle, FileJson, Users, ReceiptText, CreditCard, FolderOpen, HardDrive, Database, RotateCcw, Cloud, CloudOff, RefreshCw, Unlink, CheckCircle2, Clock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { GDriveStatusPayload, GDriveBackupFile } from "@/types/electron";
 
 interface BackupPreview {
   pelanggan: number;
@@ -15,6 +16,21 @@ interface BackupPreview {
   usaha_id: number;
   nama_usaha?: string;
   exported_at?: string;
+}
+
+function formatTanggal(isoStr: string): string {
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric", month: "long", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  }).format(new Date(isoStr));
+}
+
+function formatSize(bytes: string): string {
+  const n = parseInt(bytes, 10);
+  if (isNaN(n)) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default function BackupPage() {
@@ -28,18 +44,54 @@ export default function BackupPage() {
   const [isRestoringDB, setIsRestoringDB] = useState(false);
   const [isConfirmRestoreDBOpen, setIsConfirmRestoreDBOpen] = useState(false);
 
+  // ── Google Drive state ────────────────────────────────────────────────────
+  const [gdriveStatus, setGdriveStatus] = useState<GDriveStatusPayload | null>(null);
+  const [gdriveBackups, setGdriveBackups] = useState<GDriveBackupFile[]>([]);
+  const [isGdriveLoading, setIsGdriveLoading] = useState(false);
+  const [isGdriveBackingUp, setIsGdriveBackingUp] = useState(false);
+  const [isGdriveConnecting, setIsGdriveConnecting] = useState(false);
+  const [gdriveRestoreFile, setGdriveRestoreFile] = useState<GDriveBackupFile | null>(null);
+  const [isGdriveRestoring, setIsGdriveRestoring] = useState(false);
+  const [showGdriveBackups, setShowGdriveBackups] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const importMutation = useImportBackup();
   const isElectron = !!window.electronApp?.backup;
+  const hasGdrive = !!window.electronApp?.gdrive;
+
+  const refreshGdriveStatus = useCallback(async () => {
+    if (!window.electronApp?.gdrive) return;
+    try {
+      const status = await window.electronApp.gdrive.getStatus();
+      setGdriveStatus(status);
+      if (status.connected) {
+        setIsGdriveLoading(true);
+        const files = await window.electronApp.gdrive.listBackups();
+        setGdriveBackups(files);
+      } else {
+        setGdriveBackups([]);
+      }
+    } catch {
+    } finally {
+      setIsGdriveLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (window.electronApp?.backup) {
       window.electronApp.backup.getFolder().then(setAutoBackupFolder).catch(() => {});
     }
-  }, []);
+    refreshGdriveStatus();
+
+    // Dengarkan event backup selesai dari Electron
+    const unsub = window.electronApp?.gdrive?.onBackupDone(() => {
+      refreshGdriveStatus();
+    });
+    return () => { unsub?.(); };
+  }, [refreshGdriveStatus]);
 
   const handleChooseFolder = async () => {
     if (!window.electronApp?.backup) return;
@@ -68,6 +120,62 @@ export default function BackupPage() {
       }
     } finally {
       setIsRestoringDB(false);
+    }
+  };
+
+  const handleGdriveConnect = async () => {
+    if (!window.electronApp?.gdrive) return;
+    setIsGdriveConnecting(true);
+    try {
+      const result = await window.electronApp.gdrive.connect();
+      if (result.success) {
+        toast({ title: "Google Drive terhubung!", description: "Backup otomatis sudah aktif." });
+        await refreshGdriveStatus();
+      } else {
+        toast({ variant: "destructive", title: "Gagal menghubungkan", description: result.message ?? "Terjadi kesalahan" });
+      }
+    } finally {
+      setIsGdriveConnecting(false);
+    }
+  };
+
+  const handleGdriveDisconnect = async () => {
+    if (!window.electronApp?.gdrive) return;
+    await window.electronApp.gdrive.disconnect();
+    setGdriveStatus(prev => prev ? { ...prev, connected: false, email: undefined, lastBackupAt: undefined } : null);
+    setGdriveBackups([]);
+    toast({ title: "Google Drive diputus", description: "Backup lokal tetap berjalan." });
+  };
+
+  const handleGdriveBackupNow = async () => {
+    if (!window.electronApp?.gdrive) return;
+    setIsGdriveBackingUp(true);
+    try {
+      const result = await window.electronApp.gdrive.backupNow();
+      if (result.success) {
+        toast({ title: "Backup ke Google Drive berhasil!" });
+        await refreshGdriveStatus();
+      } else {
+        toast({ variant: "destructive", title: "Backup gagal", description: result.message ?? "Terjadi kesalahan" });
+      }
+    } finally {
+      setIsGdriveBackingUp(false);
+    }
+  };
+
+  const handleGdriveRestoreConfirmed = async () => {
+    if (!gdriveRestoreFile || !window.electronApp?.gdrive) return;
+    setIsGdriveRestoring(true);
+    setGdriveRestoreFile(null);
+    try {
+      const result = await window.electronApp.gdrive.restoreFromDrive(gdriveRestoreFile.id);
+      if (result.success) {
+        toast({ title: "Restore dari Google Drive berhasil!", description: "Aplikasi memuat ulang data..." });
+      } else {
+        toast({ variant: "destructive", title: "Restore gagal", description: result.message ?? "Terjadi kesalahan" });
+      }
+    } finally {
+      setIsGdriveRestoring(false);
     }
   };
 
@@ -272,6 +380,156 @@ export default function BackupPage() {
         </Card>
       )}
 
+      {/* ── Kartu Google Drive ──────────────────────────────────────────── */}
+      {hasGdrive && gdriveStatus && (
+        <Card className={gdriveStatus.connected ? "border-blue-200 bg-blue-50/40" : "border-muted"}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-700">
+              {gdriveStatus.connected ? (
+                <Cloud className="h-5 w-5 text-blue-600" />
+              ) : (
+                <CloudOff className="h-5 w-5 text-muted-foreground" />
+              )}
+              Backup ke Google Drive
+              {gdriveStatus.connected && (
+                <span className="ml-auto text-xs font-normal px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" /> Terhubung
+                </span>
+              )}
+            </CardTitle>
+            <CardDescription>
+              {gdriveStatus.connected
+                ? "Data dicadangkan otomatis ke Google Drive setiap kali ada perubahan dan internet tersedia."
+                : "Hubungkan akun Google untuk backup otomatis ke cloud. Aman, gratis, dan mudah dipulihkan."}
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-3">
+            {!gdriveStatus.configured && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Belum Dikonfigurasi</AlertTitle>
+                <AlertDescription className="text-xs">
+                  Fitur Google Drive belum diaktifkan pada versi ini. Hubungi pengembang untuk informasi lebih lanjut.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {gdriveStatus.configured && gdriveStatus.connected && (
+              <>
+                <div className="flex flex-col gap-1.5 p-3 bg-background rounded-md border text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Cloud className="h-4 w-4 flex-shrink-0 text-blue-500" />
+                    <span className="font-medium text-foreground truncate">{gdriveStatus.email}</span>
+                  </div>
+                  {gdriveStatus.lastBackupAt && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground pl-6">
+                      <Clock className="h-3 w-3" />
+                      Backup terakhir: {formatTanggal(gdriveStatus.lastBackupAt)}
+                    </div>
+                  )}
+                  {!gdriveStatus.lastBackupAt && (
+                    <div className="text-xs text-muted-foreground pl-6">Belum ada backup ke Drive</div>
+                  )}
+                  {gdriveStatus.lastError && (
+                    <div className="text-xs text-destructive pl-6">{gdriveStatus.lastError}</div>
+                  )}
+                </div>
+
+                {/* Daftar backup */}
+                <div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 px-2 text-blue-600"
+                    onClick={() => setShowGdriveBackups(v => !v)}
+                    disabled={isGdriveLoading}
+                  >
+                    {isGdriveLoading ? (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-1 h-3 w-3" />
+                    )}
+                    {showGdriveBackups ? "Sembunyikan" : `Lihat ${gdriveBackups.length} backup di Drive`}
+                  </Button>
+
+                  {showGdriveBackups && gdriveBackups.length > 0 && (
+                    <div className="mt-2 border rounded-md overflow-hidden text-sm">
+                      {gdriveBackups.map((f, i) => (
+                        <div key={f.id} className={`flex items-center gap-2 px-3 py-2 ${i % 2 === 0 ? "bg-background" : "bg-muted/30"}`}>
+                          <Database className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="truncate text-xs font-medium">{f.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {formatTanggal(f.createdTime)}{f.size ? ` · ${formatSize(f.size)}` : ""}
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs flex-shrink-0"
+                            onClick={() => setGdriveRestoreFile(f)}
+                            disabled={isGdriveRestoring}
+                          >
+                            <RotateCcw className="mr-1 h-3 w-3" />
+                            Pulihkan
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {showGdriveBackups && gdriveBackups.length === 0 && !isGdriveLoading && (
+                    <p className="text-xs text-muted-foreground mt-2 px-1">Belum ada file backup di Drive.</p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {gdriveStatus.configured && !gdriveStatus.connected && (
+              <p className="text-sm text-muted-foreground">
+                Setelah terhubung, backup otomatis berjalan di latar belakang setiap kali ada internet.
+                Maksimal 7 file backup tersimpan di Drive.
+              </p>
+            )}
+          </CardContent>
+
+          <CardFooter className="gap-2 flex-wrap">
+            {gdriveStatus.configured && !gdriveStatus.connected && (
+              <Button
+                onClick={handleGdriveConnect}
+                disabled={isGdriveConnecting}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isGdriveConnecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Cloud className="mr-2 h-4 w-4" />}
+                Hubungkan Google Drive
+              </Button>
+            )}
+            {gdriveStatus.configured && gdriveStatus.connected && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleGdriveBackupNow}
+                  disabled={isGdriveBackingUp}
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                >
+                  {isGdriveBackingUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Cloud className="mr-2 h-4 w-4" />}
+                  Backup Sekarang
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleGdriveDisconnect}
+                  className="text-muted-foreground hover:text-destructive ml-auto"
+                >
+                  <Unlink className="mr-1 h-3.5 w-3.5" />
+                  Putuskan Koneksi
+                </Button>
+              </>
+            )}
+          </CardFooter>
+        </Card>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -443,6 +701,42 @@ export default function BackupPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Konfirmasi restore dari Google Drive */}
+      <AlertDialog open={!!gdriveRestoreFile} onOpenChange={(open) => { if (!open) setGdriveRestoreFile(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pulihkan dari Google Drive?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Anda akan memulihkan data dari file:<br />
+                  <strong className="text-foreground">{gdriveRestoreFile?.name}</strong>
+                </p>
+                {gdriveRestoreFile?.createdTime && (
+                  <div className="text-sm text-muted-foreground">
+                    Dibuat: {formatTanggal(gdriveRestoreFile.createdTime)}
+                  </div>
+                )}
+                <p>
+                  Semua data saat ini akan <strong>dihapus dan diganti</strong> dengan isi file ini.
+                  Aplikasi akan memuat ulang secara otomatis.
+                </p>
+                <p className="text-destructive font-medium">Proses ini tidak dapat dibatalkan.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleGdriveRestoreConfirmed}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Ya, Pulihkan Sekarang
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={isConfirmRestoreDBOpen} onOpenChange={setIsConfirmRestoreDBOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
