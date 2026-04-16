@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.33**
+**Current version: 1.0.34**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -23,7 +23,17 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.33)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.34)
+
+### v1.0.34 — Fix Credentials Google Drive (Baked-In ke Binary)
+- Perbaikan: credentials `GDRIVE_CLIENT_ID` dan `GDRIVE_CLIENT_SECRET` sebelumnya hanya dibaca dari `process.env` saat runtime (tidak tersedia di .exe hasil build) — sekarang di-inject langsung ke binary saat kompilasi
+- Ditambahkan `scripts/inject-credentials.js`: membaca env vars dan menulis `src/credentials.ts` sebelum `tsc` berjalan
+- `main.ts` sekarang import dari `./credentials` (bukan `process.env`) — nilai tertanam permanen di binary
+- `build:main` script diupdate: `node scripts/inject-credentials.js && tsc -p tsconfig.json`
+- `src/credentials.ts` ditambahkan ke `.gitignore` (tidak ikut commit ke repo publik)
+- GitHub Actions workflow sudah meneruskan `GDRIVE_CLIENT_ID` dan `GDRIVE_CLIENT_SECRET` dari GitHub Secrets ke step build
+- Fix: `GDRIVE_CLIENT_ID` di Replit Secrets sebelumnya mengandung prefix `http://` yang salah — sudah dikoreksi
+- Files: `artifacts/electron-app/scripts/inject-credentials.js`, `artifacts/electron-app/src/main.ts`, `artifacts/electron-app/package.json`, `artifacts/electron-app/.gitignore`
 
 ### v1.0.33 — Backup Google Drive (Infrastruktur)
 - Ditambahkan fitur backup otomatis ke Google Drive (Electron only)
