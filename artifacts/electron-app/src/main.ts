@@ -6,6 +6,8 @@ import * as https from "https";
 import * as fs from "fs";
 import * as os from "os";
 import { autoUpdater } from "electron-updater";
+// Credentials di-inject saat build oleh scripts/inject-credentials.js → baked-in ke binary
+import { GDRIVE_CLIENT_ID, GDRIVE_CLIENT_SECRET } from "./credentials";
 
 const APP_NAME = "Usahaku";
 const APP_ID = "com.ketantech.usahaku";
@@ -629,13 +631,6 @@ function performAutoBackup(): void {
 }
 
 // ── Google Drive Backup ────────────────────────────────────────────────────────
-// CATATAN DEVELOPER: Isi GDRIVE_CLIENT_ID dan GDRIVE_CLIENT_SECRET dari Google Cloud Console.
-// Langkah: https://console.cloud.google.com → APIs & Services → Credentials
-//          → Create Credentials → OAuth 2.0 Client IDs → Desktop app
-// Aktifkan: Google Drive API di Library
-// Scope yang diperlukan: https://www.googleapis.com/auth/drive.file
-const GDRIVE_CLIENT_ID = process.env.GDRIVE_CLIENT_ID ?? "";
-const GDRIVE_CLIENT_SECRET = process.env.GDRIVE_CLIENT_SECRET ?? "";
 const GDRIVE_FOLDER_NAME = "Usahaku Backup";
 const GDRIVE_MAX_BACKUPS = 7;
 

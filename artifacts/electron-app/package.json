@@ -7,7 +7,7 @@
   "license": "UNLICENSED",
   "main": "build/main.js",
   "scripts": {
-    "build:main": "tsc -p tsconfig.json",
+    "build:main": "node scripts/inject-credentials.js && tsc -p tsconfig.json",
     "electron": "cross-env NODE_ENV=development electron .",
     "electron:prod": "cross-env NODE_ENV=production electron .",
     "build:desktop": "pnpm run build:backend && pnpm run build:frontend && pnpm run build:main",
