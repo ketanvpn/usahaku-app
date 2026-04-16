@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.42**
+**Current version: 1.0.43**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -23,7 +23,13 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.42)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.43)
+
+### v1.0.43 — Fix Badge Jumlah Item Kasir Terpotong
+**Masalah:** Badge angka jumlah item di pojok kanan atas kartu produk terpotong karena posisi `-top-2 -right-2` (di luar batas kartu) diclip oleh `overflow:hidden` milik Card.
+**Fix:** Ubah posisi badge ke `top-2 right-2` (di dalam batas kartu). Angka sekarang tampil utuh.
+**Catatan versi:** v1.0.42 tag di GitHub menunjuk ke commit sebelum fix ini, sehingga bump ke v1.0.43 diperlukan agar fix masuk ke build.
+- File: `artifacts/hutang-app/src/pages/kasir.tsx`
 
 ### v1.0.42 — Redesign UI Halaman Kasir
 **Alasan versi baru:** v1.0.41 sudah ter-release di GitHub dengan konten lama (sebelum perubahan UI). Daripada hapus + force-push tag (berbahaya, auto-updater tidak akan detect sebagai versi baru), lebih aman bump ke v1.0.42.
