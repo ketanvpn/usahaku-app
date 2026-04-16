@@ -46,6 +46,14 @@ Key features:
 - Urutan baru lebih aman karena WAL di-flush secara eksplisit via HTTP sebelum backend dimatikan
 - File: `artifacts/electron-app/src/main.ts` (handler `mainWindow.on("close")`)
 
+**Fix 4 — Restore dari file backup kosong (DB belum disetup):**
+- Bug lapangan: restore dari file `.db` yang ternyata kosong/belum ada data → aplikasi tampil halaman setup dari awal
+- Penyebab 1: file backup yang terbentuk di sesi pertama install (sebelum ada data) ikut tersimpan sebagai kandidat restore
+- Penyebab 2: `staleTime: 5 menit` di query `setup-status` → setelah reload, frontend pakai cache lama yang bilang `needsSetup: true`
+- Fix 1: validasi file backup sebelum restore — cek magic bytes SQLite + ukuran file minimum 20 KB (DB kosong hanya ~8–16 KB)
+- Fix 2: `staleTime: 0` dan `gcTime: 0` pada query `setup-status` → selalu fetch ulang saat reload
+- File: `artifacts/electron-app/src/main.ts` (fungsi `validateBackupDbFile`), `artifacts/hutang-app/src/hooks/use-auth.tsx`
+
 ### v1.0.37 — Interval Auto-Backup Google Drive: 60 Menit → 15 Menit
 - Interval backup otomatis dipercepat dari 60 menit menjadi 15 menit
 - Alasan: 60 menit terlalu berisiko untuk data hutang/transaksi bisnis kecil — kehilangan data maksimal kini hanya 15 menit

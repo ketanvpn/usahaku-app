@@ -28,7 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return r.json();
     },
     retry: false,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
+    gcTime: 0,
   });
 
   const { data: user, isLoading: isAuthLoading, isError } = useGetMe({

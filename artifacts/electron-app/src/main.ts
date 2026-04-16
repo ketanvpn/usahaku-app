@@ -1077,10 +1077,48 @@ async function startGDriveOAuthFlow(): Promise<{ success: boolean; message?: str
   });
 }
 
+// Validasi apakah file .db adalah SQLite valid berdasarkan magic bytes dan ukuran minimum
+function validateBackupDbFile(filePath: string): { valid: boolean; reason?: string } {
+  try {
+    const stat = fs.statSync(filePath);
+    writeLog(`[restore] Ukuran file backup: ${stat.size} bytes`);
+
+    // DB Usahaku yang sudah punya data setidaknya > 50 KB
+    // DB baru/kosong hanya ~8–16 KB (schema saja, belum ada akun/usaha)
+    if (stat.size < 20 * 1024) {
+      return {
+        valid: false,
+        reason: `File backup terlalu kecil (${Math.round(stat.size / 1024)} KB). File ini kemungkinan backup dari aplikasi yang belum disetup atau belum ada data. Pilih file backup yang lebih baru.`,
+      };
+    }
+
+    // Cek magic bytes SQLite: 16 byte pertama harus "SQLite format 3"
+    const fd = fs.openSync(filePath, "r");
+    const header = Buffer.alloc(16);
+    fs.readSync(fd, header, 0, 16, 0);
+    fs.closeSync(fd);
+    if (header.toString("utf8", 0, 15) !== "SQLite format 3") {
+      return { valid: false, reason: "File bukan database SQLite yang valid. Pastikan file yang dipilih adalah backup Usahaku (.db)." };
+    }
+
+    return { valid: true };
+  } catch (e) {
+    writeLog(`[restore] Validasi file backup error: ${e}`);
+    return { valid: false, reason: `File backup tidak dapat dibaca: ${e instanceof Error ? e.message : String(e)}` };
+  }
+}
+
 // Fungsi restore DB yang dapat dipakai bersama (lokal maupun Drive)
 async function performRestoreFromFile(sourcePath: string): Promise<{ success: boolean; canceled?: boolean; message?: string }> {
   const dbPath = getDbPath();
   const rollbackPath = dbPath + ".rollback";
+
+  // Validasi file backup sebelum melakukan apapun
+  const validation = validateBackupDbFile(sourcePath);
+  if (!validation.valid) {
+    writeLog(`[restore] File backup tidak valid: ${validation.reason}`);
+    return { success: false, message: validation.reason ?? "File backup tidak valid." };
+  }
 
   try {
     fs.copyFileSync(dbPath, rollbackPath);
