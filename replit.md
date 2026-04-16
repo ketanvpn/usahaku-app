@@ -35,8 +35,11 @@ Key features:
 - Renderer event: `gdrive:backupDone` (dikirim ke frontend setiap backup selesai)
 - UI di halaman Backup: kartu Google Drive dengan status, email, waktu backup terakhir, daftar file, tombol Backup Sekarang & Pulihkan
 - Fungsi restore DB di-refactor jadi `performRestoreFromFile(sourcePath)` — dipakai bersama oleh restore lokal dan restore dari Drive
-- **PENTING**: Credentials (`GDRIVE_CLIENT_ID`, `GDRIVE_CLIENT_SECRET`) dibaca dari env var. Harus di-set sebelum build — lihat komentar di `main.ts`. Tanpa credentials, fitur tampil tapi muncul pesan "Belum Dikonfigurasi"
-- Files: `artifacts/electron-app/src/main.ts`, `artifacts/electron-app/src/preload.ts`, `artifacts/hutang-app/src/types/electron.d.ts`, `artifacts/hutang-app/src/pages/backup.tsx`
+- **Bug fix (OAuth)**: Handler OAuth server lokal sekarang mengabaikan request `/favicon.ico` & request duplikat dari browser — pakai flag `settled` agar `resolve` hanya dipanggil sekali
+- **Bug fix (token expired)**: Jika refresh token dicabut user dari Google (invalid_grant), token lokal otomatis dihapus dan muncul pesan "Hubungkan ulang" — sebelumnya app diam tanpa info
+- GitHub Actions build workflow diupdate: `GDRIVE_CLIENT_ID` dan `GDRIVE_CLIENT_SECRET` sekarang diteruskan ke step build `.exe` dari GitHub Secrets
+- **PENTING**: Credentials (`GDRIVE_CLIENT_ID`, `GDRIVE_CLIENT_SECRET`) dibaca dari env var. Harus di-set sebagai GitHub Secrets sebelum build. Tanpa credentials, fitur tampil tapi muncul pesan "Belum Dikonfigurasi"
+- Files: `artifacts/electron-app/src/main.ts`, `artifacts/electron-app/src/preload.ts`, `artifacts/hutang-app/src/types/electron.d.ts`, `artifacts/hutang-app/src/pages/backup.tsx`, `.github/workflows/build-release.yml`
 
 ### v1.0.32 — Paket & Harga Lisensi di Halaman Lisensi + Fix Keamanan Batch
 - Ditambahkan section "Paket & Harga Lisensi" di halaman Lisensi (bawah kartu aktivasi key)

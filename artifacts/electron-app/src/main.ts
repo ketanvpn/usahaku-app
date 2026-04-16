@@ -734,7 +734,16 @@ async function refreshAccessToken(refreshToken: string): Promise<string | null> 
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded", "Content-Length": Buffer.byteLength(body) },
     }, body);
-    if (res.statusCode !== 200) return null;
+    if (res.statusCode !== 200) {
+      // Jika Google menolak (token dicabut/revoked), hapus token lokal agar user diminta reconnect
+      const errBody = JSON.parse(res.body.toString("utf8")) as { error?: string };
+      if (res.statusCode === 400 && errBody.error === "invalid_grant") {
+        writeLog("[gdrive] Refresh token dicabut. Menghapus token lokal.");
+        clearGDriveTokens();
+        gdriveLastError = "Akses Google Drive dicabut. Hubungkan ulang.";
+      }
+      return null;
+    }
     return (JSON.parse(res.body.toString("utf8")) as { access_token: string }).access_token;
   } catch {
     return null;
@@ -930,6 +939,8 @@ function scheduleGDriveAutoBackup(): void {
 async function startGDriveOAuthFlow(): Promise<{ success: boolean; message?: string }> {
   return new Promise((resolve) => {
     const server = http.createServer();
+    let settled = false; // pastikan resolve hanya dipanggil sekali
+
     server.listen(0, "127.0.0.1", () => {
       const port = (server.address() as { port: number }).port;
       const redirectUri = `http://127.0.0.1:${port}`;
@@ -949,12 +960,24 @@ async function startGDriveOAuthFlow(): Promise<{ success: boolean; message?: str
       writeLog(`[gdrive] OAuth flow dimulai, port=${port}`);
 
       const timeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
         server.close();
         resolve({ success: false, message: "Waktu habis (5 menit). Silakan coba lagi." });
       }, 5 * 60 * 1000);
 
       server.on("request", async (req, res) => {
         const url = new URL(req.url ?? "/", `http://127.0.0.1:${port}`);
+
+        // Abaikan request selain root (misal: /favicon.ico dari browser)
+        if (url.pathname !== "/" && url.pathname !== "") {
+          res.writeHead(204).end();
+          return;
+        }
+
+        // Abaikan kalau sudah selesai (request duplikat)
+        if (settled) { res.writeHead(204).end(); return; }
+
         const code = url.searchParams.get("code");
         const error = url.searchParams.get("error");
 
@@ -973,6 +996,7 @@ async function startGDriveOAuthFlow(): Promise<{ success: boolean; message?: str
         res.end(html);
 
         clearTimeout(timeout);
+        settled = true;
         server.close();
 
         if (!code) {
