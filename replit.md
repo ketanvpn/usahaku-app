@@ -24,6 +24,25 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
+## Technical Debt (Dicatat, Belum Diperbaiki)
+
+### TD-001 — TS4023: `sqliteRaw` export di `lib/db/src/index.ts`
+**File:** `lib/db/src/index.ts` baris 168
+**Error:** `TS4023: Exported variable 'sqliteRaw' has or is using name 'BetterSqlite3.Database' from external module but cannot be named.`
+**Dampak:** Karena `lib/db` gagal generate file `.d.ts`, semua file yang import dari `@workspace/db` mendapat error TS6305 (cascade), dan callback di beberapa route mendapat TS7006 (implicit any). Total muncul ~127 error saat `tsc --noEmit`.
+**Tidak menyebabkan crash** — runtime pakai esbuild (baca source langsung, tidak butuh `.d.ts`). Tapi TypeScript tidak bisa jaga tipe di area-area yang pakai `sqliteRaw`.
+**Fix (1 baris):**
+```ts
+// Ubah dari:
+export const sqliteRaw = sqlite;
+// Jadi:
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const sqliteRaw: any = sqlite;
+```
+**Penyebab root:** `better-sqlite3` di-import sebagai `import type` (bukan value import) karena Electron butuh dynamic require — sehingga tipe `BetterSqlite3.Database` tidak bisa ditulis ke file `.d.ts`.
+
+---
+
 ## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.45)
 
 ### v1.0.45 — Fitur Jatuh Tempo Hutang
