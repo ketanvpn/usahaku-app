@@ -39,7 +39,7 @@ Usahaku membantu Anda mencatat hutang pelanggan, keuangan masuk/keluar, stok bar
 | Backup JSON | Export semua data ke file JSON untuk cadangan manual |
 | Restore JSON | Pulihkan data dari file backup JSON |
 | Restore Auto-Backup | Pulihkan data dari file auto-backup .db dengan pengaman rollback otomatis |
-| Backup Google Drive | Backup otomatis ke Google Drive setiap 60 menit — file tersimpan aman di cloud |
+| Backup Google Drive | Backup otomatis ke Google Drive setiap 15 menit — file tersimpan aman di cloud |
 | Restore dari Drive | Pulihkan data langsung dari daftar backup yang tersimpan di Google Drive |
 | License Key | Sistem lisensi untuk aktivasi aplikasi |
 | Multi Usaha | Super Admin kelola banyak toko/usaha |
@@ -51,10 +51,10 @@ Usahaku membantu Anda mencatat hutang pelanggan, keuangan masuk/keluar, stok bar
 
 | Role | Username | Password | Akses |
 |------|----------|----------|-------|
-| Super Admin | `admin` | `admin123` | Kelola semua usaha & pengguna |
-| Owner | `owner1` | `owner123` | Kelola usaha sendiri |
+| Super Admin | `admin` | `maduTJ150` | Kelola semua usaha & pengguna |
+| Owner | *(dibuat saat setup)* | *(ditentukan saat setup)* | Kelola usaha sendiri |
 
-> **Penting**: Ganti password segera setelah login pertama kali melalui menu **Profil**.
+> **Penting**: Ganti password Super Admin segera setelah login pertama kali melalui menu **Profil**.
 
 ---
 
@@ -241,7 +241,7 @@ Fitur ini dilengkapi **pengaman otomatis** — jika file backup yang dipilih ter
 
 ### Backup & Restore Google Drive
 
-Fitur ini memungkinkan data Anda tersimpan aman di Google Drive secara otomatis. Backup berjalan sendiri setiap **15 menit** selama aplikasi aktif — Anda tidak perlu melakukan apapun setelah setup awal.
+Fitur ini memungkinkan data Anda tersimpan aman di Google Drive secara otomatis. Backup berjalan sendiri setiap **15 menit** selama aplikasi aktif dan terkoneksi internet — Anda tidak perlu melakukan apapun setelah setup awal.
 
 > **Catatan**: Fitur ini membutuhkan koneksi internet hanya saat proses backup/restore berlangsung. Data utama tetap bekerja 100% offline.
 

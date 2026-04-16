@@ -13,7 +13,7 @@ Key features:
 - Kasir (POS) with multi-item cart, receipt modal, auto-stok decrement, hapus transaksi kasir (void) via Riwayat Penjualan
 - Laporan: tab Penjualan Kasir (harian/bulanan chart, top produk, export CSV/PDF), Hutang, Keuangan, Stok
 - Dashboard: kasir summary cards (hari ini & bulan ini), tren keuangan chart
-- Backup/restore (v1.2 format includes kasir tables)
+- Backup/restore (v1.3 format includes kasir tables with diskon & keuangan_id)
 - Pengingat backup otomatis: banner kuning muncul jika belum backup > 7 hari (localStorage-based)
 - Auto-backup saat tutup aplikasi: salin file .db ke Documents/UsahakuBackup/, simpan 7 file terbaru (production/Electron only)
 - Offline license key system (HMAC-SHA256, format BUKU-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX); tipe: 1bulan(30h)/3bulan(90h)/6bulan(180h)/1tahun(365h)
