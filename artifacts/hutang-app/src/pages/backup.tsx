@@ -43,6 +43,7 @@ export default function BackupPage() {
   const [isChoosingFolder, setIsChoosingFolder] = useState(false);
   const [isRestoringDB, setIsRestoringDB] = useState(false);
   const [isConfirmRestoreDBOpen, setIsConfirmRestoreDBOpen] = useState(false);
+  const [restoreErrorMsg, setRestoreErrorMsg] = useState<string | null>(null);
 
   // ── Google Drive state ────────────────────────────────────────────────────
   const [gdriveStatus, setGdriveStatus] = useState<GDriveStatusPayload | null>(null);
@@ -282,11 +283,8 @@ export default function BackupPage() {
               queryClient.invalidateQueries();
             },
             onError: (err: any) => {
-              toast({
-                variant: "destructive",
-                title: "Restore gagal",
-                description: err?.data?.error || err?.message || "Terjadi kesalahan",
-              });
+              const msg = err?.data?.error || err?.message || "Terjadi kesalahan tidak diketahui";
+              setRestoreErrorMsg(msg);
             },
           }
         );
@@ -763,6 +761,30 @@ export default function BackupPage() {
             >
               Lanjutkan, Pilih File...
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog error restore JSON — tampil penuh agar bisa dibaca lengkap */}
+      <AlertDialog open={!!restoreErrorMsg} onOpenChange={(open) => { if (!open) setRestoreErrorMsg(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Restore Data Gagal
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-left">
+                <p className="text-sm text-muted-foreground">Terjadi kesalahan saat memproses file backup. Detail error:</p>
+                <div className="bg-muted rounded p-3 text-xs font-mono break-all whitespace-pre-wrap max-h-48 overflow-auto">
+                  {restoreErrorMsg}
+                </div>
+                <p className="text-sm text-muted-foreground">Data Anda tidak berubah (semua perubahan dibatalkan otomatis). Silakan screenshot error di atas dan hubungi pengembang jika masalah berlanjut.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setRestoreErrorMsg(null)}>Tutup</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

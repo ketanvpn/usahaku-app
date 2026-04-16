@@ -315,6 +315,7 @@ router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
+    console.error("[backup/restore] Error dalam transaksi restore:", message, err instanceof Error ? err.stack : "");
     res.status(500).json({ error: `Restore gagal, semua perubahan dibatalkan: ${message}` });
     return;
   }
