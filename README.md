@@ -250,9 +250,15 @@ Fitur ini memungkinkan data Anda tersimpan aman di Google Drive secara otomatis.
 1. Klik menu **Backup** di sidebar
 2. Di bagian **Backup Google Drive**, klik tombol **Hubungkan Google Drive**
 3. Browser akan terbuka otomatis dan menampilkan halaman login Google
-4. Pilih akun Google yang ingin digunakan dan klik **Izinkan**
-5. Setelah berhasil, browser akan menampilkan pesan *"Berhasil! Google Drive berhasil dihubungkan"*
-6. Kembali ke aplikasi — status akan berubah menampilkan email akun Google yang terhubung
+4. Pilih akun Google yang ingin digunakan
+5. Akan muncul halaman peringatan: **"usahaku belum diverifikasi Google"** — ini normal
+   - Klik **"Advanced"** (tulisan kecil di bagian bawah halaman)
+   - Klik **"Go to usahaku (unsafe)"**
+6. Klik **Izinkan**
+7. Setelah berhasil, browser akan menampilkan pesan *"Berhasil! Google Drive berhasil dihubungkan"*
+8. Kembali ke aplikasi — status akan berubah menampilkan email akun Google yang terhubung
+
+> **Kenapa muncul peringatan "belum diverifikasi"?** Ini adalah peringatan standar Google untuk aplikasi desktop yang belum melalui proses verifikasi resmi. Aplikasi Usahaku aman digunakan — hanya mengakses file yang dibuat oleh aplikasi itu sendiri di Drive Anda.
 
 **Backup Manual (kapan saja):**
 

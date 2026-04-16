@@ -33,6 +33,8 @@ Key features:
 - `src/credentials.ts` ditambahkan ke `.gitignore` (tidak ikut commit ke repo publik)
 - GitHub Actions workflow sudah meneruskan `GDRIVE_CLIENT_ID` dan `GDRIVE_CLIENT_SECRET` dari GitHub Secrets ke step build
 - Fix: `GDRIVE_CLIENT_ID` di Replit Secrets sebelumnya mengandung prefix `http://` yang salah — sudah dikoreksi
+- **Google Cloud Console**: OAuth consent screen di-publish ke "In production" (bukan Testing) agar semua user bisa connect tanpa perlu didaftarkan satu-satu sebagai test user. User akan melihat peringatan "unverified app" dan bisa bypass lewat Advanced → "Go to usahaku (unsafe)"
+- Scope `drive.file` tidak memerlukan verifikasi penuh dari Google untuk dipublish — cukup publish consent screen
 - Files: `artifacts/electron-app/scripts/inject-credentials.js`, `artifacts/electron-app/src/main.ts`, `artifacts/electron-app/package.json`, `artifacts/electron-app/.gitignore`
 
 ### v1.0.33 — Backup Google Drive (Infrastruktur)
