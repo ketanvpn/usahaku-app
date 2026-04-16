@@ -5,7 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ShieldCheck, ShieldAlert, ShieldOff, KeyRound, AlertTriangle } from "lucide-react";
+import { Loader2, ShieldCheck, ShieldAlert, ShieldOff, KeyRound, AlertTriangle, MessageCircle } from "lucide-react";
+
+const PAKET_LISENSI = [
+  { label: "1 Bulan", durasi: "30 hari", harga: 19900 },
+  { label: "3 Bulan", durasi: "90 hari", harga: 54900, populer: true },
+  { label: "6 Bulan", durasi: "180 hari", harga: 99000 },
+  { label: "1 Tahun", durasi: "365 hari", harga: 179000 },
+];
+
+const WA_NUMBER = "6282397803813";
+const WA_MESSAGE = encodeURIComponent("Halo, saya ingin order/perpanjang lisensi Usahaku. Mohon info lebih lanjut.");
+
+function formatRupiahLisensi(n: number) {
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+}
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -190,6 +204,60 @@ export default function LisensiPage() {
                   <li>Klik tombol Aktivasi Lisensi</li>
                 </ol>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Paket Harga */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" /> Paket & Harga Lisensi
+              </CardTitle>
+              <CardDescription>
+                Pilih paket yang sesuai, lalu hubungi Admin via WhatsApp untuk pemesanan.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {PAKET_LISENSI.map((paket) => (
+                  <div
+                    key={paket.label}
+                    className={`relative rounded-lg border-2 p-4 text-center space-y-1 ${
+                      paket.populer
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-muted/20"
+                    }`}
+                  >
+                    {paket.populer && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <Badge className="text-[10px] px-2 py-0.5 bg-primary text-primary-foreground">
+                          Populer
+                        </Badge>
+                      </div>
+                    )}
+                    <p className="font-semibold text-sm">{paket.label}</p>
+                    <p className="text-xs text-muted-foreground">{paket.durasi}</p>
+                    <p className={`text-lg font-bold ${paket.populer ? "text-primary" : "text-foreground"}`}>
+                      {formatRupiahLisensi(paket.harga)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-xs text-muted-foreground text-center italic">
+                * Harga dapat berubah sewaktu-waktu. Konfirmasi ke Admin untuk harga terkini.
+              </p>
+
+              <a
+                href={`https://wa.me/${WA_NUMBER}?text=${WA_MESSAGE}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Hubungi Admin via WhatsApp
+                </Button>
+              </a>
             </CardContent>
           </Card>
         </>

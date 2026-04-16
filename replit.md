@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.31**
+**Current version: 1.0.32**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -23,7 +23,15 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.31)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.32)
+
+### v1.0.32 — Paket & Harga Lisensi di Halaman Lisensi
+- Ditambahkan section "Paket & Harga Lisensi" di halaman Lisensi (bawah kartu aktivasi key)
+- Menampilkan 4 paket: 1 Bulan (Rp19.900), 3 Bulan (Rp54.900), 6 Bulan (Rp99.000), 1 Tahun (Rp179.000)
+- Paket 3 Bulan ditandai badge "Populer"
+- Keterangan harga dapat berubah sewaktu-waktu
+- Tombol "Hubungi Admin via WhatsApp" langsung buka WA ke 082397803813 dengan pesan otomatis
+- File: `artifacts/hutang-app/src/pages/lisensi.tsx`
 
 ### v1.0.31 — Multi-Pilih Nota Hutang saat Terima Pembayaran
 - Dialog "Terima Pembayaran" sekarang menggunakan **checkbox list** (bukan dropdown tunggal) — user bisa pilih lebih dari 1 nota hutang sekaligus
