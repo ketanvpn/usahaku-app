@@ -362,9 +362,9 @@ export default function KasirPage() {
                   }`}
                 >
                   <CardContent className="p-3 flex flex-col gap-1.5 h-full">
-                    {/* Badge jumlah di keranjang */}
+                    {/* Badge jumlah di keranjang — di dalam batas kartu agar tidak terpotong */}
                     {inCart && (
-                      <Badge className="absolute -top-2 -right-2 h-5 min-w-5 px-1.5 text-xs bg-primary text-primary-foreground shadow">
+                      <Badge className="absolute top-2 right-2 h-5 min-w-5 px-1.5 text-xs bg-primary text-primary-foreground shadow">
                         {inCart.jumlah}
                       </Badge>
                     )}
