@@ -912,10 +912,10 @@ function scheduleGDriveAutoBackup(): void {
   // Pertama: 45 detik setelah app siap
   setTimeout(() => {
     tryGDriveAutoBackup().catch((e) => writeLog(`[gdrive] auto-backup error: ${e}`));
-    // Kemudian setiap 60 menit
+    // Kemudian setiap 15 menit
     gdriveAutoBackupTimer = setInterval(() => {
       tryGDriveAutoBackup().catch((e) => writeLog(`[gdrive] auto-backup error: ${e}`));
-    }, 60 * 60 * 1000);
+    }, 15 * 60 * 1000);
   }, 45_000);
 }
 

@@ -241,7 +241,7 @@ Fitur ini dilengkapi **pengaman otomatis** — jika file backup yang dipilih ter
 
 ### Backup & Restore Google Drive
 
-Fitur ini memungkinkan data Anda tersimpan aman di Google Drive secara otomatis. Backup berjalan sendiri setiap 60 menit selama aplikasi aktif — Anda tidak perlu melakukan apapun setelah setup awal.
+Fitur ini memungkinkan data Anda tersimpan aman di Google Drive secara otomatis. Backup berjalan sendiri setiap **15 menit** selama aplikasi aktif — Anda tidak perlu melakukan apapun setelah setup awal.
 
 > **Catatan**: Fitur ini membutuhkan koneksi internet hanya saat proses backup/restore berlangsung. Data utama tetap bekerja 100% offline.
 
