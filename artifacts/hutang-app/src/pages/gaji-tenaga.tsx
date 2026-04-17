@@ -27,6 +27,17 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Loader2, Plus, Edit, Trash2, Search, HardHat, Banknote, Users } from "lucide-react";
 import { useLicense } from "@/context/license-context";
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function toTitleCase(str: string): string {
+  return str.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function capitalizeFirst(str: string): string {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
 const pekerjaSchema = z.object({
@@ -233,18 +244,28 @@ export default function GajiTenagaPage() {
     }
   };
 
-  // ── Filtered lists ───────────────────────────────────────────────────────────
-  const filteredUpah = (upahList ?? []).filter((u) =>
-    !searchUpah ||
-    u.pekerja_nama.toLowerCase().includes(searchUpah.toLowerCase()) ||
-    u.keterangan.toLowerCase().includes(searchUpah.toLowerCase())
-  );
+  // ── Filtered & sorted lists ──────────────────────────────────────────────────
+  const filteredUpah = (upahList ?? [])
+    .filter((u) =>
+      !searchUpah ||
+      u.pekerja_nama.toLowerCase().includes(searchUpah.toLowerCase()) ||
+      u.keterangan.toLowerCase().includes(searchUpah.toLowerCase())
+    )
+    .sort((a, b) => {
+      const namaSort = a.pekerja_nama.localeCompare(b.pekerja_nama, "id");
+      if (namaSort !== 0) return namaSort;
+      if (a.tanggal_kerja < b.tanggal_kerja) return 1;
+      if (a.tanggal_kerja > b.tanggal_kerja) return -1;
+      return b.id - a.id;
+    });
 
-  const filteredPekerja = (pekerjaList ?? []).filter((p) =>
-    !searchPekerja ||
-    p.nama.toLowerCase().includes(searchPekerja.toLowerCase()) ||
-    (p.jabatan ?? "").toLowerCase().includes(searchPekerja.toLowerCase())
-  );
+  const filteredPekerja = (pekerjaList ?? [])
+    .filter((p) =>
+      !searchPekerja ||
+      p.nama.toLowerCase().includes(searchPekerja.toLowerCase()) ||
+      (p.jabatan ?? "").toLowerCase().includes(searchPekerja.toLowerCase())
+    )
+    .sort((a, b) => a.nama.localeCompare(b.nama, "id"));
 
   const isPending = createUpah.isPending || updateUpah.isPending;
   const isPekerjaFormPending = createPekerja.isPending || updatePekerja.isPending;
@@ -288,9 +309,12 @@ export default function GajiTenagaPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="semua">Semua Pekerja</SelectItem>
-                {(pekerjaList ?? []).map((p) => (
-                  <SelectItem key={p.id} value={p.id.toString()}>{p.nama}</SelectItem>
-                ))}
+                {(pekerjaList ?? [])
+                  .slice()
+                  .sort((a, b) => a.nama.localeCompare(b.nama, "id"))
+                  .map((p) => (
+                    <SelectItem key={p.id} value={p.id.toString()}>{p.nama}</SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             <Button onClick={openTambahUpah} disabled={!lisensiAktif}>
@@ -300,28 +324,32 @@ export default function GajiTenagaPage() {
 
           <Card>
             <CardContent className="p-0">
-              {loadingUpah ? (
-                <TableSkeleton cols={8} />
-              ) : filteredUpah.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">
-                  <HardHat className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                  <p>Belum ada catatan upah</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Pekerja</TableHead>
+                      <TableHead>Keterangan</TableHead>
+                      <TableHead className="text-right">Total Upah</TableHead>
+                      <TableHead className="text-right">Sudah Dibayar</TableHead>
+                      <TableHead className="text-right">Sisa</TableHead>
+                      <TableHead>Tgl. Kerja</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  {loadingUpah ? (
+                    <TableSkeleton cols={8} />
+                  ) : filteredUpah.length === 0 ? (
+                    <TableBody>
                       <TableRow>
-                        <TableHead>Pekerja</TableHead>
-                        <TableHead>Keterangan</TableHead>
-                        <TableHead className="text-right">Total Upah</TableHead>
-                        <TableHead className="text-right">Sudah Dibayar</TableHead>
-                        <TableHead className="text-right">Sisa</TableHead>
-                        <TableHead>Tgl. Kerja</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Aksi</TableHead>
+                        <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
+                          <HardHat className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                          <p>Belum ada catatan upah</p>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
+                    </TableBody>
+                  ) : (
                     <TableBody>
                       {filteredUpah.map((u) => (
                         <TableRow key={u.id}>
@@ -353,9 +381,9 @@ export default function GajiTenagaPage() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
-                </div>
-              )}
+                  )}
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -374,25 +402,29 @@ export default function GajiTenagaPage() {
 
           <Card>
             <CardContent className="p-0">
-              {loadingPekerja ? (
-                <TableSkeleton cols={5} />
-              ) : filteredPekerja.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">
-                  <Users className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                  <p>Belum ada data pekerja</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Jabatan</TableHead>
+                      <TableHead>Telepon</TableHead>
+                      <TableHead>Catatan</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  {loadingPekerja ? (
+                    <TableSkeleton cols={5} />
+                  ) : filteredPekerja.length === 0 ? (
+                    <TableBody>
                       <TableRow>
-                        <TableHead>Nama</TableHead>
-                        <TableHead>Jabatan</TableHead>
-                        <TableHead>Telepon</TableHead>
-                        <TableHead>Catatan</TableHead>
-                        <TableHead className="text-right">Aksi</TableHead>
+                        <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                          <Users className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                          <p>Belum ada data pekerja</p>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
+                    </TableBody>
+                  ) : (
                     <TableBody>
                       {filteredPekerja.map((p) => (
                         <TableRow key={p.id}>
@@ -413,9 +445,9 @@ export default function GajiTenagaPage() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
-                </div>
-              )}
+                  )}
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -440,11 +472,14 @@ export default function GajiTenagaPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(pekerjaList ?? []).map((p) => (
-                          <SelectItem key={p.id} value={p.id.toString()}>
-                            {p.nama}{p.jabatan ? ` — ${p.jabatan}` : ""}
-                          </SelectItem>
-                        ))}
+                        {(pekerjaList ?? [])
+                          .slice()
+                          .sort((a, b) => a.nama.localeCompare(b.nama, "id"))
+                          .map((p) => (
+                            <SelectItem key={p.id} value={p.id.toString()}>
+                              {p.nama}{p.jabatan ? ` — ${p.jabatan}` : ""}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -454,7 +489,14 @@ export default function GajiTenagaPage() {
               <FormField control={upahForm.control} name="keterangan" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Keterangan Pekerjaan <span className="text-destructive">*</span></FormLabel>
-                  <FormControl><Input placeholder="Contoh: Angkut gabah 3 ton" {...field} /></FormControl>
+                  <FormControl>
+                    <Input
+                      placeholder="Contoh: Angkut gabah 3 ton"
+                      autoCapitalize="sentences"
+                      {...field}
+                      onChange={(e) => field.onChange(capitalizeFirst(e.target.value))}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -591,14 +633,28 @@ export default function GajiTenagaPage() {
               <FormField control={pekerjaForm.control} name="nama" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Nama <span className="text-destructive">*</span></FormLabel>
-                  <FormControl><Input placeholder="Nama pekerja" {...field} /></FormControl>
+                  <FormControl>
+                    <Input
+                      placeholder="Nama pekerja"
+                      autoCapitalize="words"
+                      {...field}
+                      onChange={(e) => field.onChange(toTitleCase(e.target.value))}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={pekerjaForm.control} name="jabatan" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Jabatan / Jenis Pekerjaan</FormLabel>
-                  <FormControl><Input placeholder="Contoh: Kuli, Sopir, Kasir" {...field} /></FormControl>
+                  <FormControl>
+                    <Input
+                      placeholder="Contoh: Kuli, Sopir, Kasir"
+                      autoCapitalize="words"
+                      {...field}
+                      onChange={(e) => field.onChange(toTitleCase(e.target.value))}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
