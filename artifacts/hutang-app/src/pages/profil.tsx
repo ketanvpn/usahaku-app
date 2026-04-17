@@ -13,7 +13,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { UserCircle, Shield, LogOut, Loader2, KeyRound, Check, Store, Phone, MapPin, Pencil, X } from "lucide-react";
+import { Shield, LogOut, Loader2, KeyRound, Check, Store, Phone, MapPin, Pencil, X } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -161,11 +161,11 @@ export default function ProfilPage() {
         <Card className="shadow-md">
           <CardHeader className="bg-primary/5 pb-8 pt-8">
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 bg-primary rounded-full flex items-center justify-center text-primary-foreground shadow-inner">
-                <UserCircle className="h-10 w-10" />
+              <div className="h-16 w-16 bg-primary rounded-full flex items-center justify-center text-primary-foreground shadow-inner text-2xl font-bold select-none">
+                {(user.nama || user.username).charAt(0).toUpperCase()}
               </div>
               <div>
-                <CardTitle className="text-2xl">{user.nama}</CardTitle>
+                <CardTitle className="text-2xl">{user.nama || user.username}</CardTitle>
                 <CardDescription className="flex items-center gap-1 mt-1">
                   <Shield className="h-3 w-3" />
                   {user.role === "super_admin" ? "Super Administrator" : "Owner Usaha"}
@@ -196,8 +196,10 @@ export default function ProfilPage() {
 
               {user.usaha_id && (
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">ID Usaha Terhubung</label>
-                  <div className="font-medium">#{user.usaha_id}</div>
+                  <label className="text-sm font-medium text-muted-foreground">Usaha Terhubung</label>
+                  <div className="font-medium">
+                    {usahaData ? usahaData.nama_usaha : usahaLoading ? "Memuat..." : `#${user.usaha_id}`}
+                  </div>
                 </div>
               )}
             </div>
