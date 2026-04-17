@@ -55,6 +55,8 @@ export const sqliteRaw: any = sqlite;
 - **Frontend (Daftar Pekerja table):** Kolom "Sisa Upah" baru (merah jika ada sisa, "Lunas" jika 0), tombol "Bayar" per baris (disabled jika lunas)
 - **Dialog Bayar Batch:** Preview distribusi FIFO live saat nominal diubah, input jumlah + tanggal + catatan opsional
 - **Computed:** `sisaPerPekerja` (Map) dan `batchUpahList` via `useMemo` dari `allUpahList` (unfiltered query)
+- **Bugfix:** `Cache-Control: no-store` ditambahkan ke semua `/api` response di Express (`app.ts`) — mencegah browser HTTP cache mengembalikan data lama (304 Not Modified) setelah mutation, sehingga list selalu langsung diperbarui
+- **Bugfix:** Backend harus di-build ulang (`pnpm run build`) sebelum restart agar route baru aktif (dist-based server)
 
 ### v1.0.46 — Fitur Gaji & Tenaga
 **Fitur:** Modul manajemen upah/gaji tenaga kerja, mirip pola hutang/pembayaran.
