@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   useGetPekerjaList, useCreatePekerja, useUpdatePekerja, useDeletePekerja,
   useGetUpahList, useCreateUpah, useUpdateUpah, useDeleteUpah,
   useGetUpah, useBayarUpah, useDeleteBayarUpah, useBayarBatchUpah,
+  useGetUsaha, getGetUsahaQueryKey,
   getGetPekerjaListQueryKey, getGetUpahListQueryKey, getGetUpahQueryKey,
   Pekerja, UpahPekerja, GetUpahListParams, UpahStatus,
 } from "@workspace/api-client-react";
@@ -24,8 +25,9 @@ import * as z from "zod";
 import { formatRupiah, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { Loader2, Plus, Edit, Trash2, Search, HardHat, Banknote, Users, TrendingDown, Clock, Download } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Search, HardHat, Banknote, Users, TrendingDown, Clock, Download, Printer } from "lucide-react";
 import { useLicense } from "@/context/license-context";
+import { useAuth } from "@/hooks/use-auth";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -36,6 +38,90 @@ function toTitleCase(str: string): string {
 function capitalizeFirst(str: string): string {
   if (!str) return str;
   return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// ── Kwitansi helpers ──────────────────────────────────────────────────────────
+
+interface KwitansiUpahData {
+  type: "single" | "batch";
+  pekerja_nama: string;
+  pekerja_jabatan: string;
+  keterangan: string;
+  tanggal_bayar: string;
+  jumlah: number;
+  catatan: string;
+  namaUsaha: string;
+}
+
+function openPrintWindow(html: string) {
+  if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
+    window.electronApp.openInBrowser(html);
+  } else {
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const tab = window.open(url, "_blank");
+    if (tab) tab.addEventListener("load", () => setTimeout(() => URL.revokeObjectURL(url), 2000));
+  }
+}
+
+function buildKwitansiUpahHtml(d: KwitansiUpahData): string {
+  const noKwitansi = `KWT-UPAH-${Date.now().toString().slice(-8)}`;
+  const fmtRp = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+  const fmtTgl = (s: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(s));
+  const judulKet = d.type === "batch" ? "Pembayaran seluruh upah tertunggak" : d.keterangan;
+
+  return `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
+<title>Kwitansi ${noKwitansi}</title>
+<style>
+@page { size: A5 landscape; margin: 12mm 14mm; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; background: white; }
+.wrap { border: 2px solid #333; border-radius: 4px; padding: 16px 20px; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1.5px solid #333; padding-bottom: 10px; margin-bottom: 10px; }
+.usaha-nama { font-size: 14pt; font-weight: bold; }
+.judul-kwt { font-size: 11pt; font-weight: bold; text-align: right; }
+.nomor-kwt { font-size: 8.5pt; color: #555; text-align: right; margin-top: 2px; }
+table.detail { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10pt; }
+table.detail td { padding: 3px 6px; vertical-align: top; }
+table.detail td:first-child { font-weight: 600; width: 130px; white-space: nowrap; }
+table.detail td.colon { width: 12px; }
+.nominal-box { margin-top: 14px; background: #f5f5f5; border: 1px solid #bbb; border-radius: 3px; padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; }
+.nominal-label { font-size: 9pt; color: #555; }
+.nominal-value { font-size: 16pt; font-weight: bold; color: #1a1a1a; }
+.footer-kwt { margin-top: 14px; display: flex; justify-content: flex-end; align-items: flex-end; }
+.ttd-box { text-align: center; width: 160px; }
+.ttd-space { height: 48px; border-bottom: 1px solid #999; margin-bottom: 4px; }
+.ttd-label { font-size: 8.5pt; color: #555; }
+.bottom-note { margin-top: 10px; border-top: 1px dashed #bbb; padding-top: 8px; text-align: center; font-size: 8pt; color: #777; }
+</style>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},600);});<\/script>
+</head><body>
+<div class="wrap">
+  <div class="header">
+    <div><div class="usaha-nama">${d.namaUsaha}</div></div>
+    <div><div class="judul-kwt">KWITANSI PEMBAYARAN UPAH</div>
+    <div class="nomor-kwt">No: ${noKwitansi} &bull; Tgl: ${fmtTgl(d.tanggal_bayar)}</div></div>
+  </div>
+  <table class="detail">
+    <tr><td>Nama Pekerja</td><td class="colon">:</td><td><strong>${d.pekerja_nama}</strong></td></tr>
+    ${d.pekerja_jabatan ? `<tr><td>Jabatan</td><td class="colon">:</td><td>${d.pekerja_jabatan}</td></tr>` : ""}
+    <tr><td>Keterangan</td><td class="colon">:</td><td>${judulKet}</td></tr>
+    <tr><td>Tanggal Bayar</td><td class="colon">:</td><td>${fmtTgl(d.tanggal_bayar)}</td></tr>
+    ${d.catatan ? `<tr><td>Catatan</td><td class="colon">:</td><td>${d.catatan}</td></tr>` : ""}
+  </table>
+  <div class="nominal-box">
+    <span class="nominal-label">Jumlah Diterima</span>
+    <span class="nominal-value">${fmtRp(d.jumlah)}</span>
+  </div>
+  <div class="footer-kwt">
+    <div class="ttd-box">
+      <div class="ttd-space"></div>
+      <div class="ttd-label">Tanda Tangan Pekerja</div>
+    </div>
+  </div>
+  <div class="bottom-note">Simpan kwitansi ini sebagai bukti pembayaran upah.</div>
+</div>
+</body></html>`;
 }
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
@@ -85,6 +171,12 @@ export default function GajiTenagaPage() {
   const { lisensiAktif } = useLicense();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { user } = useAuth();
+
+  // ── Kwitansi state ──────────────────────────────────────────────────────────
+  const [isKwitansiOpen, setIsKwitansiOpen] = useState(false);
+  const [kwitansiData, setKwitansiData] = useState<KwitansiUpahData | null>(null);
+  const pendingKwitansiRef = useRef<KwitansiUpahData | null>(null);
 
   // ── Upah state ──────────────────────────────────────────────────────────────
   const [filterStatus, setFilterStatus] = useState<UpahStatus | undefined>(undefined);
@@ -120,6 +212,10 @@ export default function GajiTenagaPage() {
   const { data: upahDetail, isLoading: loadingDetail } = useGetUpah(selectedUpahId ?? 0, {
     query: { enabled: !!selectedUpahId },
   });
+  const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, {
+    query: { enabled: !!user?.usaha_id, queryKey: getGetUsahaQueryKey(user?.usaha_id ?? 0) },
+  });
+  const namaUsaha = usahaData?.nama_usaha ?? "Usahaku";
 
   // ── Mutations ────────────────────────────────────────────────────────────────
   const invalidateUpah = () => {
@@ -150,7 +246,16 @@ export default function GajiTenagaPage() {
   });
   const bayarUpah = useBayarUpah({
     mutation: {
-      onSuccess: () => { invalidateUpah(); toast({ title: "Pembayaran berhasil dicatat" }); bayarForm.reset(); },
+      onSuccess: () => {
+        invalidateUpah();
+        toast({ title: "Pembayaran berhasil dicatat" });
+        bayarForm.reset();
+        if (pendingKwitansiRef.current) {
+          setKwitansiData(pendingKwitansiRef.current);
+          setIsKwitansiOpen(true);
+          pendingKwitansiRef.current = null;
+        }
+      },
       onError: (e: unknown) => toast({ title: "Gagal", description: (e as Error)?.message, variant: "destructive" }),
     },
   });
@@ -169,6 +274,11 @@ export default function GajiTenagaPage() {
         toast({ title: "Pembayaran batch berhasil", description: data.message });
         setIsBatchDialogOpen(false);
         setBatchPekerja(null);
+        if (pendingKwitansiRef.current) {
+          setKwitansiData(pendingKwitansiRef.current);
+          setIsKwitansiOpen(true);
+          pendingKwitansiRef.current = null;
+        }
       },
       onError: (e: unknown) => toast({ title: "Gagal", description: (e as Error)?.message, variant: "destructive" }),
     },
@@ -305,6 +415,16 @@ export default function GajiTenagaPage() {
 
   const submitBatch = (data: BatchForm) => {
     if (!batchPekerja) return;
+    pendingKwitansiRef.current = {
+      type: "batch",
+      pekerja_nama: batchPekerja.nama,
+      pekerja_jabatan: batchPekerja.jabatan ?? "",
+      keterangan: "Pembayaran seluruh upah tertunggak",
+      tanggal_bayar: data.tanggal_bayar,
+      jumlah: data.jumlah_total,
+      catatan: data.catatan ?? "",
+      namaUsaha,
+    };
     bayarBatch.mutate({ id: batchPekerja.id, data: { jumlah_total: data.jumlah_total, tanggal_bayar: data.tanggal_bayar, catatan: data.catatan || undefined } });
   };
 
@@ -317,7 +437,17 @@ export default function GajiTenagaPage() {
   };
 
   const submitBayar = (data: BayarForm) => {
-    if (!selectedUpahId) return;
+    if (!selectedUpahId || !upahDetail) return;
+    pendingKwitansiRef.current = {
+      type: "single",
+      pekerja_nama: upahDetail.pekerja_nama,
+      pekerja_jabatan: upahDetail.pekerja_jabatan ?? "",
+      keterangan: upahDetail.keterangan,
+      tanggal_bayar: data.tanggal_bayar,
+      jumlah: data.jumlah,
+      catatan: data.catatan ?? "",
+      namaUsaha,
+    };
     bayarUpah.mutate({ id: selectedUpahId, data: { upah_id: selectedUpahId, jumlah: data.jumlah, tanggal_bayar: data.tanggal_bayar, catatan: data.catatan || null } });
   };
 
@@ -978,6 +1108,38 @@ export default function GajiTenagaPage() {
                 </div>
               </form>
             </Form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog Kwitansi Upah ─────────────────────────────────────────────── */}
+      <Dialog open={isKwitansiOpen} onOpenChange={setIsKwitansiOpen}>
+        <DialogContent aria-describedby={undefined} className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Printer className="h-5 w-5 text-primary" />
+              Cetak Kwitansi
+            </DialogTitle>
+          </DialogHeader>
+          {kwitansiData && (
+            <div className="space-y-4">
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1.5 text-sm">
+                <div className="font-semibold">{kwitansiData.pekerja_nama}</div>
+                {kwitansiData.pekerja_jabatan && (
+                  <div className="text-muted-foreground text-xs">{kwitansiData.pekerja_jabatan}</div>
+                )}
+                <div className="text-muted-foreground">{kwitansiData.keterangan}</div>
+                <div className="pt-1 font-bold text-base text-primary">{formatRupiah(kwitansiData.jumlah)}</div>
+              </div>
+              <p className="text-sm text-muted-foreground">Cetak kwitansi pembayaran upah untuk diberikan kepada pekerja?</p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsKwitansiOpen(false)}>Lewati</Button>
+                <Button onClick={() => { openPrintWindow(buildKwitansiUpahHtml(kwitansiData)); setIsKwitansiOpen(false); }}>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Cetak Kwitansi
+                </Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
