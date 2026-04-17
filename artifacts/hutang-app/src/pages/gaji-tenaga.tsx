@@ -73,26 +73,26 @@ function buildKwitansiUpahHtml(d: KwitansiUpahData): string {
   return `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
 <title>Kwitansi ${noKwitansi}</title>
 <style>
-@page { size: A5 landscape; margin: 12mm 14mm; }
+@page { size: A5 landscape; margin: 8mm 10mm; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; background: white; }
-.wrap { border: 2px solid #333; border-radius: 4px; padding: 16px 20px; }
-.header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1.5px solid #333; padding-bottom: 10px; margin-bottom: 10px; }
-.usaha-nama { font-size: 14pt; font-weight: bold; }
-.judul-kwt { font-size: 11pt; font-weight: bold; text-align: right; }
-.nomor-kwt { font-size: 8.5pt; color: #555; text-align: right; margin-top: 2px; }
-table.detail { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10pt; }
-table.detail td { padding: 3px 6px; vertical-align: top; }
-table.detail td:first-child { font-weight: 600; width: 130px; white-space: nowrap; }
-table.detail td.colon { width: 12px; }
-.nominal-box { margin-top: 14px; background: #f5f5f5; border: 1px solid #bbb; border-radius: 3px; padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; }
-.nominal-label { font-size: 9pt; color: #555; }
-.nominal-value { font-size: 16pt; font-weight: bold; color: #1a1a1a; }
-.footer-kwt { margin-top: 14px; display: flex; justify-content: flex-end; align-items: flex-end; }
-.ttd-box { text-align: center; width: 160px; }
-.ttd-space { height: 48px; border-bottom: 1px solid #999; margin-bottom: 4px; }
-.ttd-label { font-size: 8.5pt; color: #555; }
-.bottom-note { margin-top: 10px; border-top: 1px dashed #bbb; padding-top: 8px; text-align: center; font-size: 8pt; color: #777; }
+body { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #111; background: white; width: 182mm; }
+.wrap { border: 1.5px solid #333; border-radius: 3px; padding: 10px 14px; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #333; padding-bottom: 7px; margin-bottom: 7px; }
+.usaha-nama { font-size: 12pt; font-weight: bold; }
+.judul-kwt { font-size: 10pt; font-weight: bold; text-align: right; }
+.nomor-kwt { font-size: 7.5pt; color: #555; text-align: right; margin-top: 2px; }
+table.detail { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 9pt; }
+table.detail td { padding: 2px 4px; vertical-align: top; }
+table.detail td:first-child { font-weight: 600; width: 110px; white-space: nowrap; }
+table.detail td.colon { width: 10px; }
+.nominal-box { margin-top: 10px; background: #f5f5f5; border: 1px solid #bbb; border-radius: 3px; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center; }
+.nominal-label { font-size: 8pt; color: #555; }
+.nominal-value { font-size: 13pt; font-weight: bold; color: #1a1a1a; }
+.footer-kwt { margin-top: 10px; display: flex; justify-content: flex-end; }
+.ttd-box { text-align: center; width: 130px; }
+.ttd-space { height: 38px; border-bottom: 1px solid #999; margin-bottom: 3px; }
+.ttd-label { font-size: 7.5pt; color: #555; }
+.bottom-note { margin-top: 7px; border-top: 1px dashed #bbb; padding-top: 6px; text-align: center; font-size: 7pt; color: #777; }
 </style>
 <script>window.addEventListener('load',function(){setTimeout(function(){window.print();},600);});<\/script>
 </head><body>
