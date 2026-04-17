@@ -822,3 +822,10 @@ export const CreateBayarUpahBody = zod.object({
 
 export const DeleteBayarUpahParams = zod.object({ id: zod.coerce.number() });
 export const DeleteBayarUpahResponse = zod.object({ message: zod.string() });
+
+export const BayarBatchUpahParams = zod.object({ id: zod.coerce.number() });
+export const BayarBatchUpahBody = zod.object({
+  jumlah_total: zod.number().positive(),
+  tanggal_bayar: zod.string().min(1),
+  catatan: zod.string().nullish(),
+});

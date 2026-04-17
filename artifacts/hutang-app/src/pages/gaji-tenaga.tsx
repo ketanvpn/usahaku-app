@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   useGetPekerjaList, useCreatePekerja, useUpdatePekerja, useDeletePekerja,
   useGetUpahList, useCreateUpah, useUpdateUpah, useDeleteUpah,
-  useGetUpah, useBayarUpah, useDeleteBayarUpah,
+  useGetUpah, useBayarUpah, useDeleteBayarUpah, useBayarBatchUpah,
   getGetPekerjaListQueryKey, getGetUpahListQueryKey, getGetUpahQueryKey,
   Pekerja, UpahPekerja, GetUpahListParams, UpahStatus,
 } from "@workspace/api-client-react";
@@ -61,9 +61,16 @@ const bayarSchema = z.object({
   catatan: z.string().optional(),
 });
 
+const batchSchema = z.object({
+  jumlah_total: z.coerce.number().min(1, { message: "Jumlah harus lebih dari 0" }),
+  tanggal_bayar: z.string().min(1, { message: "Tanggal bayar wajib diisi" }),
+  catatan: z.string().optional(),
+});
+
 type PekerjaForm = z.infer<typeof pekerjaSchema>;
 type UpahForm = z.infer<typeof upahSchema>;
 type BayarForm = z.infer<typeof bayarSchema>;
+type BatchForm = z.infer<typeof batchSchema>;
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "lunas") {
@@ -98,12 +105,17 @@ export default function GajiTenagaPage() {
   const [deletingPekerjaId, setDeletingPekerjaId] = useState<number | null>(null);
   const [deletingBayarId, setDeletingBayarId] = useState<number | null>(null);
 
+  // ── Batch state ─────────────────────────────────────────────────────────────
+  const [batchPekerja, setBatchPekerja] = useState<Pekerja | null>(null);
+  const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
+
   // ── Queries ─────────────────────────────────────────────────────────────────
   const params: GetUpahListParams = {};
   if (filterStatus) params.status = filterStatus;
   if (filterPekerja) params.pekerja_id = filterPekerja;
 
   const { data: upahList, isLoading: loadingUpah } = useGetUpahList(params);
+  const { data: allUpahList } = useGetUpahList({});
   const { data: pekerjaList, isLoading: loadingPekerja } = useGetPekerjaList();
   const { data: upahDetail, isLoading: loadingDetail } = useGetUpah(selectedUpahId ?? 0, {
     query: { enabled: !!selectedUpahId },
@@ -149,6 +161,19 @@ export default function GajiTenagaPage() {
     },
   });
 
+  const bayarBatch = useBayarBatchUpah({
+    mutation: {
+      onSuccess: (data) => {
+        invalidateUpah();
+        qc.invalidateQueries({ queryKey: getGetUpahListQueryKey({}) });
+        toast({ title: "Pembayaran batch berhasil", description: data.message });
+        setIsBatchDialogOpen(false);
+        setBatchPekerja(null);
+      },
+      onError: (e: unknown) => toast({ title: "Gagal", description: (e as Error)?.message, variant: "destructive" }),
+    },
+  });
+
   const createPekerja = useCreatePekerja({
     mutation: {
       onSuccess: () => { invalidatePekerja(); toast({ title: "Pekerja berhasil ditambah" }); setIsPekerjaDialogOpen(false); },
@@ -168,6 +193,25 @@ export default function GajiTenagaPage() {
     },
   });
 
+  // ── Computed: sisa upah per pekerja & batch list ────────────────────────────
+  const sisaPerPekerja = useMemo(() => {
+    const map = new Map<number, number>();
+    (allUpahList ?? []).filter(u => u.status === "belum_lunas").forEach(u => {
+      map.set(u.pekerja_id, (map.get(u.pekerja_id) ?? 0) + u.sisa_upah);
+    });
+    return map;
+  }, [allUpahList]);
+
+  const batchUpahList = useMemo(() => {
+    if (!batchPekerja) return [];
+    return (allUpahList ?? [])
+      .filter(u => u.pekerja_id === batchPekerja.id && u.status === "belum_lunas")
+      .slice()
+      .sort((a, b) => a.tanggal_kerja.localeCompare(b.tanggal_kerja) || a.id - b.id);
+  }, [allUpahList, batchPekerja]);
+
+  const totalSisaBatch = batchUpahList.reduce((acc, u) => acc + u.sisa_upah, 0);
+
   // ── Forms ────────────────────────────────────────────────────────────────────
   const today = new Date().toISOString().split("T")[0];
 
@@ -184,6 +228,11 @@ export default function GajiTenagaPage() {
   const bayarForm = useForm<BayarForm>({
     resolver: zodResolver(bayarSchema),
     defaultValues: { jumlah: 0, tanggal_bayar: today, catatan: "" },
+  });
+
+  const batchForm = useForm<BatchForm>({
+    resolver: zodResolver(batchSchema),
+    defaultValues: { jumlah_total: 0, tanggal_bayar: today, catatan: "" },
   });
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
@@ -209,6 +258,20 @@ export default function GajiTenagaPage() {
     setSelectedUpahId(u.id);
     bayarForm.reset({ jumlah: u.sisa_upah, tanggal_bayar: today, catatan: "" });
     setIsBayarDialogOpen(true);
+  };
+
+  const openBatch = (p: Pekerja) => {
+    setBatchPekerja(p);
+    const sisaBatch = (allUpahList ?? [])
+      .filter(u => u.pekerja_id === p.id && u.status === "belum_lunas")
+      .reduce((acc, u) => acc + u.sisa_upah, 0);
+    batchForm.reset({ jumlah_total: sisaBatch, tanggal_bayar: today, catatan: "" });
+    setIsBatchDialogOpen(true);
+  };
+
+  const submitBatch = (data: BatchForm) => {
+    if (!batchPekerja) return;
+    bayarBatch.mutate({ id: batchPekerja.id, data: { jumlah_total: data.jumlah_total, tanggal_bayar: data.tanggal_bayar, catatan: data.catatan || undefined } });
   };
 
   const submitUpah = (data: UpahForm) => {
@@ -410,15 +473,16 @@ export default function GajiTenagaPage() {
                       <TableHead>Jabatan</TableHead>
                       <TableHead>Telepon</TableHead>
                       <TableHead>Catatan</TableHead>
+                      <TableHead className="text-right">Sisa Upah</TableHead>
                       <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   {loadingPekerja ? (
-                    <TableSkeleton cols={5} />
+                    <TableSkeleton cols={6} />
                   ) : filteredPekerja.length === 0 ? (
                     <TableBody>
                       <TableRow>
-                        <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                        <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
                           <Users className="h-10 w-10 mx-auto mb-3 opacity-20" />
                           <p>Belum ada data pekerja</p>
                         </TableCell>
@@ -426,24 +490,36 @@ export default function GajiTenagaPage() {
                     </TableBody>
                   ) : (
                     <TableBody>
-                      {filteredPekerja.map((p) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="font-medium">{p.nama}</TableCell>
-                          <TableCell className="text-muted-foreground">{p.jabatan ?? "-"}</TableCell>
-                          <TableCell className="text-muted-foreground">{p.telepon ?? "-"}</TableCell>
-                          <TableCell className="text-muted-foreground max-w-[180px] truncate">{p.catatan ?? "-"}</TableCell>
-                          <TableCell>
-                            <div className="flex justify-end gap-1">
-                              <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => openEditPekerja(p)} disabled={!lisensiAktif}>
-                                <Edit className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button size="sm" variant="outline" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => { setDeletingPekerjaId(p.id); setIsDeletePekerjaOpen(true); }} disabled={!lisensiAktif}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {filteredPekerja.map((p) => {
+                        const sisaUpah = sisaPerPekerja.get(p.id) ?? 0;
+                        return (
+                          <TableRow key={p.id}>
+                            <TableCell className="font-medium">{p.nama}</TableCell>
+                            <TableCell className="text-muted-foreground">{p.jabatan ?? "-"}</TableCell>
+                            <TableCell className="text-muted-foreground">{p.telepon ?? "-"}</TableCell>
+                            <TableCell className="text-muted-foreground max-w-[180px] truncate">{p.catatan ?? "-"}</TableCell>
+                            <TableCell className="text-right">
+                              {sisaUpah > 0
+                                ? <span className="font-semibold text-red-700">{formatRupiah(sisaUpah)}</span>
+                                : <span className="text-muted-foreground text-xs">Lunas</span>
+                              }
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex justify-end gap-1">
+                                <Button size="sm" variant="default" className="h-7 text-xs" onClick={() => openBatch(p)} disabled={!lisensiAktif || sisaUpah === 0} title={sisaUpah === 0 ? "Semua upah sudah lunas" : "Bayar upah batch"}>
+                                  <Banknote className="h-3 w-3 mr-1" /> Bayar
+                                </Button>
+                                <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => openEditPekerja(p)} disabled={!lisensiAktif}>
+                                  <Edit className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button size="sm" variant="outline" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => { setDeletingPekerjaId(p.id); setIsDeletePekerjaOpen(true); }} disabled={!lisensiAktif}>
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   )}
                 </Table>
@@ -746,6 +822,85 @@ export default function GajiTenagaPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* ── Dialog Bayar Batch ───────────────────────────────────────────────── */}
+      <Dialog open={isBatchDialogOpen} onOpenChange={(open) => { setIsBatchDialogOpen(open); if (!open) { setBatchPekerja(null); batchForm.clearErrors(); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Bayar Upah Batch — {batchPekerja?.nama}</DialogTitle>
+          </DialogHeader>
+          {batchPekerja && (
+            <Form {...batchForm}>
+              <form onSubmit={batchForm.handleSubmit(submitBatch)} className="space-y-4">
+                <div className="rounded-md border bg-muted/40 p-3 space-y-1.5 max-h-48 overflow-y-auto">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Distribusi FIFO (terlama dulu)</p>
+                  {(() => {
+                    const jumlahInput = Number(batchForm.watch("jumlah_total")) || 0;
+                    let sisa = jumlahInput;
+                    return batchUpahList.map((u) => {
+                      const alokasi = Math.min(sisa, u.sisa_upah);
+                      sisa -= alokasi;
+                      const akanLunas = alokasi >= u.sisa_upah;
+                      return (
+                        <div key={u.id} className="flex items-center justify-between text-sm">
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium truncate block">{u.keterangan}</span>
+                            <span className="text-xs text-muted-foreground">{formatDate(u.tanggal_kerja)} · sisa {formatRupiah(u.sisa_upah)}</span>
+                          </div>
+                          <div className="text-right ml-3 shrink-0">
+                            {alokasi > 0 ? (
+                              <>
+                                <span className="font-semibold text-green-700">{formatRupiah(alokasi)}</span>
+                                {akanLunas && <span className="ml-1 text-xs bg-green-100 text-green-800 rounded px-1">Lunas</span>}
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                  <div className="flex justify-between pt-1.5 border-t text-sm font-semibold">
+                    <span>Total Sisa</span>
+                    <span>{formatRupiah(totalSisaBatch)}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField control={batchForm.control} name="jumlah_total" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Jumlah Bayar <span className="text-destructive">*</span></FormLabel>
+                      <FormControl><Input type="number" min={1} max={totalSisaBatch} placeholder="0" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={batchForm.control} name="tanggal_bayar" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tanggal Bayar <span className="text-destructive">*</span></FormLabel>
+                      <FormControl><Input type="date" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+                <FormField control={batchForm.control} name="catatan" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Catatan</FormLabel>
+                    <FormControl><Input placeholder="Opsional" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button type="button" variant="outline" onClick={() => setIsBatchDialogOpen(false)}>Batal</Button>
+                  <Button type="submit" disabled={bayarBatch.isPending}>
+                    {bayarBatch.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Bayar Sekarang
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.46**
+**Current version: 1.0.47**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -44,7 +44,17 @@ export const sqliteRaw: any = sqlite;
 
 ---
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.46)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.47)
+
+### v1.0.47 — Bayar Batch Upah
+**Fitur:** Pembayaran upah massal untuk 1 pekerja (FIFO distribution) dari tab Daftar Pekerja.
+- **Backend:** `POST /api/pekerja/:id/bayar-batch` — validasi, distribusi FIFO (terlama duluan), 1 entri Keuangan, N entri `bayar_upah`, semua dalam 1 DB transaction
+- **Zod types:** `BayarBatchUpahParams` + `BayarBatchUpahBody` di `lib/api-zod`
+- **API schemas:** `BayarBatchUpahBody` + `BayarBatchUpahResponse` di `api.schemas.ts`
+- **Client hook:** `bayarBatchUpah()` + `useBayarBatchUpah()` di `api-client-react`
+- **Frontend (Daftar Pekerja table):** Kolom "Sisa Upah" baru (merah jika ada sisa, "Lunas" jika 0), tombol "Bayar" per baris (disabled jika lunas)
+- **Dialog Bayar Batch:** Preview distribusi FIFO live saat nominal diubah, input jumlah + tanggal + catatan opsional
+- **Computed:** `sisaPerPekerja` (Map) dan `batchUpahList` via `useMemo` dari `allUpahList` (unfiltered query)
 
 ### v1.0.46 — Fitur Gaji & Tenaga
 **Fitur:** Modul manajemen upah/gaji tenaga kerja, mirip pola hutang/pembayaran.

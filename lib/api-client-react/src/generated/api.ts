@@ -19,6 +19,8 @@ import type {
 import type {
   AdminDashboard,
   BackupData,
+  BayarBatchUpahBody,
+  BayarBatchUpahResponse,
   CreateBayarUpahBody,
   CreateHutangBody,
   CreatePelangganBody,
@@ -2976,6 +2978,25 @@ export const useDeleteBayarUpah = <TError = ErrorType<unknown>, TContext = unkno
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
   return useMutation({
     mutationFn: (props: { id: number }) => deleteBayarUpah(props.id, requestOptions),
+    ...mutationOptions,
+  });
+};
+
+export const bayarBatchUpah = async (id: number, body: BayarBatchUpahBody, options?: RequestInit): Promise<BayarBatchUpahResponse> => {
+  return customFetch<BayarBatchUpahResponse>(`/api/pekerja/${id}/bayar-batch`, {
+    ...options,
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+};
+
+export const useBayarBatchUpah = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof bayarBatchUpah>>, TError, { id: number; data: BayarBatchUpahBody }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof bayarBatchUpah>>, TError, { id: number; data: BayarBatchUpahBody }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: (props: { id: number; data: BayarBatchUpahBody }) => bayarBatchUpah(props.id, props.data, requestOptions),
     ...mutationOptions,
   });
 };

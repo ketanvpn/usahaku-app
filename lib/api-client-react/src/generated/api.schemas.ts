@@ -384,6 +384,18 @@ export interface CreateBayarUpahBody {
   catatan?: string | null;
 }
 
+export interface BayarBatchUpahBody {
+  jumlah_total: number;
+  tanggal_bayar: string;
+  catatan?: string | null;
+}
+
+export interface BayarBatchUpahResponse {
+  message: string;
+  jumlah_dibayar: number;
+  jumlah_upah_lunas: number;
+}
+
 export type GetUpahListParams = {
   pekerja_id?: number;
   status?: UpahStatus;
