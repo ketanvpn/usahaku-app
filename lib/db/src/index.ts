@@ -163,6 +163,44 @@ sqlite.exec(`
   );
 `);
 
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS pekerja (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usaha_id INTEGER NOT NULL REFERENCES usaha(id),
+    nama TEXT NOT NULL,
+    telepon TEXT,
+    jabatan TEXT,
+    catatan TEXT,
+    created_at INTEGER NOT NULL DEFAULT (CAST((julianday('now') - 2440587.5)*86400000 AS INTEGER))
+  );
+
+  CREATE TABLE IF NOT EXISTS upah_pekerja (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usaha_id INTEGER NOT NULL REFERENCES usaha(id),
+    pekerja_id INTEGER NOT NULL REFERENCES pekerja(id),
+    keterangan TEXT NOT NULL,
+    jumlah_total TEXT NOT NULL,
+    total_dibayar TEXT NOT NULL DEFAULT '0',
+    sisa_upah TEXT NOT NULL,
+    tanggal_kerja TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'belum_lunas',
+    catatan TEXT,
+    created_at INTEGER NOT NULL DEFAULT (CAST((julianday('now') - 2440587.5)*86400000 AS INTEGER)),
+    updated_at INTEGER NOT NULL DEFAULT (CAST((julianday('now') - 2440587.5)*86400000 AS INTEGER))
+  );
+
+  CREATE TABLE IF NOT EXISTS bayar_upah (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usaha_id INTEGER NOT NULL REFERENCES usaha(id),
+    upah_id INTEGER NOT NULL REFERENCES upah_pekerja(id),
+    jumlah TEXT NOT NULL,
+    tanggal_bayar TEXT NOT NULL,
+    keuangan_id INTEGER,
+    catatan TEXT,
+    created_at INTEGER NOT NULL DEFAULT (CAST((julianday('now') - 2440587.5)*86400000 AS INTEGER))
+  );
+`);
+
 export const db = drizzle(sqlite, { schema });
 
 export const sqliteRaw = sqlite;

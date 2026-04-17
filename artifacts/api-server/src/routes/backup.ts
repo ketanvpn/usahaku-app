@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, sqliteRaw, usahaTable, pelangganTable, hutangTable, pembayaranTable, keuanganTable, barangTable, transaksiStokTable, transaksiKasirTable, transaksiKasirItemTable } from "@workspace/db";
+import { db, sqliteRaw, usahaTable, pelangganTable, hutangTable, pembayaranTable, keuanganTable, barangTable, transaksiStokTable, transaksiKasirTable, transaksiKasirItemTable, pekerjaTable, upahPekerjaTable, bayarUpahTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
@@ -25,6 +25,9 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   const barangList          = await db.select().from(barangTable).where(eq(barangTable.usahaId, usahaId));
   const transaksiStokList   = await db.select().from(transaksiStokTable).where(eq(transaksiStokTable.usahaId, usahaId));
   const transaksiKasirList  = await db.select().from(transaksiKasirTable).where(eq(transaksiKasirTable.usahaId, usahaId));
+  const pekerjaList         = await db.select().from(pekerjaTable).where(eq(pekerjaTable.usahaId, usahaId));
+  const upahList            = await db.select().from(upahPekerjaTable).where(eq(upahPekerjaTable.usahaId, usahaId));
+  const bayarUpahList       = await db.select().from(bayarUpahTable).where(eq(bayarUpahTable.usahaId, usahaId));
 
   // Ambil semua item kasir sekaligus
   const allKasirItems = transaksiKasirList.length > 0
@@ -35,7 +38,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   const transaksiKasirItemList = allKasirItems.flat();
 
   const backup = {
-    version: "1.3",
+    version: "1.4",
     exported_at: new Date().toISOString(),
     usaha_id: usahaId,
     usaha: {
@@ -137,6 +140,39 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       harga_satuan: parseFloat(i.hargaSatuan),
       subtotal: parseFloat(i.subtotal),
     })),
+    pekerja: pekerjaList.map((p) => ({
+      id: p.id,
+      usaha_id: p.usahaId,
+      nama: p.nama,
+      telepon: p.telepon ?? null,
+      jabatan: p.jabatan ?? null,
+      catatan: p.catatan ?? null,
+      created_at: p.createdAt.toISOString(),
+    })),
+    upah_pekerja: upahList.map((u) => ({
+      id: u.id,
+      usaha_id: u.usahaId,
+      pekerja_id: u.pekerjaid,
+      keterangan: u.keterangan,
+      jumlah_total: parseFloat(u.jumlahTotal),
+      total_dibayar: parseFloat(u.totalDibayar),
+      sisa_upah: parseFloat(u.sisaUpah),
+      tanggal_kerja: u.tanggalKerja,
+      status: u.status,
+      catatan: u.catatan ?? null,
+      created_at: u.createdAt.toISOString(),
+      updated_at: u.updatedAt.toISOString(),
+    })),
+    bayar_upah: bayarUpahList.map((b) => ({
+      id: b.id,
+      usaha_id: b.usahaId,
+      upah_id: b.upahId,
+      jumlah: parseFloat(b.jumlah),
+      tanggal_bayar: b.tanggalBayar,
+      keuangan_id: b.keuanganId ?? null,
+      catatan: b.catatan ?? null,
+      created_at: b.createdAt.toISOString(),
+    })),
   };
 
   res.json(backup);
@@ -182,6 +218,9 @@ router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
       sqliteRaw.prepare("DELETE FROM hutang            WHERE usaha_id = ?").run(usahaId);
       sqliteRaw.prepare("DELETE FROM barang            WHERE usaha_id = ?").run(usahaId);
       sqliteRaw.prepare("DELETE FROM pelanggan         WHERE usaha_id = ?").run(usahaId);
+      sqliteRaw.prepare("DELETE FROM bayar_upah        WHERE usaha_id = ?").run(usahaId);
+      sqliteRaw.prepare("DELETE FROM upah_pekerja      WHERE usaha_id = ?").run(usahaId);
+      sqliteRaw.prepare("DELETE FROM pekerja           WHERE usaha_id = ?").run(usahaId);
       sqliteRaw.prepare("DELETE FROM keuangan          WHERE usaha_id = ?").run(usahaId);
 
       // ── 1. Restore keuangan — bangun peta ID lama → baru ──────────────────
@@ -311,7 +350,54 @@ router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
         }
       }
 
-      // ── 9. Perbarui info usaha dari backup ────────────────────────────────
+      // ── 9. Restore pekerja — bangun peta ID lama → baru ──────────────────
+      const pekerjaIdMap = new Map<number, number>();
+      if (Array.isArray(backup.pekerja)) {
+        const stmtPekerja = sqliteRaw.prepare(
+          "INSERT INTO pekerja (usaha_id, nama, telepon, jabatan, catatan) VALUES (?, ?, ?, ?, ?)"
+        );
+        for (const p of backup.pekerja) {
+          const r = stmtPekerja.run(
+            usahaId, p.nama, p.telepon ?? null, p.jabatan ?? null, p.catatan ?? null
+          );
+          pekerjaIdMap.set(p.id, Number(r.lastInsertRowid));
+        }
+      }
+
+      // ── 10. Restore upah_pekerja — bangun peta ID lama → baru ─────────────
+      const upahIdMap = new Map<number, number>();
+      if (Array.isArray(backup.upah_pekerja)) {
+        const stmtUpah = sqliteRaw.prepare(
+          "INSERT INTO upah_pekerja (usaha_id, pekerja_id, keterangan, jumlah_total, total_dibayar, sisa_upah, tanggal_kerja, status, catatan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+        for (const u of backup.upah_pekerja) {
+          const newPekerjaId = pekerjaIdMap.get(u.pekerja_id) ?? u.pekerja_id;
+          const r = stmtUpah.run(
+            usahaId, newPekerjaId, u.keterangan,
+            String(u.jumlah_total), String(u.total_dibayar ?? 0),
+            String(u.sisa_upah), u.tanggal_kerja,
+            u.status ?? "belum_lunas", u.catatan ?? null
+          );
+          upahIdMap.set(u.id, Number(r.lastInsertRowid));
+        }
+      }
+
+      // ── 11. Restore bayar_upah ────────────────────────────────────────────
+      if (Array.isArray(backup.bayar_upah)) {
+        const stmtBayarUpah = sqliteRaw.prepare(
+          "INSERT INTO bayar_upah (usaha_id, upah_id, jumlah, tanggal_bayar, keuangan_id, catatan) VALUES (?, ?, ?, ?, ?, ?)"
+        );
+        for (const b of backup.bayar_upah) {
+          const newUpahId     = upahIdMap.get(b.upah_id) ?? b.upah_id;
+          const newKeuanganId = b.keuangan_id != null ? (keuanganIdMap.get(b.keuangan_id) ?? null) : null;
+          stmtBayarUpah.run(
+            usahaId, newUpahId, String(b.jumlah),
+            b.tanggal_bayar, newKeuanganId ?? null, b.catatan ?? null
+          );
+        }
+      }
+
+      // ── 12. Perbarui info usaha dari backup ───────────────────────────────
       if (backup.usaha && typeof backup.usaha === "object") {
         sqliteRaw.prepare(
           "UPDATE usaha SET nama_usaha = COALESCE(?, nama_usaha), alamat = ?, telepon = ?, catatan = ? WHERE id = ?"

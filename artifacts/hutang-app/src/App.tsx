@@ -27,6 +27,7 @@ import LisensiPage from "@/pages/lisensi";
 import KeuanganPage from "@/pages/keuangan";
 import StokPage from "@/pages/stok";
 import KasirPage from "@/pages/kasir";
+import GajiTenagaPage from "@/pages/gaji-tenaga";
 
 const queryClient = new QueryClient();
 
@@ -95,6 +96,11 @@ function Router() {
       <Route path="/keuangan">
         <ProtectedRoute allowedRoles={["owner"]}>
           <Layout><KeuanganPage /></Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/gaji-tenaga">
+        <ProtectedRoute allowedRoles={["owner"]}>
+          <Layout><GajiTenagaPage /></Layout>
         </ProtectedRoute>
       </Route>
 

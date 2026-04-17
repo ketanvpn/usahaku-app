@@ -21,7 +21,8 @@ import {
   RefreshCw,
   X,
   ShieldAlert,
-  ShieldOff
+  ShieldOff,
+  HardHat
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -146,6 +147,7 @@ export function Layout({ children }: { children: ReactNode }) {
         { href: "/kasir", label: "Kasir", icon: ShoppingBag },
         { href: "/stok", label: "Stok Barang", icon: Package },
         { href: "/keuangan", label: "Keuangan", icon: BookOpen },
+        { href: "/gaji-tenaga", label: "Gaji & Tenaga", icon: HardHat },
       ],
     },
     {

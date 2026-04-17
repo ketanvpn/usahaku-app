@@ -19,15 +19,19 @@ import type {
 import type {
   AdminDashboard,
   BackupData,
+  CreateBayarUpahBody,
   CreateHutangBody,
   CreatePelangganBody,
   CreatePembayaranBody,
+  CreatePekerjaBody,
+  CreateUpahBody,
   CreateUsahaBody,
   CreateUserBody,
   ErrorResponse,
   GetHutangListParams,
   GetLaporanParams,
   GetPembayaranListParams,
+  GetUpahListParams,
   HealthStatus,
   Hutang,
   HutangDetail,
@@ -36,12 +40,17 @@ import type {
   LoginResponse,
   MessageResponse,
   OwnerDashboard,
+  Pekerja,
   Pelanggan,
   PelangganDetail,
   Pembayaran,
   ResetPasswordBody,
   UpdateHutangBody,
+  UpdatePekerjaBody,
+  UpdateUpahBody,
   UpdateUserBody,
+  UpahDetail,
+  UpahPekerja,
   Usaha,
   User,
 } from "./api.schemas";
@@ -2709,4 +2718,264 @@ export const useImportBackup = <
   TContext
 > => {
   return useMutation(getImportBackupMutationOptions(options));
+};
+
+// ── Gaji & Tenaga — Pekerja ──────────────────────────────────────────────────
+
+export const getGetPekerjaListUrl = () => `/api/pekerja`;
+
+export const getPekerjaList = async (options?: RequestInit): Promise<Pekerja[]> => {
+  return customFetch<Pekerja[]>(getGetPekerjaListUrl(), { ...options, method: "GET" });
+};
+
+export const getGetPekerjaListQueryKey = () => [`/api/pekerja`] as const;
+
+export const getGetPekerjaListQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPekerjaList>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getPekerjaList>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetPekerjaListQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPekerjaList>>> = ({ signal }) =>
+    getPekerjaList({ signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPekerjaList>>, TError, TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetPekerjaList<
+  TData = Awaited<ReturnType<typeof getPekerjaList>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getPekerjaList>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPekerjaListQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const createPekerja = async (body: CreatePekerjaBody, options?: RequestInit): Promise<Pekerja> => {
+  return customFetch<Pekerja>(getGetPekerjaListUrl(), {
+    ...options, method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+};
+
+export const useCreatePekerja = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof createPekerja>>, TError, { data: CreatePekerjaBody }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof createPekerja>>, TError, { data: CreatePekerjaBody }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: (props: { data: CreatePekerjaBody }) => createPekerja(props.data, requestOptions),
+    ...mutationOptions,
+  });
+};
+
+export const updatePekerja = async (id: number, body: UpdatePekerjaBody, options?: RequestInit): Promise<Pekerja> => {
+  return customFetch<Pekerja>(`/api/pekerja/${id}`, {
+    ...options, method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+};
+
+export const useUpdatePekerja = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof updatePekerja>>, TError, { id: number; data: UpdatePekerjaBody }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof updatePekerja>>, TError, { id: number; data: UpdatePekerjaBody }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: (props: { id: number; data: UpdatePekerjaBody }) => updatePekerja(props.id, props.data, requestOptions),
+    ...mutationOptions,
+  });
+};
+
+export const deletePekerja = async (id: number, options?: RequestInit): Promise<{ message: string }> => {
+  return customFetch<{ message: string }>(`/api/pekerja/${id}`, { ...options, method: "DELETE" });
+};
+
+export const useDeletePekerja = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof deletePekerja>>, TError, { id: number }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof deletePekerja>>, TError, { id: number }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: (props: { id: number }) => deletePekerja(props.id, requestOptions),
+    ...mutationOptions,
+  });
+};
+
+// ── Gaji & Tenaga — Upah ─────────────────────────────────────────────────────
+
+export const getGetUpahListUrl = (params?: GetUpahListParams) => {
+  const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) normalizedParams.append(key, value === null ? "null" : value.toString());
+  });
+  const stringifiedParams = normalizedParams.toString();
+  return stringifiedParams.length > 0 ? `/api/upah?${stringifiedParams}` : `/api/upah`;
+};
+
+export const getUpahList = async (params?: GetUpahListParams, options?: RequestInit): Promise<UpahPekerja[]> => {
+  return customFetch<UpahPekerja[]>(getGetUpahListUrl(params), { ...options, method: "GET" });
+};
+
+export const getGetUpahListQueryKey = (params?: GetUpahListParams) =>
+  [`/api/upah`, ...(params ? [params] : [])] as const;
+
+export const getGetUpahListQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUpahList>>,
+  TError = ErrorType<unknown>,
+>(params?: GetUpahListParams, options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getUpahList>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetUpahListQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getUpahList>>> = ({ signal }) =>
+    getUpahList(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getUpahList>>, TError, TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetUpahList<
+  TData = Awaited<ReturnType<typeof getUpahList>>,
+  TError = ErrorType<unknown>,
+>(params?: GetUpahListParams, options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getUpahList>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetUpahListQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const createUpah = async (body: CreateUpahBody, options?: RequestInit): Promise<UpahPekerja> => {
+  return customFetch<UpahPekerja>(`/api/upah`, {
+    ...options, method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+};
+
+export const useCreateUpah = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof createUpah>>, TError, { data: CreateUpahBody }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof createUpah>>, TError, { data: CreateUpahBody }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: (props: { data: CreateUpahBody }) => createUpah(props.data, requestOptions),
+    ...mutationOptions,
+  });
+};
+
+export const getGetUpahUrl = (id: number) => `/api/upah/${id}`;
+
+export const getUpah = async (id: number, options?: RequestInit): Promise<UpahDetail> => {
+  return customFetch<UpahDetail>(getGetUpahUrl(id), { ...options, method: "GET" });
+};
+
+export const getGetUpahQueryKey = (id: number) => [`/api/upah/${id}`] as const;
+
+export const getGetUpahQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUpah>>,
+  TError = ErrorType<unknown>,
+>(id: number, options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getUpah>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetUpahQueryKey(id);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getUpah>>> = ({ signal }) =>
+    getUpah(id, { signal, ...requestOptions });
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getUpah>>, TError, TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetUpah<
+  TData = Awaited<ReturnType<typeof getUpah>>,
+  TError = ErrorType<unknown>,
+>(id: number, options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getUpah>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetUpahQueryOptions(id, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const updateUpah = async (id: number, body: UpdateUpahBody, options?: RequestInit): Promise<UpahPekerja> => {
+  return customFetch<UpahPekerja>(`/api/upah/${id}`, {
+    ...options, method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+};
+
+export const useUpdateUpah = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateUpah>>, TError, { id: number; data: UpdateUpahBody }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof updateUpah>>, TError, { id: number; data: UpdateUpahBody }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: (props: { id: number; data: UpdateUpahBody }) => updateUpah(props.id, props.data, requestOptions),
+    ...mutationOptions,
+  });
+};
+
+export const deleteUpah = async (id: number, options?: RequestInit): Promise<{ message: string }> => {
+  return customFetch<{ message: string }>(`/api/upah/${id}`, { ...options, method: "DELETE" });
+};
+
+export const useDeleteUpah = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteUpah>>, TError, { id: number }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof deleteUpah>>, TError, { id: number }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: (props: { id: number }) => deleteUpah(props.id, requestOptions),
+    ...mutationOptions,
+  });
+};
+
+export const bayarUpah = async (id: number, body: CreateBayarUpahBody, options?: RequestInit): Promise<UpahDetail> => {
+  return customFetch<UpahDetail>(`/api/upah/${id}/bayar`, {
+    ...options, method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+};
+
+export const useBayarUpah = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof bayarUpah>>, TError, { id: number; data: CreateBayarUpahBody }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof bayarUpah>>, TError, { id: number; data: CreateBayarUpahBody }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: (props: { id: number; data: CreateBayarUpahBody }) => bayarUpah(props.id, props.data, requestOptions),
+    ...mutationOptions,
+  });
+};
+
+export const deleteBayarUpah = async (id: number, options?: RequestInit): Promise<{ message: string }> => {
+  return customFetch<{ message: string }>(`/api/bayar-upah/${id}`, { ...options, method: "DELETE" });
+};
+
+export const useDeleteBayarUpah = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteBayarUpah>>, TError, { id: number }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof deleteBayarUpah>>, TError, { id: number }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: (props: { id: number }) => deleteBayarUpah(props.id, requestOptions),
+    ...mutationOptions,
+  });
 };

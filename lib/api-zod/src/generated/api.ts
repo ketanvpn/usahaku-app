@@ -687,3 +687,138 @@ export const ImportBackupBody = zod.object({
 export const ImportBackupResponse = zod.object({
   message: zod.string(),
 });
+
+// ── Gaji & Tenaga ──────────────────────────────────────────────────────────
+
+/**
+ * @summary Get all workers
+ */
+export const GetPekerjaListResponseItem = zod.object({
+  id: zod.number(),
+  usaha_id: zod.number(),
+  nama: zod.string(),
+  telepon: zod.string().nullish(),
+  jabatan: zod.string().nullish(),
+  catatan: zod.string().nullish(),
+  created_at: zod.string(),
+});
+export const GetPekerjaListResponse = zod.array(GetPekerjaListResponseItem);
+
+/**
+ * @summary Create a worker
+ */
+export const CreatePekerjaBody = zod.object({
+  nama: zod.string().min(1),
+  telepon: zod.string().nullish(),
+  jabatan: zod.string().nullish(),
+  catatan: zod.string().nullish(),
+});
+
+/**
+ * @summary Get / update / delete a worker
+ */
+export const GetPekerjaParams = zod.object({ id: zod.coerce.number() });
+export const UpdatePekerjaParams = zod.object({ id: zod.coerce.number() });
+export const DeletePekerjaParams = zod.object({ id: zod.coerce.number() });
+
+export const UpdatePekerjaBody = zod.object({
+  nama: zod.string().min(1).optional(),
+  telepon: zod.string().nullish(),
+  jabatan: zod.string().nullish(),
+  catatan: zod.string().nullish(),
+});
+
+export const DeletePekerjaResponse = zod.object({ message: zod.string() });
+
+/**
+ * @summary Get upah list
+ */
+export const GetUpahListQueryParams = zod.object({
+  pekerja_id: zod.coerce.number().optional(),
+  status: zod.enum(["belum_lunas", "lunas"]).optional(),
+});
+
+export const GetUpahListResponseItem = zod.object({
+  id: zod.number(),
+  usaha_id: zod.number(),
+  pekerja_id: zod.number(),
+  pekerja_nama: zod.string(),
+  pekerja_jabatan: zod.string().nullish(),
+  keterangan: zod.string(),
+  jumlah_total: zod.number(),
+  total_dibayar: zod.number(),
+  sisa_upah: zod.number(),
+  tanggal_kerja: zod.string(),
+  status: zod.enum(["belum_lunas", "lunas"]),
+  catatan: zod.string().nullish(),
+  created_at: zod.string(),
+  updated_at: zod.string(),
+});
+export const GetUpahListResponse = zod.array(GetUpahListResponseItem);
+
+/**
+ * @summary Create upah record
+ */
+export const CreateUpahBody = zod.object({
+  pekerja_id: zod.number(),
+  keterangan: zod.string().min(1),
+  jumlah_total: zod.number().positive(),
+  tanggal_kerja: zod.string(),
+  catatan: zod.string().nullish(),
+});
+
+/**
+ * @summary Get / update / delete upah
+ */
+export const GetUpahParams = zod.object({ id: zod.coerce.number() });
+export const UpdateUpahParams = zod.object({ id: zod.coerce.number() });
+export const DeleteUpahParams = zod.object({ id: zod.coerce.number() });
+
+export const UpdateUpahBody = zod.object({
+  keterangan: zod.string().min(1).optional(),
+  jumlah_total: zod.number().positive().optional(),
+  tanggal_kerja: zod.string().optional(),
+  catatan: zod.string().nullish(),
+});
+
+export const DeleteUpahResponse = zod.object({ message: zod.string() });
+
+export const GetUpahResponse = zod.object({
+  id: zod.number(),
+  usaha_id: zod.number(),
+  pekerja_id: zod.number(),
+  pekerja_nama: zod.string(),
+  pekerja_jabatan: zod.string().nullish(),
+  keterangan: zod.string(),
+  jumlah_total: zod.number(),
+  total_dibayar: zod.number(),
+  sisa_upah: zod.number(),
+  tanggal_kerja: zod.string(),
+  status: zod.enum(["belum_lunas", "lunas"]),
+  catatan: zod.string().nullish(),
+  created_at: zod.string(),
+  updated_at: zod.string(),
+  bayar_list: zod.array(
+    zod.object({
+      id: zod.number(),
+      upah_id: zod.number(),
+      jumlah: zod.number(),
+      tanggal_bayar: zod.string(),
+      catatan: zod.string().nullish(),
+      created_at: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Record bayar upah (cicilan)
+ */
+export const CreateBayarUpahBody = zod.object({
+  upah_id: zod.number(),
+  jumlah: zod.number().positive(),
+  tanggal_bayar: zod.string(),
+  catatan: zod.string().nullish(),
+});
+
+export const DeleteBayarUpahParams = zod.object({ id: zod.coerce.number() });
+export const DeleteBayarUpahResponse = zod.object({ message: zod.string() });

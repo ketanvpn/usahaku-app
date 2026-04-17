@@ -299,3 +299,92 @@ export const GetLaporanStatus = {
   aktif: "aktif",
   lunas: "lunas",
 } as const;
+
+// ── Gaji & Tenaga ──────────────────────────────────────────────────────────
+
+export interface Pekerja {
+  id: number;
+  usaha_id: number;
+  nama: string;
+  telepon?: string | null;
+  jabatan?: string | null;
+  catatan?: string | null;
+  created_at: string;
+}
+
+export interface CreatePekerjaBody {
+  nama: string;
+  telepon?: string | null;
+  jabatan?: string | null;
+  catatan?: string | null;
+}
+
+export interface UpdatePekerjaBody {
+  nama?: string;
+  telepon?: string | null;
+  jabatan?: string | null;
+  catatan?: string | null;
+}
+
+export type UpahStatus = (typeof UpahStatus)[keyof typeof UpahStatus];
+export const UpahStatus = {
+  belum_lunas: "belum_lunas",
+  lunas: "lunas",
+} as const;
+
+export interface UpahPekerja {
+  id: number;
+  usaha_id: number;
+  pekerja_id: number;
+  pekerja_nama: string;
+  pekerja_jabatan?: string | null;
+  keterangan: string;
+  jumlah_total: number;
+  total_dibayar: number;
+  sisa_upah: number;
+  tanggal_kerja: string;
+  status: UpahStatus;
+  catatan?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BayarUpahItem {
+  id: number;
+  upah_id: number;
+  jumlah: number;
+  tanggal_bayar: string;
+  catatan?: string | null;
+  created_at: string;
+}
+
+export interface UpahDetail extends UpahPekerja {
+  bayar_list: BayarUpahItem[];
+}
+
+export interface CreateUpahBody {
+  pekerja_id: number;
+  keterangan: string;
+  jumlah_total: number;
+  tanggal_kerja: string;
+  catatan?: string | null;
+}
+
+export interface UpdateUpahBody {
+  keterangan?: string;
+  jumlah_total?: number;
+  tanggal_kerja?: string;
+  catatan?: string | null;
+}
+
+export interface CreateBayarUpahBody {
+  upah_id: number;
+  jumlah: number;
+  tanggal_bayar: string;
+  catatan?: string | null;
+}
+
+export type GetUpahListParams = {
+  pekerja_id?: number;
+  status?: UpahStatus;
+};

@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.45**
+**Current version: 1.0.46**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -14,7 +14,8 @@ Key features:
 - Kasir (POS) with multi-item cart, receipt modal, auto-stok decrement, hapus transaksi kasir (void) via Riwayat Penjualan
 - Laporan: tab Penjualan Kasir (harian/bulanan chart, top produk, export CSV/PDF), Hutang, Keuangan, Stok
 - Dashboard: kasir summary cards (hari ini & bulan ini), tren keuangan chart
-- Backup/restore (v1.3 format includes kasir tables with diskon & keuangan_id)
+- Gaji & Tenaga: profil pekerja permanen (nama/jabatan/telepon), catatan upah dengan cicilan (bayar sebagian), auto-integrasi ke Keuangan kategori "Gaji & Upah"
+- Backup/restore (v1.4 format includes kasir + pekerja/upah_pekerja/bayar_upah tables)
 - Pengingat backup otomatis: banner kuning muncul jika belum backup > 7 hari (localStorage-based)
 - Auto-backup saat tutup aplikasi: salin file .db ke Documents/UsahakuBackup/, simpan 7 file terbaru (production/Electron only)
 - Offline license key system (HMAC-SHA256, format BUKU-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX); tipe: 1bulan(30h)/3bulan(90h)/6bulan(180h)/1tahun(365h)
@@ -43,7 +44,18 @@ export const sqliteRaw: any = sqlite;
 
 ---
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.45)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.46)
+
+### v1.0.46 — Fitur Gaji & Tenaga
+**Fitur:** Modul manajemen upah/gaji tenaga kerja, mirip pola hutang/pembayaran.
+- **Database:** 3 tabel baru: `pekerja`, `upah_pekerja`, `bayar_upah` (migrasi inline di `lib/db/src/index.ts`)
+- **Drizzle schema:** `lib/db/src/schema/pekerja.ts` + `lib/db/src/schema/upah.ts` (field `pekerjaid` mapping ke kolom `pekerja_id`)
+- **API types:** `lib/api-zod/src/generated/api.ts` + `lib/api-client-react/src/generated/api.schemas.ts` — Pekerja, UpahPekerja, UpahDetail, BayarUpahItem, CreatePekerjaBody, UpdatePekerjaBody, CreateUpahBody, UpdateUpahBody, CreateBayarUpahBody, GetUpahListParams, UpahStatus
+- **Backend:** `artifacts/api-server/src/routes/pekerja.ts` + `upah.ts`; POST /upah/:id/bayar auto-create Keuangan "Gaji & Upah" (tipe keluar); DELETE bayar juga hapus Keuangan terkait
+- **Hooks:** `lib/api-client-react/src/generated/api.ts` — useGetPekerjaList, useCreatePekerja, useUpdatePekerja, useDeletePekerja, useGetUpahList, useCreateUpah, useGetUpah, useUpdateUpah, useDeleteUpah, useBayarUpah, useDeleteBayarUpah + semua query keys
+- **Backup:** Format v1.4 — export + restore mencakup pekerja, upah_pekerja, bayar_upah dengan ID remapping
+- **Frontend:** Halaman `/gaji-tenaga` (Tab "Catatan Upah" + Tab "Daftar Pekerja"), menu sidebar "Gaji & Tenaga" di grup BISNIS (ikon HardHat)
+- **Cicilan:** Bayar sebagian didukung — satu upah bisa punya banyak bayar_upah, status auto "lunas"/"belum_lunas"
 
 ### v1.0.45 — Fitur Jatuh Tempo Hutang
 **Fitur:** Field opsional `tanggal_jatuh_tempo` ditambahkan ke tabel hutang.

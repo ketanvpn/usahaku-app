@@ -7,3 +7,5 @@ export * from "./lisensi";
 export * from "./keuangan";
 export * from "./stok";
 export * from "./kasir";
+export * from "./pekerja";
+export * from "./upah";
