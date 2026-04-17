@@ -322,9 +322,10 @@ The user wants the agent to focus on high-level architectural decisions and syst
 
 - **Selalu ingatkan perintah git setelah setiap perubahan kode.** Di akhir setiap pekerjaan, selalu tampilkan perintah git lengkap yang harus dijalankan user di Shell Replit, contoh:
   ```
-  git add .
-  git commit -m "keterangan singkat perubahan"
-  git push
+  git add -A
+  git commit -m "feat: v1.0.XX — deskripsi singkat perubahan"
+  git tag v1.0.XX
+  git push origin main --tags
   ```
 - Penjelasan dalam Bahasa Indonesia, pelan dan jelas.
 - Hati-hati tidak merusak fitur yang sudah ada.
@@ -453,11 +454,12 @@ git remote set-url origin https://TOKEN@github.com/ketanvpn/usahaku-app.git
 ```
 Ganti `TOKEN` dengan PAT yang dibuat di [github.com/settings/tokens](https://github.com/settings/tokens) (centang scope `repo`).
 
-**Setelah itu, git push cukup:**
+**Setelah itu, format perintah push untuk setiap versi:**
 ```bash
-git add .
-git commit -m "pesan commit"
-git push
+git add -A
+git commit -m "feat: v1.0.XX — deskripsi singkat perubahan"
+git tag v1.0.XX
+git push origin main --tags
 ```
 
 > Catatan: Jika token expired atau dicabut, buat token baru dan jalankan `git remote set-url` lagi.
