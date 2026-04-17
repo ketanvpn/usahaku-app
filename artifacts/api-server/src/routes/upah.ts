@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, upahPekerjaTable, bayarUpahTable, pekerjaTable, keuanganTable } from "@workspace/db";
-import { eq, and, desc, asc, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, inArray, ne } from "drizzle-orm";
 import {
   CreateUpahBody,
   GetUpahParams,
@@ -388,9 +388,32 @@ router.delete("/bayar-upah/:id", requireAuth, requireLicense, async (req, res): 
   const sisaBaru = parseFloat(upah.jumlahTotal) - totalDibayarBaru;
   const statusBaru = sisaBaru <= 0 ? "lunas" : "belum_lunas";
 
+  // Cek apakah keuangan_id ini dipakai oleh bayar_upah lain (artinya ini bagian dari batch payment)
+  let sisaBayarBatch: { jumlah: string }[] = [];
+  if (bayar.keuanganId) {
+    sisaBayarBatch = await db.select({ jumlah: bayarUpahTable.jumlah })
+      .from(bayarUpahTable)
+      .where(and(
+        eq(bayarUpahTable.keuanganId, bayar.keuanganId),
+        ne(bayarUpahTable.id, params.data.id),
+      ));
+  }
+
   db.transaction((tx) => {
     if (bayar.keuanganId) {
-      tx.delete(keuanganTable).where(eq(keuanganTable.id, bayar.keuanganId)).run();
+      if (sisaBayarBatch.length > 0) {
+        // Batch payment: kurangi jumlah keuangan saja, jangan hapus
+        const jumlahSisa = sisaBayarBatch.reduce((acc, b) => acc + parseFloat(b.jumlah), 0);
+        if (jumlahSisa <= 0) {
+          tx.delete(keuanganTable).where(eq(keuanganTable.id, bayar.keuanganId)).run();
+        } else {
+          tx.update(keuanganTable).set({ jumlah: jumlahSisa.toString() })
+            .where(eq(keuanganTable.id, bayar.keuanganId)).run();
+        }
+      } else {
+        // Individual payment: hapus keuangan sepenuhnya
+        tx.delete(keuanganTable).where(eq(keuanganTable.id, bayar.keuanganId)).run();
+      }
     }
     tx.delete(bayarUpahTable).where(eq(bayarUpahTable.id, params.data.id)).run();
     tx.update(upahPekerjaTable).set({

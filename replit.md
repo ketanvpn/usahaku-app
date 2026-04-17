@@ -57,6 +57,7 @@ export const sqliteRaw: any = sqlite;
 - **Computed:** `sisaPerPekerja` (Map) dan `batchUpahList` via `useMemo` dari `allUpahList` (unfiltered query)
 - **Bugfix:** `Cache-Control: no-store` ditambahkan ke semua `/api` response di Express (`app.ts`) — mencegah browser HTTP cache mengembalikan data lama (304 Not Modified) setelah mutation, sehingga list selalu langsung diperbarui
 - **Bugfix:** Backend harus di-build ulang (`pnpm run build`) sebelum restart agar route baru aktif (dist-based server)
+- **Bugfix:** `DELETE /bayar-upah/:id` — jika bayar_upah adalah bagian dari batch payment (berbagi `keuangan_id` dengan bayar_upah lain), sekarang keuangan hanya dikurangi nominalnya, bukan dihapus seluruhnya; keuangan baru dihapus jika ini satu-satunya bayar yang tersisa untuk keuangan tersebut
 
 ### v1.0.46 — Fitur Gaji & Tenaga
 **Fitur:** Modul manajemen upah/gaji tenaga kerja, mirip pola hutang/pembayaran.
