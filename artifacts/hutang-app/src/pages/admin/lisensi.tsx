@@ -252,7 +252,7 @@ export default function AdminLisensiPage() {
       </Card>
 
       <Dialog open={!!newKey} onOpenChange={() => setNewKey(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent aria-describedby={undefined} className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-600">
               <CheckCircle2 className="h-5 w-5" /> Key Berhasil Dibuat!

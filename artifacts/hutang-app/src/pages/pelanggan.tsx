@@ -138,7 +138,7 @@ export default function PelangganPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{editingPelanggan ? "Edit Pelanggan" : "Tambah Pelanggan"}</DialogTitle>
           </DialogHeader>

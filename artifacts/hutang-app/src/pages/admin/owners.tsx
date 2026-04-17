@@ -176,7 +176,7 @@ export default function AdminOwnersPage() {
       </div>
 
       <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{editingUser ? "Edit User" : "Tambah User Baru"}</DialogTitle>
           </DialogHeader>
@@ -272,7 +272,7 @@ export default function AdminOwnersPage() {
       </Dialog>
 
       <Dialog open={isResetPwdDialogOpen} onOpenChange={setIsResetPwdDialogOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Reset Password - {selectedUser?.nama}</DialogTitle>
           </DialogHeader>

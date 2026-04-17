@@ -579,7 +579,7 @@ export default function KasirPage() {
 
       {/* ── Dialog Riwayat Penjualan ──────────────────────────────── */}
       <Dialog open={showRiwayat} onOpenChange={setShowRiwayat}>
-        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+        <DialogContent aria-describedby={undefined} className="max-w-3xl max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="h-5 w-5" />
@@ -662,7 +662,7 @@ export default function KasirPage() {
 
       {/* ── Modal Hasil Transaksi ─────────────────────────────────── */}
       <Dialog open={showHasil} onOpenChange={(open) => { if (!open) { setShowHasil(false); resetKasir(); } }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent aria-describedby={undefined} className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-700">
               <CheckCircle className="h-5 w-5" />

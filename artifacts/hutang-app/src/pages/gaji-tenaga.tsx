@@ -24,7 +24,7 @@ import * as z from "zod";
 import { formatRupiah, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { Loader2, Plus, Edit, Trash2, Search, HardHat, Banknote, Users } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Search, HardHat, Banknote, Users, TrendingDown, Clock, Download } from "lucide-react";
 import { useLicense } from "@/context/license-context";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -212,6 +212,40 @@ export default function GajiTenagaPage() {
 
   const totalSisaBatch = batchUpahList.reduce((acc, u) => acc + u.sisa_upah, 0);
 
+  // ── Summary cards ────────────────────────────────────────────────────────────
+  const totalSisaUpah = useMemo(() =>
+    (allUpahList ?? []).reduce((sum, u) => sum + u.sisa_upah, 0),
+  [allUpahList]);
+
+  const catatanBelumLunas = useMemo(() =>
+    (allUpahList ?? []).filter(u => u.status === "belum_lunas").length,
+  [allUpahList]);
+
+  // ── Export CSV catatan upah ──────────────────────────────────────────────────
+  const exportUpahCSV = () => {
+    const header = ["No", "Pekerja", "Jabatan", "Keterangan", "Tgl. Kerja", "Total Upah", "Sudah Dibayar", "Sisa", "Status", "Catatan"];
+    const rows = filteredUpah.map((u, i) => [
+      i + 1,
+      u.pekerja_nama,
+      u.pekerja_jabatan ?? "",
+      u.keterangan,
+      u.tanggal_kerja,
+      u.jumlah_total,
+      u.total_dibayar,
+      u.sisa_upah,
+      u.status === "lunas" ? "Lunas" : "Belum Lunas",
+      u.catatan ?? "",
+    ]);
+    const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `catatan-upah-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // ── Forms ────────────────────────────────────────────────────────────────────
   const today = new Date().toISOString().split("T")[0];
 
@@ -343,6 +377,49 @@ export default function GajiTenagaPage() {
         </div>
       </div>
 
+      {/* ── Summary Cards ─────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-50 rounded-lg shrink-0">
+                <TrendingDown className="h-5 w-5 text-red-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Total Sisa Upah</p>
+                <p className="text-lg font-bold text-red-700 truncate">{formatRupiah(totalSisaUpah)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-lg shrink-0">
+                <Users className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Jumlah Pekerja</p>
+                <p className="text-lg font-bold">{pekerjaList?.length ?? 0} orang</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-50 rounded-lg shrink-0">
+                <Clock className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Catatan Belum Lunas</p>
+                <p className="text-lg font-bold text-orange-700">{catatanBelumLunas} catatan</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Tabs defaultValue="upah">
         <TabsList>
           <TabsTrigger value="upah" className="gap-2"><Banknote className="h-4 w-4" />Catatan Upah</TabsTrigger>
@@ -380,6 +457,9 @@ export default function GajiTenagaPage() {
                   ))}
               </SelectContent>
             </Select>
+            <Button variant="outline" onClick={exportUpahCSV} disabled={filteredUpah.length === 0} title="Export CSV">
+              <Download className="h-4 w-4 mr-1" /> CSV
+            </Button>
             <Button onClick={openTambahUpah} disabled={!lisensiAktif}>
               <Plus className="h-4 w-4 mr-1" /> Tambah Upah
             </Button>
@@ -531,7 +611,7 @@ export default function GajiTenagaPage() {
 
       {/* ── Dialog Tambah/Edit Upah ──────────────────────────────────────────── */}
       <Dialog open={isUpahDialogOpen} onOpenChange={(open) => { setIsUpahDialogOpen(open); if (!open) { setEditingUpah(null); upahForm.clearErrors(); } }}>
-        <DialogContent className="max-w-md">
+        <DialogContent aria-describedby={undefined} className="max-w-md">
           <DialogHeader>
             <DialogTitle>{editingUpah ? "Edit Catatan Upah" : "Tambah Catatan Upah"}</DialogTitle>
           </DialogHeader>
@@ -611,7 +691,7 @@ export default function GajiTenagaPage() {
 
       {/* ── Dialog Bayar Upah ────────────────────────────────────────────────── */}
       <Dialog open={isBayarDialogOpen} onOpenChange={(open) => { setIsBayarDialogOpen(open); if (!open) { setSelectedUpahId(null); bayarForm.clearErrors(); } }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent aria-describedby={undefined} className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Bayar Upah</DialogTitle>
           </DialogHeader>
@@ -700,7 +780,7 @@ export default function GajiTenagaPage() {
 
       {/* ── Dialog Tambah/Edit Pekerja ───────────────────────────────────────── */}
       <Dialog open={isPekerjaDialogOpen} onOpenChange={(open) => { setIsPekerjaDialogOpen(open); if (!open) { setEditingPekerja(null); pekerjaForm.clearErrors(); } }}>
-        <DialogContent className="max-w-md">
+        <DialogContent aria-describedby={undefined} className="max-w-md">
           <DialogHeader>
             <DialogTitle>{editingPekerja ? "Edit Data Pekerja" : "Tambah Pekerja"}</DialogTitle>
           </DialogHeader>
@@ -824,7 +904,7 @@ export default function GajiTenagaPage() {
       </AlertDialog>
       {/* ── Dialog Bayar Batch ───────────────────────────────────────────────── */}
       <Dialog open={isBatchDialogOpen} onOpenChange={(open) => { setIsBatchDialogOpen(open); if (!open) { setBatchPekerja(null); batchForm.clearErrors(); } }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent aria-describedby={undefined} className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Bayar Upah Batch — {batchPekerja?.nama}</DialogTitle>
           </DialogHeader>

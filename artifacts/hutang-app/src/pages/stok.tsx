@@ -570,7 +570,7 @@ export default function StokPage() {
 
       {/* Dialog Tambah/Edit Barang */}
       <Dialog open={barangDialog} onOpenChange={setBarangDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent aria-describedby={undefined} className="max-w-md">
           <DialogHeader>
             <DialogTitle>{editBarang ? "Edit Barang" : "Tambah Barang Baru"}</DialogTitle>
           </DialogHeader>
@@ -649,7 +649,7 @@ export default function StokPage() {
 
       {/* Dialog Transaksi Masuk / Keluar */}
       <Dialog open={transaksiDialog !== null} onOpenChange={(open) => { if (!open) setTransaksiDialog(null); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent aria-describedby={undefined} className="max-w-md">
           <DialogHeader>
             <DialogTitle className={transaksiDialog === "masuk" ? "text-green-700" : "text-red-700"}>
               {transaksiDialog === "masuk" ? "📦 Barang Masuk (Beli)" : "📤 Barang Keluar (Jual)"}
@@ -762,7 +762,7 @@ export default function StokPage() {
 
       {/* Dialog Import Barang */}
       <Dialog open={importDialog} onOpenChange={(open) => { if (!open) { setImportDialog(false); setImportRows([]); setImportError(""); if (fileInputRef.current) fileInputRef.current.value = ""; } }}>
-        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+        <DialogContent aria-describedby={undefined} className="max-w-3xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5" /> Import Barang dari Excel / CSV

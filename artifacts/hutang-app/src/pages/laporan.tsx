@@ -7,6 +7,8 @@ import {
   getGetUsahaQueryKey,
   GetLaporanStatus,
   LaporanItem,
+  useGetUpahList,
+  useGetPekerjaList,
 } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -369,6 +371,43 @@ export default function LaporanPage() {
     },
   });
 
+  // ── Gaji & Upah data ─────────────────────────────────────────────────────────
+  const { data: allUpahLaporan = [], isLoading: upahLoading } = useGetUpahList({});
+  const { data: pekerjaLaporan = [] } = useGetPekerjaList();
+
+  const totalUpahDicatat = allUpahLaporan.reduce((s, u) => s + u.jumlah_total, 0);
+  const totalUpahDibayar = allUpahLaporan.reduce((s, u) => s + u.total_dibayar, 0);
+  const totalUpahBelumDibayar = allUpahLaporan.reduce((s, u) => s + u.sisa_upah, 0);
+
+  const upahPerPekerja = pekerjaLaporan.map(p => {
+    const list = allUpahLaporan.filter(u => u.pekerja_id === p.id);
+    return {
+      id: p.id,
+      nama: p.nama,
+      jabatan: p.jabatan ?? "",
+      jumlah_catatan: list.length,
+      total_upah: list.reduce((s, u) => s + u.jumlah_total, 0),
+      total_dibayar: list.reduce((s, u) => s + u.total_dibayar, 0),
+      sisa: list.reduce((s, u) => s + u.sisa_upah, 0),
+    };
+  }).filter(p => p.jumlah_catatan > 0).sort((a, b) => b.sisa - a.sisa);
+
+  const handleExportUpahCsv = () => {
+    if (!allUpahLaporan.length) return;
+    const header = ["No","Pekerja","Jabatan","Keterangan","Tgl. Kerja","Total Upah","Sudah Dibayar","Sisa","Status","Catatan"];
+    const rows = allUpahLaporan.map((u, i) => [
+      i + 1, u.pekerja_nama, u.pekerja_jabatan ?? "", u.keterangan,
+      u.tanggal_kerja, u.jumlah_total, u.total_dibayar, u.sisa_upah,
+      u.status === "lunas" ? "Lunas" : "Belum Lunas", u.catatan ?? "",
+    ]);
+    const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `laporan_gaji_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
   const namaUsaha = usahaData?.nama_usaha ?? "Usahaku";
   const selectedPelanggan = filterPelanggan ? pelangganList?.find(p => p.id === filterPelanggan) : undefined;
   const isSinglePelanggan = !!selectedPelanggan;
@@ -595,7 +634,7 @@ export default function LaporanPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight text-primary">Laporan</h2>
-        <p className="text-muted-foreground">Laporan lengkap penjualan kasir, hutang, keuangan, dan stok barang.</p>
+        <p className="text-muted-foreground">Laporan lengkap penjualan kasir, hutang, keuangan, stok barang, dan gaji tenaga kerja.</p>
       </div>
 
       <Tabs defaultValue="kasir">
@@ -604,6 +643,7 @@ export default function LaporanPage() {
           <TabsTrigger value="hutang">Hutang & Pembayaran</TabsTrigger>
           <TabsTrigger value="keuangan">Keuangan</TabsTrigger>
           <TabsTrigger value="stok">Stok Barang</TabsTrigger>
+          <TabsTrigger value="gaji">Gaji & Upah</TabsTrigger>
         </TabsList>
 
         {/* ── Tab Penjualan Kasir ─────────────────────────────────────────────── */}
@@ -1128,6 +1168,118 @@ export default function LaporanPage() {
                               </TableCell>
                               <TableCell className="text-right">{formatRupiah(parseFloat(b.harga_beli))}</TableCell>
                               <TableCell className="text-right">{formatRupiah(parseFloat(b.harga_jual))}</TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Tab Gaji & Upah ────────────────────────────────────────────────── */}
+        <TabsContent value="gaji" className="space-y-4 mt-4">
+          <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+            <p className="text-sm text-muted-foreground">Rekap upah seluruh tenaga kerja dan status pembayaran.</p>
+            <Button variant="outline" onClick={handleExportUpahCsv} disabled={!allUpahLaporan.length}>
+              <Download className="mr-2 h-4 w-4" /> Export CSV
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="border-l-4 border-l-primary">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-medium">Total Upah Dicatat</CardTitle>
+                <Wallet className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent><p className="text-2xl font-bold">{fmtRupiah(totalUpahDicatat)}</p></CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-emerald-500">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-medium">Total Sudah Dibayar</CardTitle>
+                <TrendingUp className="h-4 w-4 text-emerald-600" />
+              </CardHeader>
+              <CardContent><p className="text-2xl font-bold text-emerald-600">{fmtRupiah(totalUpahDibayar)}</p></CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-red-500">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-medium">Belum Dibayar</CardTitle>
+                <TrendingDown className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent><p className="text-2xl font-bold text-red-700">{fmtRupiah(totalUpahBelumDibayar)}</p></CardContent>
+            </Card>
+          </div>
+
+          {upahPerPekerja.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-sm font-medium">Rekap Per Pekerja</CardTitle></CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nama</TableHead>
+                        <TableHead>Jabatan</TableHead>
+                        <TableHead className="text-right">Jml. Catatan</TableHead>
+                        <TableHead className="text-right">Total Upah</TableHead>
+                        <TableHead className="text-right">Dibayar</TableHead>
+                        <TableHead className="text-right">Sisa</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {upahPerPekerja.map(p => (
+                        <TableRow key={p.id}>
+                          <TableCell className="font-medium">{p.nama}</TableCell>
+                          <TableCell className="text-muted-foreground">{p.jabatan || "—"}</TableCell>
+                          <TableCell className="text-right">{p.jumlah_catatan}</TableCell>
+                          <TableCell className="text-right">{fmtRupiah(p.total_upah)}</TableCell>
+                          <TableCell className="text-right text-emerald-700">{fmtRupiah(p.total_dibayar)}</TableCell>
+                          <TableCell className={`text-right font-bold ${p.sisa > 0 ? "text-red-700" : "text-muted-foreground"}`}>{fmtRupiah(p.sisa)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader><CardTitle className="text-sm font-medium">Semua Catatan Upah</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              {upahLoading
+                ? <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Pekerja</TableHead>
+                          <TableHead>Keterangan</TableHead>
+                          <TableHead>Tgl. Kerja</TableHead>
+                          <TableHead className="text-right">Total Upah</TableHead>
+                          <TableHead className="text-right">Dibayar</TableHead>
+                          <TableHead className="text-right">Sisa</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {!allUpahLaporan.length
+                          ? <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Tidak ada data catatan upah.</TableCell></TableRow>
+                          : allUpahLaporan.map(u => (
+                            <TableRow key={u.id}>
+                              <TableCell className="font-medium">{u.pekerja_nama}</TableCell>
+                              <TableCell>{u.keterangan}</TableCell>
+                              <TableCell className="text-muted-foreground">{u.tanggal_kerja}</TableCell>
+                              <TableCell className="text-right">{fmtRupiah(u.jumlah_total)}</TableCell>
+                              <TableCell className="text-right text-emerald-700">{fmtRupiah(u.total_dibayar)}</TableCell>
+                              <TableCell className={`text-right font-bold ${u.sisa_upah > 0 ? "text-red-700" : "text-muted-foreground"}`}>{fmtRupiah(u.sisa_upah)}</TableCell>
+                              <TableCell>
+                                {u.status === "lunas"
+                                  ? <Badge variant="outline" className="border-emerald-400 text-emerald-700 bg-emerald-50">Lunas</Badge>
+                                  : <Badge variant="outline" className="border-orange-400 text-orange-700 bg-orange-50">Belum Lunas</Badge>}
+                              </TableCell>
                             </TableRow>
                           ))}
                       </TableBody>

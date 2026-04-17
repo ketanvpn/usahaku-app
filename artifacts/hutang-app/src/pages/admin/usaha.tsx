@@ -106,7 +106,7 @@ export default function AdminUsahaPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{editingUsaha ? "Edit Usaha" : "Tambah Usaha Baru"}</DialogTitle>
           </DialogHeader>

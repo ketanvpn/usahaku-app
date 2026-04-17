@@ -461,7 +461,7 @@ export default function PembayaranPage() {
 
       {/* Dialog Terima Pembayaran */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent aria-describedby={undefined} className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Terima Pembayaran</DialogTitle>
           </DialogHeader>
@@ -638,7 +638,7 @@ export default function PembayaranPage() {
 
       {/* Dialog: Cetak kwitansi gabungan setelah bayar */}
       <Dialog open={!!batchResult} onOpenChange={(open) => { if (!open) setBatchResult(null); }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent aria-describedby={undefined} className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Printer className="h-5 w-5 text-primary" />

@@ -227,7 +227,7 @@ export default function HutangPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{editingHutang ? "Edit Hutang" : "Catat Hutang Baru"}</DialogTitle>
           </DialogHeader>
