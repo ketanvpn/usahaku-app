@@ -53,6 +53,10 @@ app.use(
   })
 );
 
+app.use("/api", (_req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 app.use("/api", router);
 
 if (process.env.SERVE_STATIC === "true") {
