@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.49**
+**Current version: 1.0.50**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -44,7 +44,29 @@ export const sqliteRaw: any = sqlite;
 
 ---
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.47)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.50)
+
+### v1.0.50 — Perbaikan Halaman Profil Pengguna
+**Fix:**
+- Avatar menampilkan **inisial huruf pertama** nama pengguna (bukan ikon generik `UserCircle`)
+- Label "ID Usaha Terhubung" berubah jadi "Usaha Terhubung" dengan **nilai nama usaha** (contoh: "Toko Sumber Makmur Jaya"), bukan nomor ID mentah `#1`
+- Fallback: tampilkan "Memuat..." saat query belum selesai, kembali ke `#ID` jika query gagal
+- File: `artifacts/hutang-app/src/pages/profil.tsx`
+
+### v1.0.49 — Kwitansi Pembayaran Upah
+**Fitur:** Cetak kwitansi/receipt setelah bayar upah (single maupun batch), format A5 landscape.
+- Dialog "Cetak Kwitansi?" muncul setelah pembayaran berhasil; user bisa cetak atau tutup
+- Electron: buka via `openInBrowser`, browser biasa: blob URL dengan `window.print()` auto-trigger
+- HTML tergenerate inline (`buildKwitansiUpahHtml`) dengan CSS embedded: nama usaha, data pekerja, nominal, tanggal, keterangan
+- Ukuran cetak: `body { width: 182mm }`, font 9–12pt agar pas A5 landscape
+- Pattern: `pendingKwitansiRef` (useRef) menjembatani data form dari submit handler ke `onSuccess` mutation callback
+- File: `artifacts/hutang-app/src/pages/gaji-tenaga.tsx`
+
+### v1.0.48 — 4 Perbaikan Serentak
+1. **Fix aria-describedby** — `aria-describedby={undefined}` ditambahkan ke setiap `<DialogContent>` (bukan AlertDialog) di 10 file halaman; menghilangkan warning aksesibilitas di konsol browser
+2. **Summary Cards Gaji & Tenaga** — 3 kartu ringkasan di atas tab: Total Sisa Upah (merah), Jumlah Pekerja, Catatan Belum Lunas; menggunakan data dari query yang sudah ada
+3. **Export CSV Catatan Upah** — tombol "Export CSV" di tab Catatan Upah; export `filteredUpah` (mengikuti filter/search aktif); kolom: No, Pekerja, Jabatan, Keterangan, Tanggal Kerja, Total Upah, Sudah Dibayar, Sisa, Status, Catatan
+4. **Tab Gaji & Upah di Laporan** — tab baru (setelah Stok Barang): summary cards 3 item, rekap per-pekerja (tabel), semua catatan upah (tabel), export CSV
 
 ### v1.0.47 — Bayar Batch Upah
 **Fitur:** Pembayaran upah massal untuk 1 pekerja (FIFO distribution) dari tab Daftar Pekerja.
