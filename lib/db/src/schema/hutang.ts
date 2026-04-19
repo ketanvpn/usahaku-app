@@ -15,6 +15,7 @@ export const hutangTable = sqliteTable("hutang", {
   totalDibayar: text("total_dibayar").notNull().default("0"),
   sisaHutang: text("sisa_hutang").notNull(),
   status: text("status").notNull().default("aktif").$type<"aktif" | "lunas">(),
+  keuanganId: integer("keuangan_id"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });

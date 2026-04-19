@@ -90,17 +90,35 @@ router.post("/hutang", requireAuth, requireLicense, async (req, res): Promise<vo
   }
 
   const nominalStr = parsed.data.nominal_hutang.toString();
-  const [hutang] = await db.insert(hutangTable).values({
-    usahaId,
-    pelangganId: parsed.data.pelanggan_id,
-    tanggalHutang: parsed.data.tanggal_hutang,
-    tanggalJatuhTempo: parsed.data.tanggal_jatuh_tempo ?? null,
-    keterangan: parsed.data.keterangan ?? null,
-    nominalHutang: nominalStr,
-    totalDibayar: "0",
-    sisaHutang: nominalStr,
-    status: "aktif",
-  }).returning();
+  const keterangan = parsed.data.keterangan
+    ? `Hutang - ${pelanggan.nama} - ${parsed.data.keterangan}`
+    : `Hutang - ${pelanggan.nama}`;
+
+  const hutang = db.transaction((tx) => {
+    const [keuangan] = tx.insert(keuanganTable).values({
+      usahaId,
+      tanggal: parsed.data.tanggal_hutang,
+      tipe: "keluar",
+      kategori: "Hutang",
+      keterangan,
+      jumlah: nominalStr,
+    }).returning();
+
+    const [h] = tx.insert(hutangTable).values({
+      usahaId,
+      pelangganId: parsed.data.pelanggan_id,
+      tanggalHutang: parsed.data.tanggal_hutang,
+      tanggalJatuhTempo: parsed.data.tanggal_jatuh_tempo ?? null,
+      keterangan: parsed.data.keterangan ?? null,
+      nominalHutang: nominalStr,
+      totalDibayar: "0",
+      sisaHutang: nominalStr,
+      status: "aktif",
+      keuanganId: keuangan.id,
+    }).returning();
+
+    return h;
+  });
 
   res.status(201).json(formatHutang(hutang, pelanggan.nama));
 });
@@ -198,15 +216,30 @@ router.put("/hutang/:id", requireAuth, requireLicense, async (req, res): Promise
   }
   updateData.updatedAt = new Date();
 
-  const [row] = await db.select({
-    hutang: hutangTable,
-    pelangganNama: pelangganTable.nama,
-  })
-    .from(hutangTable)
-    .leftJoin(pelangganTable, eq(hutangTable.pelangganId, pelangganTable.id))
-    .where(and(eq(hutangTable.id, params.data.id), eq(hutangTable.usahaId, usahaId)));
+  const [pelangganRow] = await db.select({ nama: pelangganTable.nama })
+    .from(pelangganTable)
+    .where(eq(pelangganTable.id, existing.pelangganId));
 
-  await db.update(hutangTable).set(updateData).where(eq(hutangTable.id, params.data.id));
+  const pelangganNama = pelangganRow?.nama ?? "";
+
+  db.transaction((tx) => {
+    tx.update(hutangTable).set(updateData).where(eq(hutangTable.id, params.data.id)).run();
+
+    if (existing.keuanganId) {
+      const keuanganUpdateData: Record<string, unknown> = {};
+      if (updateData.tanggalHutang) keuanganUpdateData.tanggal = updateData.tanggalHutang;
+      if (updateData.nominalHutang) keuanganUpdateData.jumlah = updateData.nominalHutang;
+      if (updateData.keterangan !== undefined || updateData.nominalHutang) {
+        const ket = updateData.keterangan ?? existing.keterangan;
+        keuanganUpdateData.keterangan = ket
+          ? `Hutang - ${pelangganNama} - ${ket}`
+          : `Hutang - ${pelangganNama}`;
+      }
+      if (Object.keys(keuanganUpdateData).length > 0) {
+        tx.update(keuanganTable).set(keuanganUpdateData).where(eq(keuanganTable.id, existing.keuanganId)).run();
+      }
+    }
+  });
 
   const [updated] = await db.select({
     hutang: hutangTable,
@@ -248,6 +281,11 @@ router.delete("/hutang/:id", requireAuth, requireLicense, async (req, res): Prom
   const keuanganIds = pembayaranTerkait
     .map((p) => p.keuanganId)
     .filter((id): id is number => id !== null && id !== undefined);
+
+  // Tambahkan keuangan_id dari hutang itu sendiri (entri uang keluar saat hutang dibuat)
+  if (existing.keuanganId) {
+    keuanganIds.push(existing.keuanganId);
+  }
 
   // Hapus keuangan, pembayaran, dan hutang dalam satu transaction
   db.transaction((tx) => {
