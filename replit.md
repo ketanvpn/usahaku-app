@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.50**
+**Current version: 1.0.51**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -44,7 +44,17 @@ export const sqliteRaw: any = sqlite;
 
 ---
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.50)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.51)
+
+### v1.0.51 — Integrasi Hutang ke Keuangan (Uang Keluar Otomatis)
+**Fix krusial:** Saat tambah catatan hutang baru, sistem kini otomatis membuat entri keuangan **uang keluar** — sehingga laporan keuangan mencerminkan uang/barang yang sudah dikeluarkan.
+- **Tambah hutang** → otomatis buat entri keuangan `tipe: "keluar"`, `kategori: "Hutang"`, keterangan `"Hutang - [Nama Pelanggan]"` (atau dengan catatan jika ada), dalam satu DB transaction
+- **Edit nominal/keterangan/tanggal hutang** → entri keuangan terkait ikut diperbarui secara otomatis
+- **Hapus hutang** → entri keuangan uang keluar (dari pembuatan hutang) ikut terhapus bersama entri pembayaran yang sudah ada
+- **Database migration:** `ALTER TABLE hutang ADD COLUMN keuangan_id INTEGER` — kolom baru untuk menyimpan referensi ke keuangan
+- **Schema:** tambah field `keuanganId` di `hutangTable` (Drizzle)
+- Alur kini simetris: hutang baru = uang keluar, bayar hutang = uang masuk
+- Files: `lib/db/src/schema/hutang.ts`, `lib/db/src/index.ts`, `artifacts/api-server/src/routes/hutang.ts`
 
 ### v1.0.50 — Perbaikan Halaman Profil Pengguna
 **Fix:**
