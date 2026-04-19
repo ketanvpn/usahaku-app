@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.52**
+**Current version: 1.0.53**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -44,7 +44,19 @@ export const sqliteRaw: any = sqlite;
 
 ---
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.52)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.53)
+
+### v1.0.53 — Fix Backup JSON: keuangan_id Hutang Tidak Ter-restore
+**Bug:** Setelah restore JSON, hapus hutang tidak ikut hapus entri keuangan "uang keluar" yang terkait — karena `keuangan_id` di tabel hutang tidak diekspor maupun di-restore dalam backup JSON.
+**Root cause:** 2 tempat yang luput saat fitur integrasi hutang↔keuangan ditambahkan di v1.0.51:
+1. **Export** — field `keuangan_id` tidak disertakan di map hutang → nilai hilang dari file backup JSON
+2. **Restore** — INSERT hutang tidak menyertakan kolom `keuangan_id` dan tidak melakukan ID remapping → hutang yang di-restore selalu punya `keuangan_id = NULL`
+**Fix:**
+- Export: tambah `keuangan_id: h.keuanganId ?? null` ke map hutang
+- Restore: UPDATE SQL INSERT hutang sertakan kolom `keuangan_id`, remap via `keuanganIdMap` (sama seperti pola pembayaran, stok, kasir)
+- Versi format backup dinaikkan `"1.4"` → `"1.5"`
+- Kompatibel mundur: backup lama (tanpa `keuangan_id` di hutang) di-restore dengan `keuangan_id = NULL` (fallback aman)
+- File: `artifacts/api-server/src/routes/backup.ts`
 
 ### v1.0.52 — Hotfix: Tambah Hutang Gagal 500 (Missing .all())
 **Bug:** v1.0.51 selalu error HTTP 500 saat tambah hutang baru — crash karena `.returning()` tanpa `.all()` di dalam `db.transaction()` tidak mengeksekusi query, sehingga `keuangan` jadi `undefined` dan `keuangan.id` throw error.

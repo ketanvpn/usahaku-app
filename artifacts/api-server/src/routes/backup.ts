@@ -38,7 +38,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   const transaksiKasirItemList = allKasirItems.flat();
 
   const backup = {
-    version: "1.4",
+    version: "1.5",
     exported_at: new Date().toISOString(),
     usaha_id: usahaId,
     usaha: {
@@ -69,6 +69,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       total_dibayar: parseFloat(h.totalDibayar),
       sisa_hutang: parseFloat(h.sisaHutang),
       status: h.status,
+      keuangan_id: h.keuanganId ?? null,
       created_at: h.createdAt.toISOString(),
       updated_at: h.updatedAt.toISOString(),
     })),
@@ -269,16 +270,18 @@ router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
       // ── 4. Restore hutang — bangun peta ID lama → baru ────────────────────
       const hutangIdMap = new Map<number, number>();
       const stmtHutang = sqliteRaw.prepare(
-        "INSERT INTO hutang (usaha_id, pelanggan_id, tanggal_hutang, tanggal_jatuh_tempo, keterangan, nominal_hutang, total_dibayar, sisa_hutang, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO hutang (usaha_id, pelanggan_id, tanggal_hutang, tanggal_jatuh_tempo, keterangan, nominal_hutang, total_dibayar, sisa_hutang, status, keuangan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       );
       for (const h of backup.hutang) {
         const newPelangganId = pelangganIdMap.get(h.pelanggan_id) ?? h.pelanggan_id;
+        const newKeuanganId  = h.keuangan_id != null ? (keuanganIdMap.get(h.keuangan_id) ?? null) : null;
         const r = stmtHutang.run(
           usahaId, newPelangganId,
           h.tanggal_hutang, h.tanggal_jatuh_tempo ?? null,
           h.keterangan ?? null,
           String(h.nominal_hutang), String(h.total_dibayar ?? 0),
-          String(h.sisa_hutang), h.status ?? "aktif"
+          String(h.sisa_hutang), h.status ?? "aktif",
+          newKeuanganId ?? null
         );
         hutangIdMap.set(h.id, Number(r.lastInsertRowid));
       }
