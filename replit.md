@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.51**
+**Current version: 1.0.52**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -44,7 +44,12 @@ export const sqliteRaw: any = sqlite;
 
 ---
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.51)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.52)
+
+### v1.0.52 — Hotfix: Tambah Hutang Gagal 500 (Missing .all())
+**Bug:** v1.0.51 selalu error HTTP 500 saat tambah hutang baru — crash karena `.returning()` tanpa `.all()` di dalam `db.transaction()` tidak mengeksekusi query, sehingga `keuangan` jadi `undefined` dan `keuangan.id` throw error.
+**Fix:** Tambahkan `.all()` pada kedua `.returning()` di dalam transaction POST /hutang, mengikuti pola yang benar di codebase (seperti di `pembayaran.ts`).
+- File: `artifacts/api-server/src/routes/hutang.ts`
 
 ### v1.0.51 — Integrasi Hutang ke Keuangan (Uang Keluar Otomatis)
 **Fix krusial:** Saat tambah catatan hutang baru, sistem kini otomatis membuat entri keuangan **uang keluar** — sehingga laporan keuangan mencerminkan uang/barang yang sudah dikeluarkan.

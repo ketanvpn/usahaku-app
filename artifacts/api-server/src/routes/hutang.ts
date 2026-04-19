@@ -102,7 +102,7 @@ router.post("/hutang", requireAuth, requireLicense, async (req, res): Promise<vo
       kategori: "Hutang",
       keterangan,
       jumlah: nominalStr,
-    }).returning();
+    }).returning().all();
 
     const [h] = tx.insert(hutangTable).values({
       usahaId,
@@ -115,7 +115,7 @@ router.post("/hutang", requireAuth, requireLicense, async (req, res): Promise<vo
       sisaHutang: nominalStr,
       status: "aktif",
       keuanganId: keuangan.id,
-    }).returning();
+    }).returning().all();
 
     return h;
   });
