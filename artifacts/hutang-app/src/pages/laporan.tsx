@@ -421,6 +421,55 @@ export default function LaporanPage() {
   const hasActiveFilterHutang = !!filterPelanggan || !!filterStatus || !!dateFrom || !!dateTo;
   const hasActiveFilterKeu = !!keuDari || !!keuSampai || keuTipe !== "semua";
 
+  const toYmd = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const applyHutangPreset = (preset: "today" | "7d" | "30d" | "month") => {
+    const nowDate = new Date();
+    const end = toYmd(nowDate);
+    if (preset === "today") {
+      setDateFrom(end);
+      setDateTo(end);
+      return;
+    }
+    if (preset === "month") {
+      const start = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1);
+      setDateFrom(toYmd(start));
+      setDateTo(end);
+      return;
+    }
+    const days = preset === "7d" ? 6 : 29;
+    const start = new Date(nowDate);
+    start.setDate(start.getDate() - days);
+    setDateFrom(toYmd(start));
+    setDateTo(end);
+  };
+
+  const applyKeuPreset = (preset: "today" | "7d" | "30d" | "month") => {
+    const nowDate = new Date();
+    const end = toYmd(nowDate);
+    if (preset === "today") {
+      setKeuDari(end);
+      setKeuSampai(end);
+      return;
+    }
+    if (preset === "month") {
+      const start = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1);
+      setKeuDari(toYmd(start));
+      setKeuSampai(end);
+      return;
+    }
+    const days = preset === "7d" ? 6 : 29;
+    const start = new Date(nowDate);
+    start.setDate(start.getDate() - days);
+    setKeuDari(toYmd(start));
+    setKeuSampai(end);
+  };
+
   const hutangFilterLines: { label: string; value: string }[] = [];
   if (selectedPelanggan) hutangFilterLines.push({ label: "Pelanggan", value: selectedPelanggan.nama });
   if (filterStatus) hutangFilterLines.push({ label: "Status", value: filterStatus === "aktif" ? "Aktif" : "Lunas" });
@@ -873,6 +922,12 @@ export default function LaporanPage() {
                   </Button>
                 )}
               </div>
+              <div className="mb-4 flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => applyHutangPreset("today")}>Hari ini</Button>
+                <Button variant="outline" size="sm" onClick={() => applyHutangPreset("7d")}>7 hari</Button>
+                <Button variant="outline" size="sm" onClick={() => applyHutangPreset("30d")}>30 hari</Button>
+                <Button variant="outline" size="sm" onClick={() => applyHutangPreset("month")}>Bulan ini</Button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label>Pelanggan</Label>
@@ -992,6 +1047,12 @@ export default function LaporanPage() {
                     <X className="h-3 w-3 mr-1" /> Reset
                   </Button>
                 )}
+              </div>
+              <div className="mb-4 flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => applyKeuPreset("today")}>Hari ini</Button>
+                <Button variant="outline" size="sm" onClick={() => applyKeuPreset("7d")}>7 hari</Button>
+                <Button variant="outline" size="sm" onClick={() => applyKeuPreset("30d")}>30 hari</Button>
+                <Button variant="outline" size="sm" onClick={() => applyKeuPreset("month")}>Bulan ini</Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">

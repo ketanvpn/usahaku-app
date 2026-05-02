@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Loader2, Download, Upload, AlertTriangle, FileJson, Users, ReceiptText, CreditCard, FolderOpen, HardDrive, Database, RotateCcw, Cloud, CloudOff, RefreshCw, Unlink, CheckCircle2, Clock } from "lucide-react";
+import { Loader2, Download, Upload, AlertTriangle, FileJson, Users, ReceiptText, CreditCard, FolderOpen, HardDrive, Database, RotateCcw, Cloud, CloudOff, RefreshCw, Unlink, CheckCircle2, Clock, Copy } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { GDriveStatusPayload, GDriveBackupFile } from "@/types/electron";
 
@@ -105,6 +105,16 @@ export default function BackupPage() {
       }
     } finally {
       setIsChoosingFolder(false);
+    }
+  };
+
+  const handleCopyFolderPath = async () => {
+    if (!autoBackupFolder) return;
+    try {
+      await navigator.clipboard.writeText(autoBackupFolder);
+      toast({ title: "Lokasi folder disalin", description: autoBackupFolder });
+    } catch {
+      toast({ variant: "destructive", title: "Gagal menyalin lokasi folder" });
     }
   };
 
@@ -333,6 +343,15 @@ export default function BackupPage() {
                 <FolderOpen className="mr-2 h-4 w-4" />
               )}
               Ubah Folder Auto-Backup
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleCopyFolderPath}
+              disabled={!autoBackupFolder}
+              className="w-full sm:w-auto"
+            >
+              <Copy className="mr-2 h-4 w-4" /> Salin Lokasi Folder
             </Button>
           </CardContent>
         </Card>
