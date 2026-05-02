@@ -8,13 +8,15 @@ Aturan pakai:
 - Tanggal pakai format `YYYY-MM-DD`.
 - Update bagian `Versi terbaru` setelah rilis sukses.
 
-Versi terbaru: `v1.0.57`
+Versi terbaru: `v1.0.59`
 
-Rilis berikutnya (siap dipublish): `v1.0.58`
+Rilis berikutnya (siap dipublish): `v1.0.60`
 
 | Versi | Tanggal | Status | Catatan Singkat |
 | --- | --- | --- | --- |
-| v1.0.58 | 2026-05-02 | Planned | Peningkatan pipeline release: cache pnpm, validasi format tag, trigger manual workflow, dan migrasi Node 24 |
+| v1.0.60 | 2026-05-02 | Planned | Penyempurnaan operasional rilis dan peningkatan UX lintas halaman (kandidat berikutnya) |
+| v1.0.59 | 2026-05-02 | Published | Peningkatan UX laporan & backup + stabilisasi pipeline rilis (preset periode cepat, copy path backup, validasi workflow) |
+| v1.0.58 | 2026-05-02 | Published | Peningkatan pipeline release: validasi format tag, trigger manual workflow, migrasi Node 24, dan perbaikan alur verify/release agar stabil |
 | v1.0.57 | 2026-05-02 | Published | Peningkatan workflow release: pisah job verify/release dan penamaan job agar lebih jelas di GitHub Actions |
 | v1.0.56 | 2026-05-02 | Published | Bundle perbaikan: ringkasan keuangan lintas bulan, optimasi pipeline release, hardening secret policy production, template release notes, dan quality gate sebelum packaging |
 | v1.0.54 | 2026-05-02 | Published | Fix ringkasan keuangan agar tetap tampil akumulasi semua waktu saat ganti bulan |

@@ -4,9 +4,9 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.57**
+**Current version: 1.0.59**
 
-**Next planned release: 1.0.58**
+**Next planned release: 1.0.60**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -46,7 +46,20 @@ export const sqliteRaw: any = sqlite;
 
 ---
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.57)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.59)
+
+### v1.0.59 — Peningkatan UX Laporan dan Backup
+**Isi rilis:**
+- Tambah preset periode cepat di tab Laporan (Hutang & Keuangan): `Hari ini`, `7 hari`, `30 hari`, `Bulan ini`.
+- Tambah tombol `Salin Lokasi Folder` pada halaman Backup untuk memudahkan audit/support.
+- Stabilisasi lanjutan alur workflow release berdasarkan validasi job verify/release.
+
+### v1.0.58 — Stabilisasi Pipeline Release GitHub Actions
+**Isi rilis:**
+- Validasi format tag release ditambahkan (wajib `vX.Y.Z`) agar fail cepat saat versi tidak valid.
+- Trigger manual workflow (`workflow_dispatch`) ditambahkan untuk retry operasional tanpa ubah release flow utama.
+- Runtime Node di workflow dimigrasikan ke 24 untuk mengikuti perubahan runner GitHub.
+- Perbaikan alur job verify/release sehingga proses build installer lebih stabil.
 
 ### v1.0.57 — Perapihan Pipeline Release GitHub Actions
 **Isi rilis:**
