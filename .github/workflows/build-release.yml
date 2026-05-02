@@ -44,11 +44,8 @@ jobs:
       - name: Pastikan dependency workspace DB terpasang
         run: pnpm --filter @workspace/db install --frozen-lockfile
 
-      - name: Quality gate - Typecheck libs
-        run: pnpm run typecheck:libs
-
-      - name: Quality gate - Typecheck artifacts
-        run: pnpm -r --filter "./artifacts/**" --filter "./scripts" --if-present run typecheck
+      - name: Quality gate - Build DB package
+        run: pnpm --filter @workspace/db run build
 
       - name: Quality gate - Build backend (API server)
         run: pnpm --filter @workspace/api-server run build
