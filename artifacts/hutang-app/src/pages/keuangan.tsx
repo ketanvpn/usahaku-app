@@ -79,9 +79,12 @@ async function fetchKeuangan(params: { bulan: string; tahun: string; tipe: strin
   return r.json();
 }
 
-async function fetchRekap(params: { bulan: string; tahun: string }): Promise<Rekap> {
-  const q = new URLSearchParams({ bulan: params.bulan, tahun: params.tahun });
-  const r = await fetch(`${BASE}/api/keuangan/rekap?${q}`, { credentials: "include" });
+async function fetchRekap(params?: { bulan?: string; tahun?: string }): Promise<Rekap> {
+  const q = new URLSearchParams();
+  if (params?.bulan) q.set("bulan", params.bulan);
+  if (params?.tahun) q.set("tahun", params.tahun);
+  const query = q.toString();
+  const r = await fetch(`${BASE}/api/keuangan/rekap${query ? `?${query}` : ""}`, { credentials: "include" });
   if (!r.ok) throw new Error("Gagal memuat rekap");
   return r.json();
 }
@@ -223,9 +226,14 @@ export default function KeuanganPage() {
     queryFn: () => fetchKeuangan(filterParams),
   });
 
-  const { data: rekap } = useQuery({
+  const { data: rekapPeriode } = useQuery({
     queryKey: ["keuangan-rekap", rekapParams],
     queryFn: () => fetchRekap(rekapParams),
+  });
+
+  const { data: rekapTotal } = useQuery({
+    queryKey: ["keuangan-rekap-total"],
+    queryFn: () => fetchRekap(),
   });
 
   const { data: rekapKategori = [] } = useQuery({
@@ -241,6 +249,7 @@ export default function KeuanganPage() {
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["keuangan"] });
     qc.invalidateQueries({ queryKey: ["keuangan-rekap"] });
+    qc.invalidateQueries({ queryKey: ["keuangan-rekap-total"] });
     qc.invalidateQueries({ queryKey: ["keuangan-rekap-kategori"] });
     qc.invalidateQueries({ queryKey: ["keuangan-rekap-bulanan"] });
   };
@@ -309,7 +318,7 @@ export default function KeuanganPage() {
           <Button variant="outline" size="sm" onClick={() => handleExportCSV(items, filterBulan, filterTahun)} disabled={items.length === 0}>
             <Download className="h-4 w-4 mr-2" /> Export CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={() => handlePrint(items, rekap, filterBulan, filterTahun, namaUsaha)} disabled={items.length === 0}>
+          <Button variant="outline" size="sm" onClick={() => handlePrint(items, rekapPeriode, filterBulan, filterTahun, namaUsaha)} disabled={items.length === 0}>
             <Printer className="h-4 w-4 mr-2" /> Cetak
           </Button>
           <Button onClick={openCreate} disabled={!lisensiAktif}>
@@ -327,8 +336,8 @@ export default function KeuanganPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-green-700 dark:text-green-400">{formatRupiah(rekap?.total_masuk ?? 0)}</p>
-            <p className="text-xs text-muted-foreground mt-1">{BULAN_NAMES[parseInt(filterBulan) - 1]} {filterTahun}</p>
+            <p className="text-2xl font-bold text-green-700 dark:text-green-400">{formatRupiah(rekapTotal?.total_masuk ?? 0)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Semua waktu</p>
           </CardContent>
         </Card>
 
@@ -339,22 +348,22 @@ export default function KeuanganPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-red-700 dark:text-red-400">{formatRupiah(rekap?.total_keluar ?? 0)}</p>
-            <p className="text-xs text-muted-foreground mt-1">{BULAN_NAMES[parseInt(filterBulan) - 1]} {filterTahun}</p>
+            <p className="text-2xl font-bold text-red-700 dark:text-red-400">{formatRupiah(rekapTotal?.total_keluar ?? 0)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Semua waktu</p>
           </CardContent>
         </Card>
 
-        <Card className={`border-2 ${(rekap?.saldo ?? 0) >= 0 ? "border-blue-200 bg-blue-50 dark:bg-blue-950/20" : "border-orange-200 bg-orange-50 dark:bg-orange-950/20"}`}>
+        <Card className={`border-2 ${(rekapTotal?.saldo ?? 0) >= 0 ? "border-blue-200 bg-blue-50 dark:bg-blue-950/20" : "border-orange-200 bg-orange-50 dark:bg-orange-950/20"}`}>
           <CardHeader className="pb-2">
-            <CardTitle className={`text-sm font-medium flex items-center gap-2 ${(rekap?.saldo ?? 0) >= 0 ? "text-blue-700 dark:text-blue-400" : "text-orange-700 dark:text-orange-400"}`}>
+            <CardTitle className={`text-sm font-medium flex items-center gap-2 ${(rekapTotal?.saldo ?? 0) >= 0 ? "text-blue-700 dark:text-blue-400" : "text-orange-700 dark:text-orange-400"}`}>
               <Wallet className="h-4 w-4" /> Saldo
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={`text-2xl font-bold ${(rekap?.saldo ?? 0) >= 0 ? "text-blue-700 dark:text-blue-400" : "text-orange-700 dark:text-orange-400"}`}>
-              {formatRupiah(rekap?.saldo ?? 0)}
+            <p className={`text-2xl font-bold ${(rekapTotal?.saldo ?? 0) >= 0 ? "text-blue-700 dark:text-blue-400" : "text-orange-700 dark:text-orange-400"}`}>
+              {formatRupiah(rekapTotal?.saldo ?? 0)}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">{rekap?.jumlah_transaksi ?? 0} transaksi</p>
+            <p className="text-xs text-muted-foreground mt-1">{rekapTotal?.jumlah_transaksi ?? 0} transaksi</p>
           </CardContent>
         </Card>
       </div>
