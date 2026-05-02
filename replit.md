@@ -4,7 +4,7 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.53**
+**Current version: 1.0.54**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -44,7 +44,13 @@ export const sqliteRaw: any = sqlite;
 
 ---
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.53)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.54)
+
+### v1.0.54 — Fix Ringkasan Keuangan Tetap Tampil Saat Ganti Bulan
+**Bug:** Kartu ringkasan paling atas di tab Keuangan (Total Masuk, Total Keluar, Saldo) ikut filter bulan/tahun, sehingga saat pindah ke bulan yang belum ada transaksi nilainya terlihat hilang/0.
+**Fix:** Ringkasan atas sekarang mengambil data akumulasi semua waktu (tanpa filter bulan), sementara tabel transaksi, grafik, rincian kategori, export CSV, dan cetak tetap mengikuti filter periode.
+- Frontend: tambah query `keuangan-rekap-total` dan invalidasi cache-nya setelah tambah/edit/hapus transaksi.
+- File: `artifacts/hutang-app/src/pages/keuangan.tsx`
 
 ### v1.0.53 — Fix Backup JSON: keuangan_id Hutang Tidak Ter-restore
 **Bug:** Setelah restore JSON, hapus hutang tidak ikut hapus entri keuangan "uang keluar" yang terkait — karena `keuangan_id` di tabel hutang tidak diekspor maupun di-restore dalam backup JSON.

@@ -90,6 +90,35 @@ Aplikasi pengguna yang sudah terinstall akan:
 
 ---
 
+## Template Catatan Release (Biar Rapi)
+
+Saat klik **Edit release** atau saat buat release baru, pakai template ini:
+
+```md
+## Perbaikan
+- fix: ...
+- fix: ...
+
+## Peningkatan
+- improve: ...
+
+## Catatan
+- ...
+```
+
+Contoh untuk v1.0.54:
+
+```md
+## Perbaikan
+- fix: ringkasan keuangan (Total Masuk, Total Keluar, Saldo) sekarang tampil akumulasi semua waktu dan tidak hilang saat ganti bulan
+- fix: cache rekap total ikut di-refresh setelah tambah/edit/hapus transaksi
+
+## Catatan
+- tabel transaksi, grafik, export CSV, dan cetak tetap mengikuti filter bulan/tahun
+```
+
+---
+
 ## Catat Versi Rilis (WAJIB)
 
 Setiap selesai publish release, langsung catat ke file:
