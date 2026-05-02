@@ -4,9 +4,9 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.54**
+**Current version: 1.0.56**
 
-**Next planned release: 1.0.56**
+**Next planned release: 1.0.57**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -29,7 +29,7 @@ Key features:
 
 ## Technical Debt (Status Terkini)
 
-### TD-001 — TS4023: `sqliteRaw` export di `lib/db/src/index.ts` (Resolved, siap rilis v1.0.56)
+### TD-001 — TS4023: `sqliteRaw` export di `lib/db/src/index.ts` (Resolved di v1.0.56)
 **File:** `lib/db/src/index.ts` baris 168
 **Error:** `TS4023: Exported variable 'sqliteRaw' has or is using name 'BetterSqlite3.Database' from external module but cannot be named.`
 **Dampak:** Karena `lib/db` gagal generate file `.d.ts`, semua file yang import dari `@workspace/db` mendapat error TS6305 (cascade), dan callback di beberapa route mendapat TS7006 (implicit any). Total muncul ~127 error saat `tsc --noEmit`.
@@ -46,7 +46,15 @@ export const sqliteRaw: any = sqlite;
 
 ---
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.54)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.56)
+
+### v1.0.56 — Bundle Stabilitas Rilis dan Keamanan
+**Isi rilis:**
+- Ringkasan keuangan atas diperbaiki agar tetap akumulasi semua waktu saat ganti bulan.
+- Pipeline release dioptimasi (hapus build duplikat, install lockfile ketat `--frozen-lockfile`).
+- Quality gate ditambahkan sebelum packaging (`typecheck`, build backend, build frontend).
+- Secret policy production diperketat: warning saat fallback secret dipakai, dengan opsi fail via `STRICT_SECRET_POLICY=fail`.
+- Template catatan release dirapikan (manual + generate release notes).
 
 ### v1.0.54 — Fix Ringkasan Keuangan Tetap Tampil Saat Ganti Bulan
 **Bug:** Kartu ringkasan paling atas di tab Keuangan (Total Masuk, Total Keluar, Saldo) ikut filter bulan/tahun, sehingga saat pindah ke bulan yang belum ada transaksi nilainya terlihat hilang/0.
