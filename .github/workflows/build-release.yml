@@ -72,17 +72,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: pnpm
-
-      - name: Preflight - Validasi format tag release
-        shell: bash
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Tag release tidak valid: '$TAG'. Gunakan format vX.Y.Z (contoh v1.0.59)."
-            exit 1
-          fi
-          cache: pnpm
 
       - name: Preflight - Validasi format tag release
         shell: bash
