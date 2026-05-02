@@ -204,6 +204,6 @@ sqlite.exec(`
 
 export const db = drizzle(sqlite, { schema });
 
-export const sqliteRaw = sqlite;
+export const sqliteRaw: any = sqlite;
 
 export * from "./schema";

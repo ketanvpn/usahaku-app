@@ -1,6 +1,12 @@
 import { createHmac, randomBytes } from "crypto";
+import { resolveSecret } from "../lib/security-secrets";
 
-const SECRET = process.env.LICENSE_SECRET ?? "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE";
+const SECRET = resolveSecret({
+  key: "LICENSE_SECRET",
+  value: process.env.LICENSE_SECRET,
+  fallback: "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE",
+  reason: "dipakai untuk sign dan verifikasi license key",
+});
 
 export type LicenseTipe = "1bulan" | "3bulan" | "6bulan" | "1tahun";
 

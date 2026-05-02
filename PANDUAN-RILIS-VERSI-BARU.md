@@ -41,10 +41,14 @@ git push
 
 4. Isi kolom **"Release title"** → ketik `Usahaku v1.0.54`
 
-5. Di kolom deskripsi, tulis apa saja yang berubah di versi ini
-   (contoh: "Perbaikan bug tampilan" atau "Tambah fitur pengingat hutang")
+5. Klik **"Generate release notes"** dulu (otomatis ambil perubahan dari commit/PR)
 
-6. Klik **"Publish release"**
+6. Rapikan hasil generate pakai format ringkas:
+   - `fix: ...`
+   - `improve: ...`
+   - `note: ...`
+
+7. Klik **"Publish release"**
 
 ---
 

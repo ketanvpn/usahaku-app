@@ -6,6 +6,8 @@ This project is a pnpm workspace monorepo using TypeScript, designed to be **Usa
 
 **Current version: 1.0.54**
 
+**Next planned release: 1.0.56**
+
 Key features:
 - CRUD for customers, debts, payments
 - Jatuh tempo hutang: field opsional `tanggal_jatuh_tempo` di setiap hutang; badge "Terlambat" (merah) atau "Segera JT" (kuning, ≤7 hari) di tabel hutang; field dibackup/restore
@@ -25,14 +27,14 @@ Key features:
 - Standalone HTML tools (offline): `license-generator.html` dan `password-reset-generator.html` di `artifacts/hutang-app/public/`
 - PelangganCombobox: searchable dropdown untuk pilih pelanggan di dialog tambah hutang & terima pembayaran
 
-## Technical Debt (Dicatat, Belum Diperbaiki)
+## Technical Debt (Status Terkini)
 
-### TD-001 — TS4023: `sqliteRaw` export di `lib/db/src/index.ts`
+### TD-001 — TS4023: `sqliteRaw` export di `lib/db/src/index.ts` (Resolved, siap rilis v1.0.56)
 **File:** `lib/db/src/index.ts` baris 168
 **Error:** `TS4023: Exported variable 'sqliteRaw' has or is using name 'BetterSqlite3.Database' from external module but cannot be named.`
 **Dampak:** Karena `lib/db` gagal generate file `.d.ts`, semua file yang import dari `@workspace/db` mendapat error TS6305 (cascade), dan callback di beberapa route mendapat TS7006 (implicit any). Total muncul ~127 error saat `tsc --noEmit`.
 **Tidak menyebabkan crash** — runtime pakai esbuild (baca source langsung, tidak butuh `.d.ts`). Tapi TypeScript tidak bisa jaga tipe di area-area yang pakai `sqliteRaw`.
-**Fix (1 baris):**
+**Fix (1 baris) sudah diterapkan:**
 ```ts
 // Ubah dari:
 export const sqliteRaw = sqlite;

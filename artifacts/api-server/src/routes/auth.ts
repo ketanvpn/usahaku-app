@@ -5,8 +5,14 @@ import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { LoginBody } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
+import { resolveSecret } from "../lib/security-secrets";
 
-const RESET_SECRET = process.env.LICENSE_SECRET ?? "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE";
+const RESET_SECRET = resolveSecret({
+  key: "LICENSE_SECRET",
+  value: process.env.LICENSE_SECRET,
+  fallback: "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE",
+  reason: "dipakai untuk reset code HMAC",
+});
 
 const router: IRouter = Router();
 

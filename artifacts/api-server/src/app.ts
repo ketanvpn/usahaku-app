@@ -7,6 +7,7 @@ import path from "path";
 import fs from "fs";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { resolveSecret } from "./lib/security-secrets";
 
 const app: Express = express();
 
@@ -38,7 +39,12 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-const sessionSecret = process.env.SESSION_SECRET || "hutang-app-secret-key-change-in-production";
+const sessionSecret = resolveSecret({
+  key: "SESSION_SECRET",
+  value: process.env.SESSION_SECRET,
+  fallback: "hutang-app-secret-key-change-in-production",
+  reason: "dipakai untuk menandatangani session cookie",
+});
 
 app.use(
   session({
