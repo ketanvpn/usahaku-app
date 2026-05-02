@@ -8,8 +8,9 @@ Aturan pakai:
 - Tanggal pakai format `YYYY-MM-DD`.
 - Update bagian `Versi terbaru` setelah rilis sukses.
 
-Versi terbaru: `v1.0.53`
+Versi terbaru: `v1.0.54`
 
 | Versi | Tanggal | Status | Catatan Singkat |
 | --- | --- | --- | --- |
+| v1.0.54 | 2026-05-02 | Baseline | Versi aktif saat catatan rilis mulai dibuat |
 | v1.0.53 | 2026-05-02 | Baseline | Versi aktif saat catatan rilis mulai dibuat |
