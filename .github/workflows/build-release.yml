@@ -40,17 +40,7 @@ jobs:
           "
 
       - name: Install semua dependencies
-        run: pnpm install
-
-      - name: Build backend (API server)
-        run: pnpm --filter @workspace/api-server run build
-
-      - name: Build frontend (React app)
-        run: pnpm --filter @workspace/hutang-app run build:electron
-
-      - name: Compile Electron main process
-        run: pnpm --filter @workspace/electron-app run build:main
-        working-directory: artifacts/electron-app
+        run: pnpm install --frozen-lockfile
 
       - name: Build installer Windows (.exe) dan upload otomatis ke Release
         run: pnpm run dist:win
