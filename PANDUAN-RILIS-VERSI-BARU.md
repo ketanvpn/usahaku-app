@@ -37,9 +37,9 @@ git push
 
 2. Klik tombol **"Draft a new release"**
 
-3. Isi kolom **"Choose a tag"** → ketik versi baru misalnya `v1.0.14` → klik **"Create new tag"**
+3. Isi kolom **"Choose a tag"** → ketik versi baru misalnya `v1.0.54` → klik **"Create new tag"**
 
-4. Isi kolom **"Release title"** → ketik `Usahaku v1.0.14`
+4. Isi kolom **"Release title"** → ketik `Usahaku v1.0.54`
 
 5. Di kolom deskripsi, tulis apa saja yang berubah di versi ini
    (contoh: "Perbaikan bug tampilan" atau "Tambah fitur pengingat hutang")
@@ -83,10 +83,28 @@ Aplikasi pengguna yang sudah terinstall akan:
 ```
 1. Edit kode di Replit
 2. git add . && git commit -m "..." && git push
-3. Buat GitHub Release dengan tag baru (misal v1.0.14)
+3. Buat GitHub Release dengan tag baru (misal v1.0.54)
 4. Klik Publish release → GitHub Actions otomatis build & upload .exe
 5. Tunggu ~10 menit → pengguna otomatis dapat notifikasi update
 ```
+
+---
+
+## Catat Versi Rilis (WAJIB)
+
+Setiap selesai publish release, langsung catat ke file:
+
+`CATATAN-RILIS.md`
+
+Format isi yang dipakai:
+
+```
+| Versi | Tanggal | Status | Catatan Singkat |
+| --- | --- | --- | --- |
+| v1.0.54 | 2026-05-02 | Published | Perbaikan tab keuangan |
+```
+
+Tujuannya supaya riwayat versi rapi, gampang rollback, dan gampang cek user pakai versi berapa.
 
 ---
 
