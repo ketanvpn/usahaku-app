@@ -422,6 +422,19 @@ function createLoadingWindow(): void {
     return { action: "deny" };
   });
 
+  mainWindow.webContents.on("console-message", (_event, level, message, line, sourceId) => {
+    const lvl = level === 2 ? "warn" : level >= 3 ? "error" : "info";
+    writeLog(`[renderer:${lvl}] ${sourceId}:${line} ${message}`);
+  });
+
+  mainWindow.webContents.on("render-process-gone", (_event, details) => {
+    writeLog(`[renderer] process gone: reason=${details.reason} exitCode=${details.exitCode}`);
+  });
+
+  mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL) => {
+    writeLog(`[renderer] did-fail-load code=${errorCode} desc=${errorDescription} url=${validatedURL}`);
+  });
+
   mainWindow.on("close", (e) => {
     // Auto-backup sebelum tutup (hanya di production/release)
     if (!isDev) {
