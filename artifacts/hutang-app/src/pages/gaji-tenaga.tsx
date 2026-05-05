@@ -1356,16 +1356,17 @@ export default function GajiTenagaPage() {
       </AlertDialog>
       {/* ── Dialog Bayar Batch ───────────────────────────────────────────────── */}
       <Dialog open={isBatchDialogOpen} onOpenChange={(open) => { setIsBatchDialogOpen(open); if (!open) { setBatchPekerja(null); batchForm.clearErrors(); setPotongHutangBatchEnabled(false); setPotongHutangBatchAmount(""); setSelectedBatchHutangIds([]); } }}>
-        <DialogContent aria-describedby={undefined} className="max-w-lg">
+        <DialogContent aria-describedby={undefined} className="max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Bayar Upah Batch — {batchPekerja?.nama}</DialogTitle>
           </DialogHeader>
           {batchPekerja && (
             <Form {...batchForm}>
-              <form onSubmit={batchForm.handleSubmit(submitBatch)} className="space-y-4">
-                {batchPekerja?.pelanggan_id && (
-                  <div className="rounded-lg border bg-blue-50/60 p-3 space-y-3 text-sm">
-                    <div className="flex items-center justify-between gap-2">
+              <form onSubmit={batchForm.handleSubmit(submitBatch)} className="flex flex-col flex-1 min-h-0 gap-4">
+                <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
+                  {batchPekerja?.pelanggan_id && (
+                    <div className="rounded-lg border bg-blue-50/60 p-3 space-y-3 text-sm">
+                      <div className="flex items-center justify-between gap-2">
                       <div>
                         <p className="font-semibold">Opsi potong hutang</p>
                         <p className="text-xs text-muted-foreground">{batchPelangganDetail ? `Terkait pelanggan: ${batchPelangganDetail.nama}` : "Memuat data pelanggan..."}</p>
@@ -1436,9 +1437,9 @@ export default function GajiTenagaPage() {
                         </div>
                       </>
                     )}
-                  </div>
-                )}
-                <div className="rounded-md border bg-muted/40 p-3 space-y-1.5 max-h-48 overflow-y-auto">
+                    </div>
+                  )}
+                  <div className="rounded-md border bg-muted/40 p-3 space-y-1.5 max-h-48 overflow-y-auto">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Distribusi FIFO (terlama dulu)</p>
                   {(() => {
                     const jumlahInput = Number(batchForm.watch("jumlah_total")) || 0;
@@ -1467,13 +1468,13 @@ export default function GajiTenagaPage() {
                       );
                     });
                   })()}
-                  <div className="flex justify-between pt-1.5 border-t text-sm font-semibold">
-                    <span>Total Sisa</span>
-                    <span>{formatRupiah(totalSisaBatch)}</span>
+                    <div className="flex justify-between pt-1.5 border-t text-sm font-semibold">
+                      <span>Total Sisa</span>
+                      <span>{formatRupiah(totalSisaBatch)}</span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                   <FormField control={batchForm.control} name="jumlah_total" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Jumlah Bayar <span className="text-destructive">*</span></FormLabel>
@@ -1496,7 +1497,9 @@ export default function GajiTenagaPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <div className="flex justify-end gap-2 pt-1">
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t shrink-0 bg-background">
                   <Button type="button" variant="outline" onClick={() => setIsBatchDialogOpen(false)}>Batal</Button>
                   <Button type="submit" disabled={bayarBatch.isPending}>
                     {bayarBatch.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
