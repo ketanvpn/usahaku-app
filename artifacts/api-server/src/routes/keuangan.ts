@@ -90,16 +90,24 @@ router.get("/keuangan/rekap-bulanan", requireAuth, async (req, res): Promise<voi
   })));
 });
 
-// GET /api/keuangan?bulan=4&tahun=2026&tipe=masuk
+// GET /api/keuangan?bulan=4&tahun=2026&tipe=masuk&dari=2026-05-01&sampai=2026-05-31
 router.get("/keuangan", requireAuth, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const { bulan, tahun, tipe } = req.query as { bulan?: string; tahun?: string; tipe?: string };
+  const { bulan, tahun, tipe, dari, sampai } = req.query as {
+    bulan?: string;
+    tahun?: string;
+    tipe?: string;
+    dari?: string;
+    sampai?: string;
+  };
   const conditions = [eq(keuanganTable.usahaId, usahaId)];
 
   if (tahun) conditions.push(sql`strftime('%Y', ${keuanganTable.tanggal}) = ${tahun}`);
   if (bulan) conditions.push(sql`strftime('%m', ${keuanganTable.tanggal}) = ${bulan.padStart(2, "0")}`);
+  if (dari) conditions.push(sql`${keuanganTable.tanggal} >= ${dari}`);
+  if (sampai) conditions.push(sql`${keuanganTable.tanggal} <= ${sampai}`);
   if (tipe === "masuk" || tipe === "keluar") conditions.push(eq(keuanganTable.tipe, tipe));
 
   const rows = await db.select().from(keuanganTable)

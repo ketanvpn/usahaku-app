@@ -27,7 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Download, Printer, Filter, X, TrendingUp, TrendingDown, Wallet, Package,
-  ShoppingBag, BarChart2, Receipt, FileSpreadsheet,
+  ShoppingBag, BarChart2, Receipt, FileSpreadsheet, Copy,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
@@ -311,6 +311,7 @@ export default function LaporanPage() {
   const [keuSampai, setKeuSampai] = useState("");
   const [keuTipe, setKeuTipe] = useState<"semua" | "masuk" | "keluar">("semua");
   const [keuPreset, setKeuPreset] = useState<"today" | "week" | "7d" | "30d" | "month" | null>(null);
+  const [copyKeuState, setCopyKeuState] = useState<"idle" | "done" | "error">("idle");
 
   const now = new Date();
   const [kasirBulan, setKasirBulan] = useState(now.getMonth() + 1);
@@ -512,6 +513,28 @@ export default function LaporanPage() {
     const fmt = (d: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(d));
     keuFilterLines.push({ label: "Periode", value: `${keuDari ? fmt(keuDari) : "awal"} – ${keuSampai ? fmt(keuSampai) : "sekarang"}` });
   }
+
+  const copyKeuanganRingkasan = async () => {
+    const lines = [
+      `Ringkasan Keuangan - ${namaUsaha}`,
+      `Tanggal cetak: ${tanggalCetak}`,
+      ...(keuFilterLines.length > 0
+        ? keuFilterLines.map((f) => `${f.label}: ${f.value}`)
+        : ["Filter: Semua data"]),
+      `Total Masuk: ${formatRupiah(totalMasuk)}`,
+      `Total Keluar: ${formatRupiah(totalKeluar)}`,
+      `Saldo Bersih: ${formatRupiah(saldo)}`,
+      `Jumlah Transaksi: ${keuanganData.length}`,
+    ];
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setCopyKeuState("done");
+      setTimeout(() => setCopyKeuState("idle"), 1500);
+    } catch {
+      setCopyKeuState("error");
+      setTimeout(() => setCopyKeuState("idle"), 1500);
+    }
+  };
 
   // ── Print handlers ──
   const handlePrintHutang = () => {
@@ -956,6 +979,9 @@ export default function LaporanPage() {
                 <Button variant={hutangPreset === "7d" ? "default" : "outline"} size="sm" onClick={() => applyHutangPreset("7d")}>7 hari</Button>
                 <Button variant={hutangPreset === "30d" ? "default" : "outline"} size="sm" onClick={() => applyHutangPreset("30d")}>30 hari</Button>
                 <Button variant={hutangPreset === "month" ? "default" : "outline"} size="sm" onClick={() => applyHutangPreset("month")}>Bulan ini</Button>
+                {(dateFrom || dateTo) && hutangPreset === null && (
+                  <Badge variant="secondary" className="text-xs">Mode: Custom</Badge>
+                )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
@@ -1052,6 +1078,10 @@ export default function LaporanPage() {
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
             <p className="text-sm text-muted-foreground">Rekap pemasukan dan pengeluaran keuangan usaha.</p>
             <div className="flex gap-2">
+              <Button variant="outline" onClick={copyKeuanganRingkasan}>
+                <Copy className="mr-2 h-4 w-4" />
+                {copyKeuState === "done" ? "Tersalin" : copyKeuState === "error" ? "Gagal Salin" : "Copy Ringkasan"}
+              </Button>
               <Button variant="outline" onClick={handleExportKeuanganCsv} disabled={!keuanganData.length}>
                 <Download className="mr-2 h-4 w-4" /> Export CSV
               </Button>
@@ -1083,6 +1113,9 @@ export default function LaporanPage() {
                 <Button variant={keuPreset === "7d" ? "default" : "outline"} size="sm" onClick={() => applyKeuPreset("7d")}>7 hari</Button>
                 <Button variant={keuPreset === "30d" ? "default" : "outline"} size="sm" onClick={() => applyKeuPreset("30d")}>30 hari</Button>
                 <Button variant={keuPreset === "month" ? "default" : "outline"} size="sm" onClick={() => applyKeuPreset("month")}>Bulan ini</Button>
+                {(keuDari || keuSampai) && keuPreset === null && (
+                  <Badge variant="secondary" className="text-xs">Mode: Custom</Badge>
+                )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
