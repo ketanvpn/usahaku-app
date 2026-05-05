@@ -807,6 +807,7 @@ export const GetUpahResponse = zod.object({
       upah_id: zod.number(),
       jumlah: zod.number(),
       tanggal_bayar: zod.string(),
+      pembayaran_id: zod.number().nullish(),
       catatan: zod.string().nullish(),
       created_at: zod.string(),
     }),

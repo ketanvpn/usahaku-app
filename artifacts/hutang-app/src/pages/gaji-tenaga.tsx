@@ -211,6 +211,8 @@ export default function GajiTenagaPage() {
   // ── Batch state ─────────────────────────────────────────────────────────────
   const [batchPekerja, setBatchPekerja] = useState<Pekerja | null>(null);
   const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
+  const [potongHutangBatchEnabled, setPotongHutangBatchEnabled] = useState(false);
+  const [potongHutangBatchAmount, setPotongHutangBatchAmount] = useState("");
 
   // ── Queries ─────────────────────────────────────────────────────────────────
   const params: GetUpahListParams = {};
@@ -223,6 +225,9 @@ export default function GajiTenagaPage() {
   const { data: pelangganList = [] } = useGetPelangganList();
   const { data: upahDetail, isLoading: loadingDetail } = useGetUpah(selectedUpahId ?? 0, {
     query: { enabled: !!selectedUpahId },
+  });
+  const { data: batchPelangganDetail } = useGetPelanggan(batchPekerja?.pelanggan_id ?? 0, {
+    query: { enabled: !!batchPekerja?.pelanggan_id },
   });
   const selectedUpahPekerja = useMemo(
     () => pekerjaList?.find((p) => p.id === upahDetail?.pekerja_id) ?? null,
@@ -298,9 +303,12 @@ export default function GajiTenagaPage() {
       onSuccess: (data) => {
         invalidateUpah();
         qc.invalidateQueries({ queryKey: getGetUpahListQueryKey({}) });
+        if (batchPekerja?.pelanggan_id) qc.invalidateQueries({ queryKey: getGetPelangganQueryKey(batchPekerja.pelanggan_id) });
         toast({ title: "Pembayaran batch berhasil", description: data.message });
         setIsBatchDialogOpen(false);
         setBatchPekerja(null);
+        setPotongHutangBatchEnabled(false);
+        setPotongHutangBatchAmount("");
         if (pendingKwitansiRef.current) {
           setKwitansiData(pendingKwitansiRef.current);
           setIsKwitansiOpen(true);
@@ -376,6 +384,17 @@ export default function GajiTenagaPage() {
   const hutangTertuaTerkait = hutangAktifTerkait[0] ?? null;
   const jumlahBayarSingle = Number(bayarForm.watch("jumlah")) || 0;
   const potongHutangSingleNum = Number(potongHutangSingleAmount.replace(/[^0-9.]/g, "")) || 0;
+
+  const batchHutangAktifTerkait = useMemo(() => {
+    return (batchPelangganDetail?.hutang_list ?? [])
+      .filter((h) => h.status === "aktif")
+      .slice()
+      .sort((a, b) => a.tanggal_hutang.localeCompare(b.tanggal_hutang) || a.id - b.id);
+  }, [batchPelangganDetail]);
+
+  const batchHutangTertuaTerkait = batchHutangAktifTerkait[0] ?? null;
+  const jumlahBayarBatch = Number(batchForm.watch("jumlah_total")) || 0;
+  const potongHutangBatchNum = Number(potongHutangBatchAmount.replace(/[^0-9.]/g, "")) || 0;
 
   // ── Export CSV catatan upah ──────────────────────────────────────────────────
   const exportUpahCSV = () => {
@@ -458,22 +477,37 @@ export default function GajiTenagaPage() {
       .filter(u => u.pekerja_id === p.id && u.status === "belum_lunas")
       .reduce((acc, u) => acc + u.sisa_upah, 0);
     batchForm.reset({ jumlah_total: sisaBatch, tanggal_bayar: today, catatan: "" });
+    setPotongHutangBatchEnabled(false);
+    setPotongHutangBatchAmount("");
     setIsBatchDialogOpen(true);
   };
 
   const submitBatch = (data: BatchForm) => {
     if (!batchPekerja) return;
+    const potong = potongHutangBatchEnabled ? potongHutangBatchNum : 0;
+    const jumlahNet = Math.max(0, data.jumlah_total - potong);
+    const catatanKwitansi = potong > 0
+      ? `${data.catatan ? `${data.catatan} · ` : ""}Potong hutang ${formatRupiah(potong)}`
+      : data.catatan ?? "";
     pendingKwitansiRef.current = {
       type: "batch",
       pekerja_nama: batchPekerja.nama,
       pekerja_jabatan: batchPekerja.jabatan ?? "",
       keterangan: "Pembayaran seluruh upah tertunggak",
       tanggal_bayar: data.tanggal_bayar,
-      jumlah: data.jumlah_total,
-      catatan: data.catatan ?? "",
+      jumlah: jumlahNet,
+      catatan: catatanKwitansi,
       namaUsaha,
     };
-    bayarBatch.mutate({ id: batchPekerja.id, data: { jumlah_total: data.jumlah_total, tanggal_bayar: data.tanggal_bayar, catatan: data.catatan || undefined } });
+    bayarBatch.mutate({
+      id: batchPekerja.id,
+      data: {
+        jumlah_total: data.jumlah_total,
+        tanggal_bayar: data.tanggal_bayar,
+        catatan: data.catatan || undefined,
+        potong_hutang: potong > 0 ? potong : undefined,
+      },
+    });
   };
 
   const submitUpah = (data: UpahForm) => {
@@ -1291,7 +1325,7 @@ export default function GajiTenagaPage() {
         </AlertDialogContent>
       </AlertDialog>
       {/* ── Dialog Bayar Batch ───────────────────────────────────────────────── */}
-      <Dialog open={isBatchDialogOpen} onOpenChange={(open) => { setIsBatchDialogOpen(open); if (!open) { setBatchPekerja(null); batchForm.clearErrors(); } }}>
+      <Dialog open={isBatchDialogOpen} onOpenChange={(open) => { setIsBatchDialogOpen(open); if (!open) { setBatchPekerja(null); batchForm.clearErrors(); setPotongHutangBatchEnabled(false); setPotongHutangBatchAmount(""); } }}>
         <DialogContent aria-describedby={undefined} className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Bayar Upah Batch — {batchPekerja?.nama}</DialogTitle>
@@ -1299,6 +1333,111 @@ export default function GajiTenagaPage() {
           {batchPekerja && (
             <Form {...batchForm}>
               <form onSubmit={batchForm.handleSubmit(submitBatch)} className="space-y-4">
+                {batchPekerja?.pelanggan_id && (
+                  <div className="rounded-lg border bg-blue-50/60 p-3 space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="font-semibold">Opsi potong hutang</p>
+                        <p className="text-xs text-muted-foreground">{batchPelangganDetail ? `Terkait pelanggan: ${batchPelangganDetail.nama}` : "Memuat data pelanggan..."}</p>
+                        {!batchHutangTertuaTerkait && <p className="text-xs text-amber-700 mt-1">Tidak ada hutang aktif untuk dipotong.</p>}
+                      </div>
+                      <Button type="button" variant={potongHutangBatchEnabled ? "default" : "outline"} size="sm" disabled={!batchHutangTertuaTerkait} onClick={() => {
+                        const next = !potongHutangBatchEnabled;
+                        setPotongHutangBatchEnabled(next);
+                        if (next) {
+                          const maxPotong = Math.min(jumlahBayarBatch, batchHutangTertuaTerkait?.sisa_hutang ?? 0);
+                          setPotongHutangBatchAmount(String(maxPotong > 0 ? maxPotong : 0));
+                        } else {
+                          setPotongHutangBatchAmount("");
+                        }
+                      }}>{potongHutangBatchEnabled ? "Dipakai" : "Sekalian bayar hutang"}</Button>
+                    </div>
+                    {potongHutangBatchEnabled && (
+                      <>
+                        {batchHutangTertuaTerkait ? (
+                          <div className="rounded-md bg-white border p-2 text-xs">Hutang tertua: <span className="font-semibold">{formatRupiah(batchHutangTertuaTerkait.sisa_hutang)}</span> sisa {formatDate(batchHutangTertuaTerkait.tanggal_hutang)}</div>
+                        ) : (
+                          <div className="rounded-md bg-white border p-2 text-xs text-amber-700">Pelanggan ini belum punya hutang aktif.</div>
+                        )}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium">Potong Hutang</label>
+                            <Input type="number" min={0} max={Math.min(jumlahBayarBatch, batchHutangTertuaTerkait?.sisa_hutang ?? 0)} value={potongHutangBatchAmount} onChange={(e) => setPotongHutangBatchAmount(e.target.value)} placeholder="0" />
+                          </div>
+                          <div className="space-y-1 rounded-md border bg-white p-2">
+                            <div className="flex justify-between text-xs"><span>Gaji</span><span>{formatRupiah(jumlahBayarBatch)}</span></div>
+                            <div className="flex justify-between text-xs"><span>Potong</span><span>{formatRupiah(potongHutangBatchNum)}</span></div>
+                            <div className="flex justify-between text-xs font-semibold border-t pt-1 mt-1"><span>Diterima</span><span>{formatRupiah(Math.max(0, jumlahBayarBatch - potongHutangBatchNum))}</span></div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                {batchPekerja?.pelanggan_id && (
+                  <div className="rounded-lg border bg-blue-50/60 p-3 space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="font-semibold">Opsi potong hutang</p>
+                        <p className="text-xs text-muted-foreground">
+                          {batchPelangganDetail ? `Terkait pelanggan: ${batchPelangganDetail.nama}` : "Memuat data pelanggan..."}
+                        </p>
+                        {!batchHutangTertuaTerkait && (
+                          <p className="text-xs text-amber-700 mt-1">Tidak ada hutang aktif untuk dipotong.</p>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant={potongHutangBatchEnabled ? "default" : "outline"}
+                        size="sm"
+                        disabled={!batchHutangTertuaTerkait}
+                        onClick={() => {
+                          const next = !potongHutangBatchEnabled;
+                          setPotongHutangBatchEnabled(next);
+                          if (next) {
+                            const maxPotong = Math.min(jumlahBayarBatch, batchHutangTertuaTerkait?.sisa_hutang ?? 0);
+                            setPotongHutangBatchAmount(String(maxPotong > 0 ? maxPotong : 0));
+                          } else {
+                            setPotongHutangBatchAmount("");
+                          }
+                        }}
+                      >
+                        {potongHutangBatchEnabled ? "Dipakai" : "Sekalian bayar hutang"}
+                      </Button>
+                    </div>
+
+                    {potongHutangBatchEnabled && (
+                      <>
+                        {batchHutangTertuaTerkait ? (
+                          <div className="rounded-md bg-white border p-2 text-xs">
+                            Hutang tertua: <span className="font-semibold">{formatRupiah(batchHutangTertuaTerkait.sisa_hutang)}</span> sisa {formatDate(batchHutangTertuaTerkait.tanggal_hutang)}
+                          </div>
+                        ) : (
+                          <div className="rounded-md bg-white border p-2 text-xs text-amber-700">Pelanggan ini belum punya hutang aktif.</div>
+                        )}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium">Potong Hutang</label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={Math.min(jumlahBayarBatch, batchHutangTertuaTerkait?.sisa_hutang ?? 0)}
+                              value={potongHutangBatchAmount}
+                              onChange={(e) => setPotongHutangBatchAmount(e.target.value)}
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="space-y-1 rounded-md border bg-white p-2">
+                            <div className="flex justify-between text-xs"><span>Gaji</span><span>{formatRupiah(jumlahBayarBatch)}</span></div>
+                            <div className="flex justify-between text-xs"><span>Potong</span><span>{formatRupiah(potongHutangBatchNum)}</span></div>
+                            <div className="flex justify-between text-xs font-semibold border-t pt-1 mt-1"><span>Diterima</span><span>{formatRupiah(Math.max(0, jumlahBayarBatch - potongHutangBatchNum))}</span></div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 <div className="rounded-md border bg-muted/40 p-3 space-y-1.5 max-h-48 overflow-y-auto">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Distribusi FIFO (terlama dulu)</p>
                   {(() => {

@@ -461,6 +461,16 @@ router.delete("/bayar-upah/:id", requireAuth, requireLicense, async (req, res): 
     pembayaranTerkait = pembayaran ?? null;
   }
 
+  const bayarLainDenganPembayaran = bayar.pembayaranId
+    ? await db.select({ id: bayarUpahTable.id })
+      .from(bayarUpahTable)
+      .where(and(eq(bayarUpahTable.pembayaranId, bayar.pembayaranId), ne(bayarUpahTable.id, params.data.id)))
+    : [];
+
+  const [keuanganTerkait] = bayar.keuanganId
+    ? await db.select().from(keuanganTable).where(eq(keuanganTable.id, bayar.keuanganId))
+    : [];
+
   const hutangTerkait = pembayaranTerkait
     ? (await db.select().from(hutangTable)
       .where(and(eq(hutangTable.id, pembayaranTerkait.hutangId), eq(hutangTable.usahaId, usahaId))))[0] ?? null
@@ -487,12 +497,12 @@ router.delete("/bayar-upah/:id", requireAuth, requireLicense, async (req, res): 
   db.transaction((tx) => {
     if (bayar.keuanganId) {
       if (sisaBayarBatch.length > 0) {
-        // Batch payment: kurangi jumlah keuangan saja, jangan hapus
-        const jumlahSisa = sisaBayarBatch.reduce((acc, b) => acc + parseFloat(b.jumlah), 0);
-        if (jumlahSisa <= 0) {
+        // Batch payment: kurangi nominal gaji yang dibatalkan saja
+        const jumlahBaru = Math.max(0, parseFloat(keuanganTerkait?.jumlah ?? "0") - jumlahBayar);
+        if (jumlahBaru <= 0) {
           tx.delete(keuanganTable).where(eq(keuanganTable.id, bayar.keuanganId)).run();
         } else {
-          tx.update(keuanganTable).set({ jumlah: jumlahSisa.toString() })
+          tx.update(keuanganTable).set({ jumlah: jumlahBaru.toString() })
             .where(eq(keuanganTable.id, bayar.keuanganId)).run();
         }
       } else {
@@ -501,7 +511,7 @@ router.delete("/bayar-upah/:id", requireAuth, requireLicense, async (req, res): 
       }
     }
 
-    if (bayar.pembayaranId && pembayaranTerkait) {
+    if (bayar.pembayaranId && pembayaranTerkait && bayarLainDenganPembayaran.length === 0) {
       if (hutangTerkait) {
         const totalDibayarHutangBaru = Math.max(0, parseFloat(hutangTerkait.totalDibayar) - potongHutang);
         const sisaHutangBaru = parseFloat(hutangTerkait.nominalHutang) - totalDibayarHutangBaru;

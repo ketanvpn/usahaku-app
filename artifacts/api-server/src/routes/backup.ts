@@ -38,7 +38,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   const transaksiKasirItemList = allKasirItems.flat();
 
   const backup = {
-    version: "1.6",
+    version: "1.7",
     exported_at: new Date().toISOString(),
     usaha_id: usahaId,
     usaha: {

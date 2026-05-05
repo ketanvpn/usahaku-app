@@ -267,7 +267,7 @@ export interface BackupData {
   pembayaran: Pembayaran[];
   pekerja: Pekerja[];
   upah_pekerja: UpahPekerja[];
-  bayar_upah: BayarUpah[];
+  bayar_upah: BayarUpahItem[];
 }
 
 export type GetHutangListParams = {
@@ -360,6 +360,7 @@ export interface BayarUpahItem {
   upah_id: number;
   jumlah: number;
   tanggal_bayar: string;
+  pembayaran_id?: number | null;
   catatan?: string | null;
   created_at: string;
 }
