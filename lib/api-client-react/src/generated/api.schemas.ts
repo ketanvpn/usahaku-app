@@ -397,6 +397,7 @@ export interface BayarBatchUpahBody {
   tanggal_bayar: string;
   catatan?: string | null;
   potong_hutang?: number | null;
+  hutang_ids?: number[] | null;
 }
 
 export interface BayarBatchUpahResponse {

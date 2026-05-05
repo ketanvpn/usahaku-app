@@ -359,6 +359,7 @@ router.post("/upah/:id/bayar", requireAuth, requireLicense, async (req, res): Pr
       keuanganId = keuangan.id;
     }
 
+    const groupKey = keuanganId ?? -(Date.now() + Math.floor(Math.random() * 1000));
     let pembayaranId: number | null = null;
 
     if (potongHutang > 0 && targetHutang) {
@@ -375,7 +376,7 @@ router.post("/upah/:id/bayar", requireAuth, requireLicense, async (req, res): Pr
         catatan: `Potong gaji ${pekerja?.nama ?? "Pekerja"}${parsed.data.catatan ? ` - ${parsed.data.catatan}` : ""}`,
         nomorKwitansi: null,
         sisaHutangSetelah: sisaHutangSetelah.toString(),
-        keuanganId: null,
+        keuanganId: groupKey,
       }).returning().all();
 
       pembayaranId = pembayaran.id;
@@ -393,7 +394,7 @@ router.post("/upah/:id/bayar", requireAuth, requireLicense, async (req, res): Pr
       upahId: params.data.id,
       jumlah: jumlahBayar.toString(),
       tanggalBayar: parsed.data.tanggal_bayar,
-      keuanganId,
+      keuanganId: groupKey,
       pembayaranId,
       catatan: parsed.data.catatan ?? null,
     }).run();
@@ -461,6 +462,17 @@ router.delete("/bayar-upah/:id", requireAuth, requireLicense, async (req, res): 
     pembayaranTerkait = pembayaran ?? null;
   }
 
+  const pembayaranGroupKey = pembayaranTerkait?.keuanganId ?? bayar.keuanganId ?? null;
+
+  let pembayaranTerkaitList = pembayaranGroupKey !== null
+    ? await db.select().from(pembayaranTable)
+      .where(and(eq(pembayaranTable.usahaId, usahaId), eq(pembayaranTable.keuanganId, pembayaranGroupKey)))
+    : (pembayaranTerkait ? [pembayaranTerkait] : []);
+
+  if (pembayaranTerkaitList.length === 0 && pembayaranTerkait) {
+    pembayaranTerkaitList = [pembayaranTerkait];
+  }
+
   const bayarLainDenganPembayaran = bayar.pembayaranId
     ? await db.select({ id: bayarUpahTable.id })
       .from(bayarUpahTable)
@@ -471,10 +483,12 @@ router.delete("/bayar-upah/:id", requireAuth, requireLicense, async (req, res): 
     ? await db.select().from(keuanganTable).where(eq(keuanganTable.id, bayar.keuanganId))
     : [];
 
-  const hutangTerkait = pembayaranTerkait
-    ? (await db.select().from(hutangTable)
-      .where(and(eq(hutangTable.id, pembayaranTerkait.hutangId), eq(hutangTable.usahaId, usahaId))))[0] ?? null
-    : null;
+  const hutangIdsTerkait = Array.from(new Set(pembayaranTerkaitList.map((p) => p.hutangId)));
+  const hutangTerkaitList = hutangIdsTerkait.length > 0
+    ? await db.select().from(hutangTable)
+      .where(and(eq(hutangTable.usahaId, usahaId), inArray(hutangTable.id, hutangIdsTerkait)))
+    : [];
+  const hutangTerkaitMap = new Map(hutangTerkaitList.map((h) => [h.id, h]));
 
   const jumlahBayar = parseFloat(bayar.jumlah);
   const totalDibayarBaru = Math.max(0, parseFloat(upah.totalDibayar) - jumlahBayar);
@@ -511,18 +525,31 @@ router.delete("/bayar-upah/:id", requireAuth, requireLicense, async (req, res): 
       }
     }
 
-    if (bayar.pembayaranId && pembayaranTerkait && bayarLainDenganPembayaran.length === 0) {
-      if (hutangTerkait) {
-        const totalDibayarHutangBaru = Math.max(0, parseFloat(hutangTerkait.totalDibayar) - potongHutang);
-        const sisaHutangBaru = parseFloat(hutangTerkait.nominalHutang) - totalDibayarHutangBaru;
+    if (bayar.pembayaranId && pembayaranTerkaitList.length > 0 && bayarLainDenganPembayaran.length === 0) {
+      const bayarPerHutang = new Map<number, number>();
+      for (const pembayaran of pembayaranTerkaitList) {
+        bayarPerHutang.set(pembayaran.hutangId, (bayarPerHutang.get(pembayaran.hutangId) ?? 0) + parseFloat(pembayaran.nominalBayar));
+      }
+
+      for (const [hutangId, totalBayar] of bayarPerHutang) {
+        const hutang = hutangTerkaitMap.get(hutangId);
+        if (!hutang) continue;
+
+        const totalDibayarHutangBaru = Math.max(0, parseFloat(hutang.totalDibayar) - totalBayar);
+        const sisaHutangBaru = parseFloat(hutang.nominalHutang) - totalDibayarHutangBaru;
         tx.update(hutangTable).set({
           totalDibayar: totalDibayarHutangBaru.toString(),
           sisaHutang: Math.max(0, sisaHutangBaru).toString(),
           status: sisaHutangBaru <= 0 ? "lunas" : "aktif",
           updatedAt: new Date(),
-        }).where(eq(hutangTable.id, hutangTerkait.id)).run();
+        }).where(eq(hutangTable.id, hutang.id)).run();
       }
-      tx.delete(pembayaranTable).where(eq(pembayaranTable.id, pembayaranTerkait.id)).run();
+
+      if (pembayaranGroupKey !== null) {
+        tx.delete(pembayaranTable).where(and(eq(pembayaranTable.usahaId, usahaId), eq(pembayaranTable.keuanganId, pembayaranGroupKey))).run();
+      } else if (pembayaranTerkait) {
+        tx.delete(pembayaranTable).where(eq(pembayaranTable.id, pembayaranTerkait.id)).run();
+      }
     }
 
     tx.delete(bayarUpahTable).where(eq(bayarUpahTable.id, params.data.id)).run();

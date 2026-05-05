@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, pekerjaTable, upahPekerjaTable, bayarUpahTable, keuanganTable, pelangganTable, hutangTable, pembayaranTable } from "@workspace/db";
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, inArray } from "drizzle-orm";
 import {
   CreatePekerjaBody,
   UpdatePekerjaParams,
@@ -249,29 +249,47 @@ router.post("/pekerja/:id/bayar-batch", requireAuth, requireLicense, async (req,
     return;
   }
 
-  let targetHutang: typeof hutangTable.$inferSelect | null = null;
+  let targetHutangs: typeof hutangTable.$inferSelect[] = [];
   if (potongHutang > 0) {
     if (!pekerja.pelangganId) {
       res.status(400).json({ error: "Pekerja belum dihubungkan ke pelanggan. Hubungkan dulu di Gaji & Tenaga." });
       return;
     }
 
-    const [hutang] = await db.select().from(hutangTable)
-      .where(and(eq(hutangTable.pelangganId, pekerja.pelangganId), eq(hutangTable.usahaId, usahaId), eq(hutangTable.status, "aktif")))
-      .orderBy(asc(hutangTable.tanggalHutang), asc(hutangTable.id));
+    const selectedHutangIds = Array.from(new Set((parsed.data.hutang_ids ?? []).filter((id) => Number.isInteger(id) && id > 0)));
 
-    if (!hutang) {
-      res.status(400).json({ error: "Pelanggan ini tidak punya hutang aktif untuk dipotong." });
-      return;
+    if (selectedHutangIds.length > 0) {
+      targetHutangs = await db.select().from(hutangTable)
+        .where(and(
+          eq(hutangTable.pelangganId, pekerja.pelangganId),
+          eq(hutangTable.usahaId, usahaId),
+          eq(hutangTable.status, "aktif"),
+          inArray(hutangTable.id, selectedHutangIds),
+        ))
+        .orderBy(asc(hutangTable.tanggalHutang), asc(hutangTable.id));
+
+      if (targetHutangs.length !== selectedHutangIds.length) {
+        res.status(400).json({ error: "Satu atau lebih hutang terpilih tidak valid atau sudah lunas." });
+        return;
+      }
+    } else {
+      const [hutang] = await db.select().from(hutangTable)
+        .where(and(eq(hutangTable.pelangganId, pekerja.pelangganId), eq(hutangTable.usahaId, usahaId), eq(hutangTable.status, "aktif")))
+        .orderBy(asc(hutangTable.tanggalHutang), asc(hutangTable.id));
+
+      if (!hutang) {
+        res.status(400).json({ error: "Pelanggan ini tidak punya hutang aktif untuk dipotong." });
+        return;
+      }
+
+      targetHutangs = [hutang];
     }
 
-    const sisaHutang = parseFloat(hutang.sisaHutang);
-    if (potongHutang > sisaHutang) {
-      res.status(400).json({ error: `Potongan hutang (${potongHutang}) melebihi sisa hutang (${sisaHutang}).` });
+    const totalSisaHutang = targetHutangs.reduce((sum, hutang) => sum + parseFloat(hutang.sisaHutang), 0);
+    if (potongHutang > totalSisaHutang) {
+      res.status(400).json({ error: `Potongan hutang (${potongHutang}) melebihi sisa hutang terpilih (${totalSisaHutang}).` });
       return;
     }
-
-    targetHutang = hutang;
   }
 
   type Distribusi = { upah: typeof upahPekerjaTable.$inferSelect; alokasi: number; statusBaru: string };
@@ -311,33 +329,48 @@ router.post("/pekerja/:id/bayar-batch", requireAuth, requireLicense, async (req,
       keuanganId = keuangan.id;
     }
 
+    const groupKey = keuanganId ?? -(Date.now() + Math.floor(Math.random() * 1000));
     let pembayaranId: number | null = null;
 
-    if (potongHutang > 0 && targetHutang) {
-      const sisaHutangSetelah = Math.max(0, parseFloat(targetHutang.sisaHutang) - potongHutang);
-      const totalDibayarHutangBaru = parseFloat(targetHutang.totalDibayar) + potongHutang;
-      const statusHutangBaru = sisaHutangSetelah <= 0 ? "lunas" : "aktif";
+    if (potongHutang > 0 && targetHutangs.length > 0) {
+      let sisaPotong = potongHutang;
 
-      const [pembayaran] = tx.insert(pembayaranTable).values({
-        usahaId,
-        hutangId: targetHutang.id,
-        pelangganId: targetHutang.pelangganId,
-        tanggalBayar: parsed.data.tanggal_bayar,
-        nominalBayar: potongHutang.toString(),
-        catatan: `Potong gaji batch ${pekerja.nama}${parsed.data.catatan ? ` - ${parsed.data.catatan}` : ""}`,
-        nomorKwitansi: null,
-        sisaHutangSetelah: sisaHutangSetelah.toString(),
-        keuanganId: null,
-      }).returning().all();
+      for (const hutang of targetHutangs) {
+        if (sisaPotong <= 0) break;
 
-      pembayaranId = pembayaran.id;
+        const sisaHutang = parseFloat(hutang.sisaHutang);
+        const nominalBayar = Math.min(sisaPotong, sisaHutang);
+        if (nominalBayar <= 0) continue;
 
-      tx.update(hutangTable).set({
-        totalDibayar: totalDibayarHutangBaru.toString(),
-        sisaHutang: sisaHutangSetelah.toString(),
-        status: statusHutangBaru,
-        updatedAt: new Date(),
-      }).where(eq(hutangTable.id, targetHutang.id)).run();
+        const sisaHutangSetelah = Math.max(0, sisaHutang - nominalBayar);
+        const totalDibayarHutangBaru = parseFloat(hutang.totalDibayar) + nominalBayar;
+        const statusHutangBaru = sisaHutangSetelah <= 0 ? "lunas" : "aktif";
+
+        const [pembayaran] = tx.insert(pembayaranTable).values({
+          usahaId,
+          hutangId: hutang.id,
+          pelangganId: hutang.pelangganId,
+          tanggalBayar: parsed.data.tanggal_bayar,
+          nominalBayar: nominalBayar.toString(),
+          catatan: `Potong gaji batch ${pekerja.nama}${parsed.data.catatan ? ` - ${parsed.data.catatan}` : ""}`,
+          nomorKwitansi: null,
+          sisaHutangSetelah: sisaHutangSetelah.toString(),
+          keuanganId: groupKey,
+        }).returning().all();
+
+        if (pembayaranId === null) {
+          pembayaranId = pembayaran.id;
+        }
+
+        tx.update(hutangTable).set({
+          totalDibayar: totalDibayarHutangBaru.toString(),
+          sisaHutang: sisaHutangSetelah.toString(),
+          status: statusHutangBaru,
+          updatedAt: new Date(),
+        }).where(eq(hutangTable.id, hutang.id)).run();
+
+        sisaPotong -= nominalBayar;
+      }
     }
 
     for (const d of distribusi) {
@@ -346,7 +379,7 @@ router.post("/pekerja/:id/bayar-batch", requireAuth, requireLicense, async (req,
         upahId: d.upah.id,
         jumlah: d.alokasi.toString(),
         tanggalBayar: parsed.data.tanggal_bayar,
-        keuanganId,
+        keuanganId: groupKey,
         pembayaranId,
         catatan: parsed.data.catatan ?? null,
       }).run();

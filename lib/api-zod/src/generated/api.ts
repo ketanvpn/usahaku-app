@@ -834,4 +834,5 @@ export const BayarBatchUpahBody = zod.object({
   tanggal_bayar: zod.string().min(1),
   catatan: zod.string().nullish(),
   potong_hutang: zod.number().min(0).optional(),
+  hutang_ids: zod.array(zod.number().int().positive()).nullish(),
 });
