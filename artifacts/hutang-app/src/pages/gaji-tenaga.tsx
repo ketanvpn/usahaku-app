@@ -382,8 +382,6 @@ export default function GajiTenagaPage() {
   }, [linkedPelangganDetail]);
 
   const hutangTertuaTerkait = hutangAktifTerkait[0] ?? null;
-  const jumlahBayarSingle = Number(bayarForm.watch("jumlah")) || 0;
-  const potongHutangSingleNum = Number(potongHutangSingleAmount.replace(/[^0-9.]/g, "")) || 0;
 
   const batchHutangAktifTerkait = useMemo(() => {
     return (batchPelangganDetail?.hutang_list ?? [])
@@ -393,8 +391,6 @@ export default function GajiTenagaPage() {
   }, [batchPelangganDetail]);
 
   const batchHutangTertuaTerkait = batchHutangAktifTerkait[0] ?? null;
-  const jumlahBayarBatch = Number(batchForm.watch("jumlah_total")) || 0;
-  const potongHutangBatchNum = Number(potongHutangBatchAmount.replace(/[^0-9.]/g, "")) || 0;
 
   // ── Export CSV catatan upah ──────────────────────────────────────────────────
   const exportUpahCSV = () => {
@@ -443,6 +439,11 @@ export default function GajiTenagaPage() {
     resolver: zodResolver(batchSchema),
     defaultValues: { jumlah_total: 0, tanggal_bayar: today, catatan: "" },
   });
+
+  const jumlahBayarSingle = Number(bayarForm.watch("jumlah")) || 0;
+  const potongHutangSingleNum = Number(potongHutangSingleAmount.replace(/[^0-9.]/g, "")) || 0;
+  const jumlahBayarBatch = Number(batchForm.watch("jumlah_total")) || 0;
+  const potongHutangBatchNum = Number(potongHutangBatchAmount.replace(/[^0-9.]/g, "")) || 0;
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
   const openTambahUpah = () => {
