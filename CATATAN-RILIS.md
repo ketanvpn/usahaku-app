@@ -8,13 +8,14 @@ Aturan pakai:
 - Tanggal pakai format `YYYY-MM-DD`.
 - Update bagian `Versi terbaru` setelah rilis sukses.
 
-Versi terbaru: `v1.0.64`
+Versi terbaru: `v1.0.65`
 
-Rilis berikutnya (siap dipublish): `v1.0.65`
+Rilis berikutnya (siap dipublish): `v1.0.66`
 
 | Versi | Tanggal | Status | Catatan Singkat |
 | --- | --- | --- | --- |
-| v1.0.65 | 2026-05-02 | Planned | Penyempurnaan operasional rilis dan peningkatan UX lintas halaman (kandidat berikutnya) |
+| v1.0.66 | 2026-05-02 | Planned | Penyempurnaan operasional rilis dan peningkatan UX lintas halaman (kandidat berikutnya) |
+| v1.0.65 | 2026-05-02 | Published | Perbaikan filter laporan keuangan + UX laporan (copy ringkasan, mode custom) serta penyempurnaan dashboard dan backup |
 | v1.0.64 | 2026-05-02 | Published | Perbaikan banner backup (hanya tampil >=7 hari) + peningkatan UX dashboard (CTA empty state, periode chart) dan tombol Refresh Status di Backup |
 | v1.0.63 | 2026-05-02 | Published | Stabilitas dashboard & backup (sinkronisasi status backup), optimasi fetch dashboard, serta penyempurnaan UX sidebar dan filter laporan |
 | v1.0.62 | 2026-05-02 | Published | Optimasi navigasi sidebar: grup PIUTANG, badge status Backup/Lisensi, indikator menu aktif, dan perapihan visual struktur menu |

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -138,6 +138,8 @@ export default function KasirPage() {
   const [showHasil, setShowHasil] = useState(false);
   const [showRiwayat, setShowRiwayat] = useState(false);
   const [hapusId, setHapusId] = useState<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const bayarInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: riwayatList = [], refetch: refetchRiwayat } = useQuery<RiwayatTransaksi[]>({
     queryKey: ["kasir-riwayat"],
@@ -192,6 +194,7 @@ export default function KasirPage() {
   const total = subtotal - nominalDiskon;
   const uangBayarNum = parseFloat(uangBayar.replace(/[^0-9]/g, "")) || 0;
   const kembalian = uangBayarNum - total;
+  const quickBayar = [1000, 5000, 10000, 50000, 100000];
 
   function tambahKeCart(barang: Barang) {
     setCart(prev => {
@@ -200,6 +203,8 @@ export default function KasirPage() {
         const updated = [...prev];
         if (updated[idx].jumlah < barang.stok) {
           updated[idx] = { ...updated[idx], jumlah: updated[idx].jumlah + 1 };
+        } else {
+          toast({ title: "Stok tidak cukup", description: `${barang.nama} tersisa ${barang.stok} ${barang.satuan}.`, variant: "destructive" });
         }
         return updated;
       }
@@ -235,7 +240,10 @@ export default function KasirPage() {
       const raw = qtyInputs[barangId];
       const angka = parseInt(raw ?? "", 10);
       if (isNaN(angka) || angka < 1) return { ...i, jumlah: 1 };
-      if (angka > i.barang.stok) return { ...i, jumlah: i.barang.stok };
+      if (angka > i.barang.stok) {
+        toast({ title: "Stok tidak cukup", description: `${i.barang.nama} tersisa ${i.barang.stok} ${i.barang.satuan}.`, variant: "destructive" });
+        return { ...i, jumlah: i.barang.stok };
+      }
       return { ...i, jumlah: angka };
     }));
   }
@@ -296,6 +304,64 @@ export default function KasirPage() {
     },
   });
 
+  const canSubmit = lisensiAktif && cart.length > 0 && uangBayarNum >= total && total > 0 && !selesaikanMutation.isPending;
+
+  useEffect(() => {
+    searchInputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isTypingContext = tag === "input" || tag === "textarea" || target?.isContentEditable;
+
+      if (e.key === "F2") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+
+      if (e.key === "F4") {
+        e.preventDefault();
+        bayarInputRef.current?.focus();
+        bayarInputRef.current?.select();
+        return;
+      }
+
+      if (e.key === "Escape") {
+        if (hapusId !== null) setHapusId(null);
+        else if (showHasil) setShowHasil(false);
+        else if (showRiwayat) setShowRiwayat(false);
+        return;
+      }
+
+      if (e.ctrlKey && e.key === "Enter") {
+        if (canSubmit) {
+          e.preventDefault();
+          selesaikanMutation.mutate();
+        }
+        return;
+      }
+
+      if (e.key === "Enter" && target === searchInputRef.current) {
+        e.preventDefault();
+        if (filtered.length > 0) {
+          tambahKeCart(filtered[0]);
+        }
+        return;
+      }
+
+      if (!isTypingContext && e.key.length === 1 && /[\w\d\s]/.test(e.key)) {
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [filtered, canSubmit, showHasil, showRiwayat, hapusId]);
+
   return (
     <div className="flex gap-4 h-[calc(100vh-8rem)]">
 
@@ -307,6 +373,7 @@ export default function KasirPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
+              ref={searchInputRef}
               placeholder="Cari barang..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -514,6 +581,7 @@ export default function KasirPage() {
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground font-medium">Uang Bayar</label>
             <Input
+              ref={bayarInputRef}
               placeholder="Masukkan nominal..."
               value={uangBayar}
               onChange={e => setUangBayar(e.target.value)}
@@ -521,6 +589,30 @@ export default function KasirPage() {
               min={0}
               className="text-lg font-bold h-11"
             />
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-7 px-2 text-xs"
+                onClick={() => setUangBayar(String(Math.max(0, Math.round(total))))}
+                disabled={total <= 0}
+              >
+                Pas
+              </Button>
+              {quickBayar.map((nominal) => (
+                <Button
+                  key={nominal}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setUangBayar(String(uangBayarNum + nominal))}
+                >
+                  +{nominal >= 1000 ? `${nominal / 1000}k` : String(nominal)}
+                </Button>
+              ))}
+            </div>
           </div>
 
           {/* Kembalian / Kurang */}
@@ -544,13 +636,7 @@ export default function KasirPage() {
           {/* Tombol Selesaikan */}
           <Button
             className="w-full h-11 text-base font-semibold"
-            disabled={
-              !lisensiAktif ||
-              cart.length === 0 ||
-              uangBayarNum < total ||
-              total === 0 ||
-              selesaikanMutation.isPending
-            }
+            disabled={!canSubmit}
             onClick={() => selesaikanMutation.mutate()}
           >
             {selesaikanMutation.isPending ? (
