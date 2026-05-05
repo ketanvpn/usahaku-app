@@ -459,7 +459,7 @@ export default function KasirPage() {
       </div>
 
       {/* ── Panel Kanan: Keranjang ────────────────────────────────── */}
-      <div className="w-80 lg:w-96 flex flex-col border rounded-xl bg-card shadow-sm shrink-0">
+      <div className="w-80 lg:w-96 flex flex-col min-h-0 border rounded-xl bg-card shadow-sm shrink-0">
 
         {/* Header keranjang */}
         <div className="px-4 py-3 border-b flex items-center justify-between">
@@ -473,7 +473,7 @@ export default function KasirPage() {
         </div>
 
         {/* Daftar item keranjang */}
-        <div className="flex-1 overflow-y-auto px-4 py-2 space-y-0 divide-y">
+        <div className="flex-1 min-h-[180px] overflow-y-auto px-4 py-2 space-y-0 divide-y">
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2 py-10">
               <ShoppingCart className="h-8 w-8 opacity-20" />
@@ -528,7 +528,7 @@ export default function KasirPage() {
         </div>
 
         {/* Total & Pembayaran */}
-        <div className="px-4 py-3 border-t space-y-3">
+        <div className="px-4 py-2.5 border-t space-y-2.5 shrink-0">
 
           {/* Diskon */}
           {cart.length > 0 && (
@@ -578,7 +578,7 @@ export default function KasirPage() {
           </div>
 
           {/* Uang Bayar */}
-          <div className="space-y-1">
+            <div className="space-y-1">
             <label className="text-xs text-muted-foreground font-medium">Uang Bayar</label>
             <Input
               ref={bayarInputRef}
@@ -587,14 +587,14 @@ export default function KasirPage() {
               onChange={e => setUangBayar(e.target.value)}
               type="number"
               min={0}
-              className="text-lg font-bold h-11"
+              className="text-lg font-bold h-10"
             />
-            <div className="flex flex-wrap gap-1.5 pt-1">
+            <div className="flex flex-wrap gap-1 pt-1">
               <Button
                 type="button"
                 size="sm"
                 variant="secondary"
-                className="h-7 px-2 text-xs"
+                className="h-6 px-2 text-[11px]"
                 onClick={() => setUangBayar(String(Math.max(0, Math.round(total))))}
                 disabled={total <= 0}
               >
@@ -603,12 +603,12 @@ export default function KasirPage() {
               {quickBayar.map((nominal) => (
                 <Button
                   key={nominal}
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => setUangBayar(String(uangBayarNum + nominal))}
-                >
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() => setUangBayar(String(uangBayarNum + nominal))}
+                  >
                   +{nominal >= 1000 ? `${nominal / 1000}k` : String(nominal)}
                 </Button>
               ))}
