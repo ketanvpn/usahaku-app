@@ -39,6 +39,11 @@ function fmtTanggalPendek(iso: string) {
   return d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 }
 
+function fmtTanggalRange(iso: string) {
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+}
+
 function getBackupInfoText(): string {
   const last = localStorage.getItem("lastBackupDate");
   if (!last) return "Belum ada backup manual";
@@ -140,6 +145,9 @@ export default function OwnerDashboard() {
     ...d,
     label: fmtTanggalPendek(d.tanggal),
   }));
+
+  const rangeStart = trenData.length > 0 ? trenData[0].tanggal : null;
+  const rangeEnd = trenData.length > 0 ? trenData[trenData.length - 1].tanggal : null;
 
   const totalMasuk = trenData.reduce((s, d) => s + (d.masuk || 0), 0);
   const totalKeluar = trenData.reduce((s, d) => s + (d.keluar || 0), 0);
@@ -328,6 +336,11 @@ export default function OwnerDashboard() {
                   </span>
                 )}
               </CardDescription>
+              {rangeStart && rangeEnd && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Periode aktif: {fmtTanggalRange(rangeStart)} - {fmtTanggalRange(rangeEnd)}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
               <Button
@@ -414,6 +427,9 @@ export default function OwnerDashboard() {
                         <div className="flex flex-col items-center gap-1">
                           <CreditCard className="h-7 w-7 opacity-25 mb-1" />
                           Belum ada pembayaran.
+                          <Link href="/pembayaran">
+                            <Button variant="outline" size="sm" className="mt-2">Catat Pembayaran</Button>
+                          </Link>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -463,6 +479,9 @@ export default function OwnerDashboard() {
                         <div className="flex flex-col items-center gap-1">
                           <Activity className="h-7 w-7 opacity-25 mb-1" />
                           Tidak ada hutang aktif.
+                          <Link href="/hutang">
+                            <Button variant="outline" size="sm" className="mt-2">Lihat Hutang</Button>
+                          </Link>
                         </div>
                       </TableCell>
                     </TableRow>

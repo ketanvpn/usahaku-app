@@ -147,6 +147,20 @@ export default function BackupPage() {
     }
   };
 
+  const handleRefreshStatus = async () => {
+    try {
+      if (window.electronApp?.backup) {
+        const folder = await window.electronApp.backup.getFolder();
+        setAutoBackupFolder(folder);
+      }
+      setLastManualBackup(localStorage.getItem("lastBackupDate"));
+      await refreshGdriveStatus();
+      toast({ title: "Status backup diperbarui" });
+    } catch {
+      toast({ variant: "destructive", title: "Gagal memperbarui status backup" });
+    }
+  };
+
   const handleRestoreDB = async () => {
     if (!window.electronApp?.backup?.restoreDB) return;
     setIsRestoringDB(true);
@@ -395,6 +409,14 @@ export default function BackupPage() {
               className="w-full sm:w-auto"
             >
               <FolderOpen className="mr-2 h-4 w-4" /> Buka Folder Backup
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshStatus}
+              className="w-full sm:w-auto"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" /> Refresh Status
             </Button>
           </CardContent>
         </Card>

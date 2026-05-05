@@ -345,7 +345,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         )}
         {/* Banner pengingat backup */}
-        {!isSuperAdmin && !backupReminderDismissed && daysWithoutBackup !== null && location !== "/backup" && (
+        {!isSuperAdmin && !backupReminderDismissed && daysWithoutBackup !== null && daysWithoutBackup >= 7 && location !== "/backup" && (
           <div className="flex items-center gap-3 px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm no-print">
             <DatabaseBackup className="h-4 w-4 flex-shrink-0 text-amber-600" />
             <span className="flex-1">
