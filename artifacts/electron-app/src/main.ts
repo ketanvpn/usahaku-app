@@ -402,9 +402,15 @@ function createLoadingWindow(): void {
     show: false,
   });
 
-  mainWindow.loadURL(
-    `data:text/html;charset=utf-8,${encodeURIComponent(LOADING_HTML)}`
-  );
+  try {
+    const loadingPath = path.join(app.getPath("userData"), "loading-screen.html");
+    fs.writeFileSync(loadingPath, LOADING_HTML, "utf8");
+    mainWindow.loadFile(loadingPath);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    writeLog(`fallback loading-screen data url: ${msg}`);
+    mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(LOADING_HTML)}`);
+  }
 
   mainWindow.once("ready-to-show", () => {
     mainWindow!.center();
@@ -553,6 +559,21 @@ function getAutoBackupDir(): string {
 }
 
 ipcMain.handle("backup:getFolder", () => getAutoBackupDir());
+
+ipcMain.handle("backup:openFolder", async (): Promise<{ success: boolean; message?: string }> => {
+  try {
+    const folder = getAutoBackupDir();
+    if (!fs.existsSync(folder)) {
+      fs.mkdirSync(folder, { recursive: true });
+    }
+    const err = await shell.openPath(folder);
+    if (err) return { success: false, message: err };
+    return { success: true };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { success: false, message: msg };
+  }
+});
 
 ipcMain.handle("backup:chooseFolder", async () => {
   if (!mainWindow) return null;

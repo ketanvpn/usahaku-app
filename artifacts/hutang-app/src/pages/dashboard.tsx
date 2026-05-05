@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGetOwnerDashboard } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
 import { formatRupiah, formatDate } from "@/lib/format";
@@ -55,7 +55,28 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function OwnerDashboard() {
   const [trenHari, setTrenHari] = useState<7 | 30>(30);
+  const [backupInfo, setBackupInfo] = useState<string>("Belum ada backup manual");
   const { data, isLoading } = useGetOwnerDashboard();
+
+  useEffect(() => {
+    const last = localStorage.getItem("lastBackupDate");
+    if (!last) {
+      setBackupInfo("Belum ada backup manual");
+      return;
+    }
+    const diffMs = Date.now() - new Date(last).getTime();
+    if (Number.isNaN(diffMs) || diffMs < 0) {
+      setBackupInfo("Backup manual: baru saja");
+      return;
+    }
+    const minutes = Math.floor(diffMs / (1000 * 60));
+    if (minutes < 1) { setBackupInfo("Backup manual: baru saja"); return; }
+    if (minutes < 60) { setBackupInfo(`Backup manual: ${minutes} menit lalu`); return; }
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) { setBackupInfo(`Backup manual: ${hours} jam lalu`); return; }
+    const days = Math.floor(hours / 24);
+    setBackupInfo(`Backup manual: ${days} hari lalu`);
+  }, []);
 
   const { data: peringatanStok = [] } = useQuery<BarangPeringatan[]>({
     queryKey: ["barang-peringatan"],
@@ -112,6 +133,7 @@ export default function OwnerDashboard() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h2>
           <p className="text-muted-foreground">Ringkasan bisnis Anda hari ini.</p>
+          <p className="text-xs text-muted-foreground mt-1">{backupInfo}</p>
         </div>
         <div className="flex gap-2">
           <Link href="/hutang" className="block">

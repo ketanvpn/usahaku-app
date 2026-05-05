@@ -29,6 +29,7 @@ declare global {
       };
       backup?: {
         getFolder: () => Promise<string>;
+        openFolder: () => Promise<{ success: boolean; message?: string }>;
         chooseFolder: () => Promise<string | null>;
         saveManual: (jsonData: string) => Promise<{ success: boolean; filePath?: string; message?: string }>;
         restoreDB: () => Promise<{ success: boolean; canceled?: boolean; message?: string }>;

@@ -132,6 +132,14 @@ export default function BackupPage() {
     }
   };
 
+  const handleOpenFolder = async () => {
+    if (!window.electronApp?.backup?.openFolder) return;
+    const result = await window.electronApp.backup.openFolder();
+    if (!result.success) {
+      toast({ variant: "destructive", title: "Gagal membuka folder", description: result.message ?? "Terjadi kesalahan" });
+    }
+  };
+
   const handleRestoreDB = async () => {
     if (!window.electronApp?.backup?.restoreDB) return;
     setIsRestoringDB(true);
@@ -373,6 +381,15 @@ export default function BackupPage() {
               className="w-full sm:w-auto"
             >
               <Copy className="mr-2 h-4 w-4" /> Salin Lokasi Folder
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleOpenFolder}
+              disabled={!isElectron}
+              className="w-full sm:w-auto"
+            >
+              <FolderOpen className="mr-2 h-4 w-4" /> Buka Folder Backup
             </Button>
           </CardContent>
         </Card>

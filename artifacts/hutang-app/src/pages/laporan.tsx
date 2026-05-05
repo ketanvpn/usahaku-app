@@ -305,10 +305,12 @@ export default function LaporanPage() {
   const [filterStatus, setFilterStatus] = useState<GetLaporanStatus | undefined>();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [hutangPreset, setHutangPreset] = useState<"today" | "week" | "7d" | "30d" | "month" | null>(null);
 
   const [keuDari, setKeuDari] = useState("");
   const [keuSampai, setKeuSampai] = useState("");
   const [keuTipe, setKeuTipe] = useState<"semua" | "masuk" | "keluar">("semua");
+  const [keuPreset, setKeuPreset] = useState<"today" | "week" | "7d" | "30d" | "month" | null>(null);
 
   const now = new Date();
   const [kasirBulan, setKasirBulan] = useState(now.getMonth() + 1);
@@ -428,18 +430,30 @@ export default function LaporanPage() {
     return `${year}-${month}-${day}`;
   };
 
-  const applyHutangPreset = (preset: "today" | "7d" | "30d" | "month") => {
+  const applyHutangPreset = (preset: "today" | "week" | "7d" | "30d" | "month") => {
     const nowDate = new Date();
     const end = toYmd(nowDate);
     if (preset === "today") {
       setDateFrom(end);
       setDateTo(end);
+      setHutangPreset(preset);
+      return;
+    }
+    if (preset === "week") {
+      const day = nowDate.getDay();
+      const diffToMonday = day === 0 ? 6 : day - 1;
+      const start = new Date(nowDate);
+      start.setDate(start.getDate() - diffToMonday);
+      setDateFrom(toYmd(start));
+      setDateTo(end);
+      setHutangPreset(preset);
       return;
     }
     if (preset === "month") {
       const start = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1);
       setDateFrom(toYmd(start));
       setDateTo(end);
+      setHutangPreset(preset);
       return;
     }
     const days = preset === "7d" ? 6 : 29;
@@ -447,20 +461,33 @@ export default function LaporanPage() {
     start.setDate(start.getDate() - days);
     setDateFrom(toYmd(start));
     setDateTo(end);
+    setHutangPreset(preset);
   };
 
-  const applyKeuPreset = (preset: "today" | "7d" | "30d" | "month") => {
+  const applyKeuPreset = (preset: "today" | "week" | "7d" | "30d" | "month") => {
     const nowDate = new Date();
     const end = toYmd(nowDate);
     if (preset === "today") {
       setKeuDari(end);
       setKeuSampai(end);
+      setKeuPreset(preset);
+      return;
+    }
+    if (preset === "week") {
+      const day = nowDate.getDay();
+      const diffToMonday = day === 0 ? 6 : day - 1;
+      const start = new Date(nowDate);
+      start.setDate(start.getDate() - diffToMonday);
+      setKeuDari(toYmd(start));
+      setKeuSampai(end);
+      setKeuPreset(preset);
       return;
     }
     if (preset === "month") {
       const start = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1);
       setKeuDari(toYmd(start));
       setKeuSampai(end);
+      setKeuPreset(preset);
       return;
     }
     const days = preset === "7d" ? 6 : 29;
@@ -468,6 +495,7 @@ export default function LaporanPage() {
     start.setDate(start.getDate() - days);
     setKeuDari(toYmd(start));
     setKeuSampai(end);
+    setKeuPreset(preset);
   };
 
   const hutangFilterLines: { label: string; value: string }[] = [];
@@ -916,17 +944,18 @@ export default function LaporanPage() {
                   <Filter className="h-4 w-4" /> Filter
                 </div>
                 {hasActiveFilterHutang && (
-                  <Button variant="ghost" size="sm" onClick={() => { setFilterPelanggan(undefined); setFilterStatus(undefined); setDateFrom(""); setDateTo(""); }}
+                  <Button variant="ghost" size="sm" onClick={() => { setFilterPelanggan(undefined); setFilterStatus(undefined); setDateFrom(""); setDateTo(""); setHutangPreset(null); }}
                     className="text-muted-foreground h-7 px-2">
                     <X className="h-3 w-3 mr-1" /> Reset
                   </Button>
                 )}
               </div>
               <div className="mb-4 flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => applyHutangPreset("today")}>Hari ini</Button>
-                <Button variant="outline" size="sm" onClick={() => applyHutangPreset("7d")}>7 hari</Button>
-                <Button variant="outline" size="sm" onClick={() => applyHutangPreset("30d")}>30 hari</Button>
-                <Button variant="outline" size="sm" onClick={() => applyHutangPreset("month")}>Bulan ini</Button>
+                <Button variant={hutangPreset === "today" ? "default" : "outline"} size="sm" onClick={() => applyHutangPreset("today")}>Hari ini</Button>
+                <Button variant={hutangPreset === "week" ? "default" : "outline"} size="sm" onClick={() => applyHutangPreset("week")}>Minggu ini</Button>
+                <Button variant={hutangPreset === "7d" ? "default" : "outline"} size="sm" onClick={() => applyHutangPreset("7d")}>7 hari</Button>
+                <Button variant={hutangPreset === "30d" ? "default" : "outline"} size="sm" onClick={() => applyHutangPreset("30d")}>30 hari</Button>
+                <Button variant={hutangPreset === "month" ? "default" : "outline"} size="sm" onClick={() => applyHutangPreset("month")}>Bulan ini</Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
@@ -952,11 +981,11 @@ export default function LaporanPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Dari Tanggal</Label>
-                  <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-background" />
+                  <Input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setHutangPreset(null); }} className="bg-background" />
                 </div>
                 <div className="space-y-2">
                   <Label>Sampai Tanggal</Label>
-                  <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-background" />
+                  <Input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setHutangPreset(null); }} className="bg-background" />
                 </div>
               </div>
             </CardContent>
@@ -1042,17 +1071,18 @@ export default function LaporanPage() {
                   <Filter className="h-4 w-4" /> Filter
                 </div>
                 {hasActiveFilterKeu && (
-                  <Button variant="ghost" size="sm" onClick={() => { setKeuDari(""); setKeuSampai(""); setKeuTipe("semua"); }}
+                  <Button variant="ghost" size="sm" onClick={() => { setKeuDari(""); setKeuSampai(""); setKeuTipe("semua"); setKeuPreset(null); }}
                     className="text-muted-foreground h-7 px-2">
                     <X className="h-3 w-3 mr-1" /> Reset
                   </Button>
                 )}
               </div>
               <div className="mb-4 flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => applyKeuPreset("today")}>Hari ini</Button>
-                <Button variant="outline" size="sm" onClick={() => applyKeuPreset("7d")}>7 hari</Button>
-                <Button variant="outline" size="sm" onClick={() => applyKeuPreset("30d")}>30 hari</Button>
-                <Button variant="outline" size="sm" onClick={() => applyKeuPreset("month")}>Bulan ini</Button>
+                <Button variant={keuPreset === "today" ? "default" : "outline"} size="sm" onClick={() => applyKeuPreset("today")}>Hari ini</Button>
+                <Button variant={keuPreset === "week" ? "default" : "outline"} size="sm" onClick={() => applyKeuPreset("week")}>Minggu ini</Button>
+                <Button variant={keuPreset === "7d" ? "default" : "outline"} size="sm" onClick={() => applyKeuPreset("7d")}>7 hari</Button>
+                <Button variant={keuPreset === "30d" ? "default" : "outline"} size="sm" onClick={() => applyKeuPreset("30d")}>30 hari</Button>
+                <Button variant={keuPreset === "month" ? "default" : "outline"} size="sm" onClick={() => applyKeuPreset("month")}>Bulan ini</Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
@@ -1068,11 +1098,11 @@ export default function LaporanPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Dari Tanggal</Label>
-                  <Input type="date" value={keuDari} onChange={e => setKeuDari(e.target.value)} className="bg-background" />
+                  <Input type="date" value={keuDari} onChange={e => { setKeuDari(e.target.value); setKeuPreset(null); }} className="bg-background" />
                 </div>
                 <div className="space-y-2">
                   <Label>Sampai Tanggal</Label>
-                  <Input type="date" value={keuSampai} onChange={e => setKeuSampai(e.target.value)} className="bg-background" />
+                  <Input type="date" value={keuSampai} onChange={e => { setKeuSampai(e.target.value); setKeuPreset(null); }} className="bg-background" />
                 </div>
               </div>
             </CardContent>
