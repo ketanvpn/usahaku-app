@@ -18,4 +18,7 @@ export interface BackupData {
   pelanggan: Pelanggan[];
   hutang: Hutang[];
   pembayaran: Pembayaran[];
+  pekerja: unknown[];
+  upah_pekerja: unknown[];
+  bayar_upah: unknown[];
 }

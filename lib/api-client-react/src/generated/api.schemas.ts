@@ -265,6 +265,9 @@ export interface BackupData {
   pelanggan: Pelanggan[];
   hutang: Hutang[];
   pembayaran: Pembayaran[];
+  pekerja: Pekerja[];
+  upah_pekerja: UpahPekerja[];
+  bayar_upah: BayarUpah[];
 }
 
 export type GetHutangListParams = {
@@ -305,6 +308,7 @@ export const GetLaporanStatus = {
 export interface Pekerja {
   id: number;
   usaha_id: number;
+  pelanggan_id?: number | null;
   nama: string;
   telepon?: string | null;
   jabatan?: string | null;
@@ -314,6 +318,7 @@ export interface Pekerja {
 
 export interface CreatePekerjaBody {
   nama: string;
+  pelanggan_id?: number | null;
   telepon?: string | null;
   jabatan?: string | null;
   catatan?: string | null;
@@ -321,6 +326,7 @@ export interface CreatePekerjaBody {
 
 export interface UpdatePekerjaBody {
   nama?: string;
+  pelanggan_id?: number | null;
   telepon?: string | null;
   jabatan?: string | null;
   catatan?: string | null;
@@ -382,12 +388,14 @@ export interface CreateBayarUpahBody {
   jumlah: number;
   tanggal_bayar: string;
   catatan?: string | null;
+  potong_hutang?: number | null;
 }
 
 export interface BayarBatchUpahBody {
   jumlah_total: number;
   tanggal_bayar: string;
   catatan?: string | null;
+  potong_hutang?: number | null;
 }
 
 export interface BayarBatchUpahResponse {

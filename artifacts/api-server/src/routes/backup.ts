@@ -38,7 +38,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   const transaksiKasirItemList = allKasirItems.flat();
 
   const backup = {
-    version: "1.5",
+    version: "1.6",
     exported_at: new Date().toISOString(),
     usaha_id: usahaId,
     usaha: {
@@ -144,6 +144,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
     pekerja: pekerjaList.map((p) => ({
       id: p.id,
       usaha_id: p.usahaId,
+      pelanggan_id: p.pelangganId ?? null,
       nama: p.nama,
       telepon: p.telepon ?? null,
       jabatan: p.jabatan ?? null,
@@ -171,6 +172,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       jumlah: parseFloat(b.jumlah),
       tanggal_bayar: b.tanggalBayar,
       keuangan_id: b.keuanganId ?? null,
+      pembayaran_id: b.pembayaranId ?? null,
       catatan: b.catatan ?? null,
       created_at: b.createdAt.toISOString(),
     })),
@@ -287,20 +289,24 @@ router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
       }
 
       // ── 5. Restore pembayaran ──────────────────────────────────────────────
+      const pembayaranIdMap = new Map<number, number>();
       const stmtBayar = sqliteRaw.prepare(
         "INSERT INTO pembayaran (usaha_id, hutang_id, pelanggan_id, tanggal_bayar, nominal_bayar, catatan, nomor_kwitansi, sisa_hutang_setelah, keuangan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
       );
-      for (const p of backup.pembayaran) {
-        const newHutangId    = hutangIdMap.get(p.hutang_id) ?? p.hutang_id;
-        const newPelangganId = pelangganIdMap.get(p.pelanggan_id) ?? p.pelanggan_id;
-        const newKeuanganId  = p.keuangan_id != null ? (keuanganIdMap.get(p.keuangan_id) ?? null) : null;
-        stmtBayar.run(
-          usahaId, newHutangId, newPelangganId,
-          p.tanggal_bayar, String(p.nominal_bayar),
-          p.catatan ?? null, p.nomor_kwitansi ?? null,
-          p.sisa_hutang_setelah != null ? String(p.sisa_hutang_setelah) : null,
-          newKeuanganId ?? null
-        );
+      if (Array.isArray(backup.pembayaran)) {
+        for (const p of backup.pembayaran) {
+          const newHutangId    = hutangIdMap.get(p.hutang_id) ?? p.hutang_id;
+          const newPelangganId = pelangganIdMap.get(p.pelanggan_id) ?? p.pelanggan_id;
+          const newKeuanganId  = p.keuangan_id != null ? (keuanganIdMap.get(p.keuangan_id) ?? null) : null;
+          const r = stmtBayar.run(
+            usahaId, newHutangId, newPelangganId,
+            p.tanggal_bayar, String(p.nominal_bayar),
+            p.catatan ?? null, p.nomor_kwitansi ?? null,
+            p.sisa_hutang_setelah != null ? String(p.sisa_hutang_setelah) : null,
+            newKeuanganId ?? null
+          );
+          pembayaranIdMap.set(p.id, Number(r.lastInsertRowid));
+        }
       }
 
       // ── 6. Restore transaksi stok ──────────────────────────────────────────
@@ -357,11 +363,12 @@ router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
       const pekerjaIdMap = new Map<number, number>();
       if (Array.isArray(backup.pekerja)) {
         const stmtPekerja = sqliteRaw.prepare(
-          "INSERT INTO pekerja (usaha_id, nama, telepon, jabatan, catatan) VALUES (?, ?, ?, ?, ?)"
+          "INSERT INTO pekerja (usaha_id, pelanggan_id, nama, telepon, jabatan, catatan) VALUES (?, ?, ?, ?, ?, ?)"
         );
         for (const p of backup.pekerja) {
+          const newPelangganId = p.pelanggan_id != null ? (pelangganIdMap.get(p.pelanggan_id) ?? null) : null;
           const r = stmtPekerja.run(
-            usahaId, p.nama, p.telepon ?? null, p.jabatan ?? null, p.catatan ?? null
+            usahaId, newPelangganId, p.nama, p.telepon ?? null, p.jabatan ?? null, p.catatan ?? null
           );
           pekerjaIdMap.set(p.id, Number(r.lastInsertRowid));
         }
@@ -388,14 +395,15 @@ router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
       // ── 11. Restore bayar_upah ────────────────────────────────────────────
       if (Array.isArray(backup.bayar_upah)) {
         const stmtBayarUpah = sqliteRaw.prepare(
-          "INSERT INTO bayar_upah (usaha_id, upah_id, jumlah, tanggal_bayar, keuangan_id, catatan) VALUES (?, ?, ?, ?, ?, ?)"
+          "INSERT INTO bayar_upah (usaha_id, upah_id, jumlah, tanggal_bayar, keuangan_id, pembayaran_id, catatan) VALUES (?, ?, ?, ?, ?, ?, ?)"
         );
         for (const b of backup.bayar_upah) {
           const newUpahId     = upahIdMap.get(b.upah_id) ?? b.upah_id;
           const newKeuanganId = b.keuangan_id != null ? (keuanganIdMap.get(b.keuangan_id) ?? null) : null;
+          const newPembayaranId = b.pembayaran_id != null ? (pembayaranIdMap.get(b.pembayaran_id) ?? null) : null;
           stmtBayarUpah.run(
             usahaId, newUpahId, String(b.jumlah),
-            b.tanggal_bayar, newKeuanganId ?? null, b.catatan ?? null
+            b.tanggal_bayar, newKeuanganId ?? null, newPembayaranId ?? null, b.catatan ?? null
           );
         }
       }

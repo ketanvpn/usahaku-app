@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, pekerjaTable, upahPekerjaTable, bayarUpahTable, keuanganTable } from "@workspace/db";
+import { db, pekerjaTable, upahPekerjaTable, bayarUpahTable, keuanganTable, pelangganTable } from "@workspace/db";
 import { eq, and, asc } from "drizzle-orm";
 import {
   CreatePekerjaBody,
@@ -18,6 +18,7 @@ function formatPekerja(p: typeof pekerjaTable.$inferSelect) {
   return {
     id: p.id,
     usaha_id: p.usahaId,
+    pelanggan_id: p.pelangganId ?? null,
     nama: p.nama,
     telepon: p.telepon ?? null,
     jabatan: p.jabatan ?? null,
@@ -53,8 +54,19 @@ router.post("/pekerja", requireAuth, requireLicense, async (req, res): Promise<v
     return;
   }
 
+  if (parsed.data.pelanggan_id !== undefined && parsed.data.pelanggan_id !== null) {
+    const [pelanggan] = await db.select().from(pelangganTable)
+      .where(and(eq(pelangganTable.id, parsed.data.pelanggan_id), eq(pelangganTable.usahaId, usahaId)));
+
+    if (!pelanggan) {
+      res.status(404).json({ error: "Pelanggan tidak ditemukan." });
+      return;
+    }
+  }
+
   const [pekerja] = await db.insert(pekerjaTable).values({
     usahaId,
+    pelangganId: parsed.data.pelanggan_id ?? null,
     nama: parsed.data.nama,
     telepon: parsed.data.telepon ?? null,
     jabatan: parsed.data.jabatan ?? null,
@@ -117,6 +129,21 @@ router.put("/pekerja/:id", requireAuth, requireLicense, async (req, res): Promis
 
   const updateData: Partial<typeof pekerjaTable.$inferInsert> = {};
   if (parsed.data.nama !== undefined) updateData.nama = parsed.data.nama;
+  if (parsed.data.pelanggan_id !== undefined) {
+    if (parsed.data.pelanggan_id === null) {
+      updateData.pelangganId = null;
+    } else {
+      const [pelanggan] = await db.select().from(pelangganTable)
+        .where(and(eq(pelangganTable.id, parsed.data.pelanggan_id), eq(pelangganTable.usahaId, usahaId)));
+
+      if (!pelanggan) {
+        res.status(404).json({ error: "Pelanggan tidak ditemukan." });
+        return;
+      }
+
+      updateData.pelangganId = parsed.data.pelanggan_id;
+    }
+  }
   if (parsed.data.telepon !== undefined) updateData.telepon = parsed.data.telepon ?? null;
   if (parsed.data.jabatan !== undefined) updateData.jabatan = parsed.data.jabatan ?? null;
   if (parsed.data.catatan !== undefined) updateData.catatan = parsed.data.catatan ?? null;

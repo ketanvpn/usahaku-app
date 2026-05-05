@@ -98,6 +98,8 @@ try { sqlite.exec(`ALTER TABLE hutang ADD COLUMN tanggal_jatuh_tempo TEXT`); } c
 try { sqlite.exec(`ALTER TABLE hutang ADD COLUMN keuangan_id INTEGER`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE transaksi_kasir ADD COLUMN diskon TEXT NOT NULL DEFAULT '0'`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE transaksi_kasir ADD COLUMN keuangan_id INTEGER`); } catch { /* column already exists */ }
+try { sqlite.exec(`ALTER TABLE pekerja ADD COLUMN pelanggan_id INTEGER REFERENCES pelanggan(id) ON DELETE SET NULL`); } catch { /* column already exists */ }
+try { sqlite.exec(`ALTER TABLE bayar_upah ADD COLUMN pembayaran_id INTEGER REFERENCES pembayaran(id) ON DELETE SET NULL`); } catch { /* column already exists */ }
 
 sqlite.exec(`
   CREATE TABLE IF NOT EXISTS barang (
@@ -168,6 +170,7 @@ sqlite.exec(`
   CREATE TABLE IF NOT EXISTS pekerja (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     usaha_id INTEGER NOT NULL REFERENCES usaha(id),
+    pelanggan_id INTEGER REFERENCES pelanggan(id) ON DELETE SET NULL,
     nama TEXT NOT NULL,
     telepon TEXT,
     jabatan TEXT,
@@ -197,6 +200,7 @@ sqlite.exec(`
     jumlah TEXT NOT NULL,
     tanggal_bayar TEXT NOT NULL,
     keuangan_id INTEGER,
+    pembayaran_id INTEGER REFERENCES pembayaran(id) ON DELETE SET NULL,
     catatan TEXT,
     created_at INTEGER NOT NULL DEFAULT (CAST((julianday('now') - 2440587.5)*86400000 AS INTEGER))
   );

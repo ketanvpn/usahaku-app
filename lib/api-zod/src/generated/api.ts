@@ -696,6 +696,7 @@ export const ImportBackupResponse = zod.object({
 export const GetPekerjaListResponseItem = zod.object({
   id: zod.number(),
   usaha_id: zod.number(),
+  pelanggan_id: zod.number().nullish(),
   nama: zod.string(),
   telepon: zod.string().nullish(),
   jabatan: zod.string().nullish(),
@@ -709,6 +710,7 @@ export const GetPekerjaListResponse = zod.array(GetPekerjaListResponseItem);
  */
 export const CreatePekerjaBody = zod.object({
   nama: zod.string().min(1),
+  pelanggan_id: zod.number().nullish(),
   telepon: zod.string().nullish(),
   jabatan: zod.string().nullish(),
   catatan: zod.string().nullish(),
@@ -723,6 +725,7 @@ export const DeletePekerjaParams = zod.object({ id: zod.coerce.number() });
 
 export const UpdatePekerjaBody = zod.object({
   nama: zod.string().min(1).optional(),
+  pelanggan_id: zod.number().nullish(),
   telepon: zod.string().nullish(),
   jabatan: zod.string().nullish(),
   catatan: zod.string().nullish(),
@@ -818,6 +821,7 @@ export const CreateBayarUpahBody = zod.object({
   jumlah: zod.number().positive(),
   tanggal_bayar: zod.string(),
   catatan: zod.string().nullish(),
+  potong_hutang: zod.number().min(0).optional(),
 });
 
 export const DeleteBayarUpahParams = zod.object({ id: zod.coerce.number() });
@@ -828,4 +832,5 @@ export const BayarBatchUpahBody = zod.object({
   jumlah_total: zod.number().positive(),
   tanggal_bayar: zod.string().min(1),
   catatan: zod.string().nullish(),
+  potong_hutang: zod.number().min(0).optional(),
 });

@@ -2,9 +2,10 @@ import { useState, useMemo, useRef } from "react";
 import {
   useGetPekerjaList, useCreatePekerja, useUpdatePekerja, useDeletePekerja,
   useGetUpahList, useCreateUpah, useUpdateUpah, useDeleteUpah,
-  useGetUpah, useBayarUpah, useDeleteBayarUpah, useBayarBatchUpah,
+  useGetUpah, useGetPelanggan, useBayarUpah, useDeleteBayarUpah, useBayarBatchUpah,
+  useGetPelangganList,
   useGetUsaha, getGetUsahaQueryKey,
-  getGetPekerjaListQueryKey, getGetUpahListQueryKey, getGetUpahQueryKey,
+  getGetPekerjaListQueryKey, getGetUpahListQueryKey, getGetUpahQueryKey, getGetPelangganQueryKey,
   Pekerja, UpahPekerja, GetUpahListParams, UpahStatus,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -25,7 +26,7 @@ import * as z from "zod";
 import { formatRupiah, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { Loader2, Plus, Edit, Trash2, Search, HardHat, Banknote, Users, TrendingDown, Clock, Download, Printer } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Search, HardHat, Banknote, Users, TrendingDown, Clock, Download, Printer, Link2, Link2Off } from "lucide-react";
 import { useLicense } from "@/context/license-context";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -38,6 +39,10 @@ function toTitleCase(str: string): string {
 function capitalizeFirst(str: string): string {
   if (!str) return str;
   return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function normalizeKey(str: string): string {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, "").trim();
 }
 
 // ── Kwitansi helpers ──────────────────────────────────────────────────────────
@@ -196,6 +201,12 @@ export default function GajiTenagaPage() {
   const [editingPekerja, setEditingPekerja] = useState<Pekerja | null>(null);
   const [deletingPekerjaId, setDeletingPekerjaId] = useState<number | null>(null);
   const [deletingBayarId, setDeletingBayarId] = useState<number | null>(null);
+  const [filterPekerjaLink, setFilterPekerjaLink] = useState<"semua" | "terhubung" | "belum_terhubung">("semua");
+  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
+  const [linkPekerja, setLinkPekerja] = useState<Pekerja | null>(null);
+  const [linkPelangganId, setLinkPelangganId] = useState<string>("none");
+  const [potongHutangSingleEnabled, setPotongHutangSingleEnabled] = useState(false);
+  const [potongHutangSingleAmount, setPotongHutangSingleAmount] = useState("");
 
   // ── Batch state ─────────────────────────────────────────────────────────────
   const [batchPekerja, setBatchPekerja] = useState<Pekerja | null>(null);
@@ -209,8 +220,17 @@ export default function GajiTenagaPage() {
   const { data: upahList, isLoading: loadingUpah } = useGetUpahList(params);
   const { data: allUpahList } = useGetUpahList({});
   const { data: pekerjaList, isLoading: loadingPekerja } = useGetPekerjaList();
+  const { data: pelangganList = [] } = useGetPelangganList();
   const { data: upahDetail, isLoading: loadingDetail } = useGetUpah(selectedUpahId ?? 0, {
     query: { enabled: !!selectedUpahId },
+  });
+  const selectedUpahPekerja = useMemo(
+    () => pekerjaList?.find((p) => p.id === upahDetail?.pekerja_id) ?? null,
+    [pekerjaList, upahDetail?.pekerja_id],
+  );
+  const linkedPelangganId = selectedUpahPekerja?.pelanggan_id ?? null;
+  const { data: linkedPelangganDetail } = useGetPelanggan(linkedPelangganId ?? 0, {
+    query: { enabled: !!linkedPelangganId },
   });
   const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, {
     query: { enabled: !!user?.usaha_id, queryKey: getGetUsahaQueryKey(user?.usaha_id ?? 0) },
@@ -225,6 +245,12 @@ export default function GajiTenagaPage() {
   const invalidatePekerja = () => {
     qc.invalidateQueries({ queryKey: getGetPekerjaListQueryKey() });
   };
+
+  const pelangganById = useMemo(() => new Map(pelangganList.map((p) => [p.id, p])), [pelangganList]);
+  const suggestedPelangganId = useMemo(
+    () => (linkPekerja ? getSuggestedPelangganId(linkPekerja) : null),
+    [linkPekerja, pelangganList],
+  );
 
   const createUpah = useCreateUpah({
     mutation: {
@@ -248,6 +274,7 @@ export default function GajiTenagaPage() {
     mutation: {
       onSuccess: () => {
         invalidateUpah();
+        if (linkedPelangganId) qc.invalidateQueries({ queryKey: getGetPelangganQueryKey(linkedPelangganId) });
         toast({ title: "Pembayaran berhasil dicatat" });
         bayarForm.reset();
         if (pendingKwitansiRef.current) {
@@ -261,7 +288,7 @@ export default function GajiTenagaPage() {
   });
   const deleteBayar = useDeleteBayarUpah({
     mutation: {
-      onSuccess: () => { invalidateUpah(); toast({ title: "Pembayaran berhasil dihapus" }); setDeletingBayarId(null); },
+      onSuccess: () => { invalidateUpah(); if (linkedPelangganId) qc.invalidateQueries({ queryKey: getGetPelangganQueryKey(linkedPelangganId) }); toast({ title: "Pembayaran berhasil dihapus" }); setDeletingBayarId(null); },
       onError: (e: unknown) => toast({ title: "Gagal", description: (e as Error)?.message, variant: "destructive" }),
     },
   });
@@ -292,7 +319,15 @@ export default function GajiTenagaPage() {
   });
   const updatePekerja = useUpdatePekerja({
     mutation: {
-      onSuccess: () => { invalidatePekerja(); toast({ title: "Pekerja berhasil diperbarui" }); setIsPekerjaDialogOpen(false); setEditingPekerja(null); },
+      onSuccess: () => {
+        invalidatePekerja();
+        toast({ title: "Pekerja berhasil diperbarui" });
+        setIsPekerjaDialogOpen(false);
+        setEditingPekerja(null);
+        setIsLinkDialogOpen(false);
+        setLinkPekerja(null);
+        setLinkPelangganId("none");
+      },
       onError: (e: unknown) => toast({ title: "Gagal", description: (e as Error)?.message, variant: "destructive" }),
     },
   });
@@ -330,6 +365,17 @@ export default function GajiTenagaPage() {
   const catatanBelumLunas = useMemo(() =>
     (allUpahList ?? []).filter(u => u.status === "belum_lunas").length,
   [allUpahList]);
+
+  const hutangAktifTerkait = useMemo(() => {
+    return (linkedPelangganDetail?.hutang_list ?? [])
+      .filter((h) => h.status === "aktif")
+      .slice()
+      .sort((a, b) => a.tanggal_hutang.localeCompare(b.tanggal_hutang) || a.id - b.id);
+  }, [linkedPelangganDetail]);
+
+  const hutangTertuaTerkait = hutangAktifTerkait[0] ?? null;
+  const jumlahBayarSingle = Number(bayarForm.watch("jumlah")) || 0;
+  const potongHutangSingleNum = Number(potongHutangSingleAmount.replace(/[^0-9.]/g, "")) || 0;
 
   // ── Export CSV catatan upah ──────────────────────────────────────────────────
   const exportUpahCSV = () => {
@@ -401,6 +447,8 @@ export default function GajiTenagaPage() {
   const openBayar = (u: UpahPekerja) => {
     setSelectedUpahId(u.id);
     bayarForm.reset({ jumlah: u.sisa_upah, tanggal_bayar: today, catatan: "" });
+    setPotongHutangSingleEnabled(false);
+    setPotongHutangSingleAmount("");
     setIsBayarDialogOpen(true);
   };
 
@@ -438,17 +486,31 @@ export default function GajiTenagaPage() {
 
   const submitBayar = (data: BayarForm) => {
     if (!selectedUpahId || !upahDetail) return;
+    const potong = potongHutangSingleEnabled ? potongHutangSingleNum : 0;
+    const jumlahNet = Math.max(0, data.jumlah - potong);
+    const catatanKwitansi = potong > 0
+      ? `${data.catatan ? `${data.catatan} · ` : ""}Potong hutang ${formatRupiah(potong)}`
+      : data.catatan ?? "";
     pendingKwitansiRef.current = {
       type: "single",
       pekerja_nama: upahDetail.pekerja_nama,
       pekerja_jabatan: upahDetail.pekerja_jabatan ?? "",
       keterangan: upahDetail.keterangan,
       tanggal_bayar: data.tanggal_bayar,
-      jumlah: data.jumlah,
-      catatan: data.catatan ?? "",
+      jumlah: jumlahNet,
+      catatan: catatanKwitansi,
       namaUsaha,
     };
-    bayarUpah.mutate({ id: selectedUpahId, data: { upah_id: selectedUpahId, jumlah: data.jumlah, tanggal_bayar: data.tanggal_bayar, catatan: data.catatan || null } });
+    bayarUpah.mutate({
+      id: selectedUpahId,
+      data: {
+        upah_id: selectedUpahId,
+        jumlah: data.jumlah,
+        tanggal_bayar: data.tanggal_bayar,
+        catatan: data.catatan || null,
+        potong_hutang: potong > 0 ? potong : undefined,
+      },
+    });
   };
 
   const openTambahPekerja = () => {
@@ -461,6 +523,36 @@ export default function GajiTenagaPage() {
     setEditingPekerja(p);
     pekerjaForm.reset({ nama: p.nama, telepon: p.telepon ?? "", jabatan: p.jabatan ?? "", catatan: p.catatan ?? "" });
     setIsPekerjaDialogOpen(true);
+  };
+
+  function getSuggestedPelangganId(p: Pekerja) {
+    const namaPekerja = normalizeKey(p.nama);
+    if (!namaPekerja) return p.pelanggan_id ?? null;
+
+    const exact = pelangganList.find((pelanggan) => normalizeKey(pelanggan.nama) === namaPekerja);
+    if (exact) return exact.id;
+
+    const contains = pelangganList.find((pelanggan) => {
+      const namaPelanggan = normalizeKey(pelanggan.nama);
+      return namaPelanggan.includes(namaPekerja) || namaPekerja.includes(namaPelanggan);
+    });
+    return contains?.id ?? p.pelanggan_id ?? null;
+  }
+
+  const openLinkPelanggan = (p: Pekerja) => {
+    setLinkPekerja(p);
+    setLinkPelangganId(getSuggestedPelangganId(p)?.toString() ?? "none");
+    setIsLinkDialogOpen(true);
+  };
+
+  const submitLinkPelanggan = () => {
+    if (!linkPekerja) return;
+    updatePekerja.mutate({
+      id: linkPekerja.id,
+      data: {
+        pelanggan_id: linkPelangganId === "none" ? null : Number(linkPelangganId),
+      },
+    });
   };
 
   const submitPekerja = (data: PekerjaForm) => {
@@ -488,9 +580,15 @@ export default function GajiTenagaPage() {
 
   const filteredPekerja = (pekerjaList ?? [])
     .filter((p) =>
-      !searchPekerja ||
-      p.nama.toLowerCase().includes(searchPekerja.toLowerCase()) ||
-      (p.jabatan ?? "").toLowerCase().includes(searchPekerja.toLowerCase())
+      (
+        !searchPekerja ||
+        p.nama.toLowerCase().includes(searchPekerja.toLowerCase()) ||
+        (p.jabatan ?? "").toLowerCase().includes(searchPekerja.toLowerCase())
+      ) && (
+        filterPekerjaLink === "semua" ||
+        (filterPekerjaLink === "terhubung" && p.pelanggan_id != null) ||
+        (filterPekerjaLink === "belum_terhubung" && p.pelanggan_id == null)
+      )
     )
     .sort((a, b) => a.nama.localeCompare(b.nama, "id"));
 
@@ -668,6 +766,16 @@ export default function GajiTenagaPage() {
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Cari nama atau jabatan..." className="pl-9" value={searchPekerja} onChange={(e) => setSearchPekerja(e.target.value)} />
             </div>
+            <Select value={filterPekerjaLink} onValueChange={(v) => setFilterPekerjaLink(v as typeof filterPekerjaLink)}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Status link" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="semua">Semua Status</SelectItem>
+                <SelectItem value="terhubung">Terhubung ke Pelanggan</SelectItem>
+                <SelectItem value="belum_terhubung">Belum Terhubung</SelectItem>
+              </SelectContent>
+            </Select>
             <Button onClick={openTambahPekerja} disabled={!lisensiAktif}>
               <Plus className="h-4 w-4 mr-1" /> Tambah Pekerja
             </Button>
@@ -683,16 +791,17 @@ export default function GajiTenagaPage() {
                       <TableHead>Jabatan</TableHead>
                       <TableHead>Telepon</TableHead>
                       <TableHead>Catatan</TableHead>
+                      <TableHead>Pelanggan</TableHead>
                       <TableHead className="text-right">Sisa Upah</TableHead>
                       <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   {loadingPekerja ? (
-                    <TableSkeleton cols={6} />
+                    <TableSkeleton cols={7} />
                   ) : filteredPekerja.length === 0 ? (
                     <TableBody>
                       <TableRow>
-                        <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
+                        <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
                           <Users className="h-10 w-10 mx-auto mb-3 opacity-20" />
                           <p>Belum ada data pekerja</p>
                         </TableCell>
@@ -708,6 +817,18 @@ export default function GajiTenagaPage() {
                             <TableCell className="text-muted-foreground">{p.jabatan ?? "-"}</TableCell>
                             <TableCell className="text-muted-foreground">{p.telepon ?? "-"}</TableCell>
                             <TableCell className="text-muted-foreground max-w-[180px] truncate">{p.catatan ?? "-"}</TableCell>
+                            <TableCell>
+                              {p.pelanggan_id ? (
+                                <div className="space-y-1">
+                                  <Badge variant="secondary" className="text-xs">Terhubung</Badge>
+                                  <p className="text-sm font-medium truncate max-w-[180px]" title={pelangganById.get(p.pelanggan_id)?.nama ?? ""}>
+                                    {pelangganById.get(p.pelanggan_id)?.nama ?? "Pelanggan tidak ditemukan"}
+                                  </p>
+                                </div>
+                              ) : (
+                                <Badge variant="outline" className="text-xs text-muted-foreground">Belum terhubung</Badge>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right">
                               {sisaUpah > 0
                                 ? <span className="font-semibold text-red-700">{formatRupiah(sisaUpah)}</span>
@@ -716,6 +837,10 @@ export default function GajiTenagaPage() {
                             </TableCell>
                             <TableCell>
                               <div className="flex justify-end gap-1">
+                                <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => openLinkPelanggan(p)} disabled={!lisensiAktif} title={p.pelanggan_id ? "Ubah relasi pelanggan" : "Hubungkan ke pelanggan"}>
+                                  <Link2 className="h-3 w-3 mr-1" />
+                                  {p.pelanggan_id ? "Ubah" : "Hubungkan"}
+                                </Button>
                                 <Button size="sm" variant="default" className="h-7 text-xs" onClick={() => openBatch(p)} disabled={!lisensiAktif || sisaUpah === 0} title={sisaUpah === 0 ? "Semua upah sudah lunas" : "Bayar upah batch"}>
                                   <Banknote className="h-3 w-3 mr-1" /> Bayar
                                 </Button>
@@ -820,7 +945,7 @@ export default function GajiTenagaPage() {
       </Dialog>
 
       {/* ── Dialog Bayar Upah ────────────────────────────────────────────────── */}
-      <Dialog open={isBayarDialogOpen} onOpenChange={(open) => { setIsBayarDialogOpen(open); if (!open) { setSelectedUpahId(null); bayarForm.clearErrors(); } }}>
+      <Dialog open={isBayarDialogOpen} onOpenChange={(open) => { setIsBayarDialogOpen(open); if (!open) { setSelectedUpahId(null); bayarForm.clearErrors(); setPotongHutangSingleEnabled(false); setPotongHutangSingleAmount(""); } }}>
         <DialogContent aria-describedby={undefined} className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Bayar Upah</DialogTitle>
@@ -863,6 +988,76 @@ export default function GajiTenagaPage() {
                 <Form {...bayarForm}>
                   <form onSubmit={bayarForm.handleSubmit(submitBayar)} className="space-y-3 border-t pt-3">
                     <p className="text-sm font-medium">Tambah Pembayaran</p>
+                    {linkedPelangganId && (
+                      <div className="rounded-lg border bg-blue-50/60 p-3 space-y-2 text-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="font-semibold">Opsi potong hutang</p>
+                            <p className="text-xs text-muted-foreground">
+                              {linkedPelangganDetail
+                                ? `Terkait pelanggan: ${linkedPelangganDetail.nama}`
+                                : "Memuat data pelanggan..."}
+                            </p>
+                            {!hutangTertuaTerkait && (
+                              <p className="text-xs text-amber-700 mt-1">Tidak ada hutang aktif untuk dipotong.</p>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            variant={potongHutangSingleEnabled ? "default" : "outline"}
+                            size="sm"
+                            disabled={!hutangTertuaTerkait}
+                            onClick={() => {
+                              const next = !potongHutangSingleEnabled;
+                              setPotongHutangSingleEnabled(next);
+                              if (next) {
+                                const maxPotong = Math.min(
+                                  jumlahBayarSingle,
+                                  hutangTertuaTerkait?.sisa_hutang ?? 0,
+                                );
+                                setPotongHutangSingleAmount(String(maxPotong > 0 ? maxPotong : 0));
+                              } else {
+                                setPotongHutangSingleAmount("");
+                              }
+                            }}
+                          >
+                            {potongHutangSingleEnabled ? "Dipakai" : "Sekalian bayar hutang"}
+                          </Button>
+                        </div>
+
+                        {potongHutangSingleEnabled && (
+                          <>
+                            {hutangTertuaTerkait ? (
+                              <div className="rounded-md bg-white border p-2 text-xs">
+                                Hutang tertua: <span className="font-semibold">{formatRupiah(hutangTertuaTerkait.sisa_hutang)}</span> sisa {formatDate(hutangTertuaTerkait.tanggal_hutang)}
+                              </div>
+                            ) : (
+                              <div className="rounded-md bg-white border p-2 text-xs text-amber-700">
+                                Pelanggan ini belum punya hutang aktif.
+                              </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium">Potong Hutang</label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={Math.min(jumlahBayarSingle, hutangTertuaTerkait?.sisa_hutang ?? 0)}
+                                  value={potongHutangSingleAmount}
+                                  onChange={(e) => setPotongHutangSingleAmount(e.target.value)}
+                                  placeholder="0"
+                                />
+                              </div>
+                              <div className="space-y-1 rounded-md border bg-white p-2">
+                                <div className="flex justify-between text-xs"><span>Gaji</span><span>{formatRupiah(jumlahBayarSingle)}</span></div>
+                                <div className="flex justify-between text-xs"><span>Potong</span><span>{formatRupiah(potongHutangSingleNum)}</span></div>
+                                <div className="flex justify-between text-xs font-semibold border-t pt-1 mt-1"><span>Diterima</span><span>{formatRupiah(Math.max(0, jumlahBayarSingle - potongHutangSingleNum))}</span></div>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-3">
                       <FormField control={bayarForm.control} name="jumlah" render={({ field }) => (
                         <FormItem>
@@ -967,6 +1162,69 @@ export default function GajiTenagaPage() {
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog Hubungkan Pekerja ke Pelanggan ───────────────────────────── */}
+      <Dialog open={isLinkDialogOpen} onOpenChange={(open) => { setIsLinkDialogOpen(open); if (!open) { setLinkPekerja(null); setLinkPelangganId("none"); } }}>
+        <DialogContent aria-describedby={undefined} className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5 text-primary" />
+              Hubungkan ke Pelanggan
+            </DialogTitle>
+          </DialogHeader>
+          {linkPekerja && (
+            <div className="space-y-4">
+              <div className="rounded-md border bg-muted/40 p-3 space-y-1.5">
+                <div className="font-semibold">{linkPekerja.nama}</div>
+                <div className="text-sm text-muted-foreground">Pilih pelanggan yang sama supaya data Piutang dan Gaji bisa dipakai bersama.</div>
+                {suggestedPelangganId && (
+                  <div className="text-xs text-emerald-700 font-medium">
+                    Saran otomatis: {pelangganById.get(suggestedPelangganId)?.nama}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Pelanggan Terkait</p>
+                <Select value={linkPelangganId} onValueChange={setLinkPelangganId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih pelanggan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Tidak dihubungkan</SelectItem>
+                    {(pelangganList ?? [])
+                      .slice()
+                      .sort((a, b) => a.nama.localeCompare(b.nama, "id"))
+                      .map((p) => (
+                        <SelectItem key={p.id} value={p.id.toString()}>{p.nama}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Kalau nama sudah ada di tab Piutang, cukup hubungkan sekali. Data lama tidak perlu diinput ulang.</p>
+              </div>
+
+              <div className="flex justify-between gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setLinkPelangganId("none")}
+                  disabled={linkPelangganId === "none"}
+                >
+                  <Link2Off className="h-4 w-4 mr-2" />
+                  Lepas Relasi
+                </Button>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsLinkDialogOpen(false)}>Batal</Button>
+                  <Button type="button" onClick={submitLinkPelanggan} disabled={updatePekerja.isPending}>
+                    {updatePekerja.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Simpan
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

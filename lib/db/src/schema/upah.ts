@@ -26,6 +26,7 @@ export const bayarUpahTable = sqliteTable("bayar_upah", {
   jumlah: text("jumlah").notNull(),
   tanggalBayar: text("tanggal_bayar").notNull(),
   keuanganId: integer("keuangan_id"),
+  pembayaranId: integer("pembayaran_id"),
   catatan: text("catatan"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });

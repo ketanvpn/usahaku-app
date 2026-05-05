@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, upahPekerjaTable, bayarUpahTable, pekerjaTable, keuanganTable } from "@workspace/db";
+import { db, upahPekerjaTable, bayarUpahTable, pekerjaTable, keuanganTable, hutangTable, pembayaranTable } from "@workspace/db";
 import { eq, and, desc, asc, inArray, ne } from "drizzle-orm";
 import {
   CreateUpahBody,
@@ -45,6 +45,7 @@ function formatBayar(b: typeof bayarUpahTable.$inferSelect) {
     jumlah: parseFloat(b.jumlah),
     tanggal_bayar: b.tanggalBayar,
     catatan: b.catatan ?? null,
+    pembayaran_id: b.pembayaranId ?? null,
     created_at: b.createdAt.toISOString(),
   };
 }
@@ -290,6 +291,7 @@ router.post("/upah/:id/bayar", requireAuth, requireLicense, async (req, res): Pr
   const upah = row.upah;
   const pekerja = row.pekerja;
   const jumlahBayar = parsed.data.jumlah;
+  const potongHutang = Math.max(0, parsed.data.potong_hutang ?? 0);
   const sisaSekarang = parseFloat(upah.sisaUpah);
 
   if (jumlahBayar <= 0) {
@@ -302,28 +304,97 @@ router.post("/upah/:id/bayar", requireAuth, requireLicense, async (req, res): Pr
     return;
   }
 
+  if (potongHutang > jumlahBayar) {
+    res.status(400).json({ error: "Potongan hutang tidak boleh melebihi jumlah bayar." });
+    return;
+  }
+
+  let targetHutang: typeof hutangTable.$inferSelect | null = null;
+  if (potongHutang > 0) {
+    if (!pekerja?.pelangganId) {
+      res.status(400).json({ error: "Pekerja belum dihubungkan ke pelanggan. Hubungkan dulu di Gaji & Tenaga." });
+      return;
+    }
+
+    const [hutang] = await db.select().from(hutangTable)
+      .where(and(eq(hutangTable.pelangganId, pekerja.pelangganId), eq(hutangTable.usahaId, usahaId), eq(hutangTable.status, "aktif")))
+      .orderBy(asc(hutangTable.tanggalHutang), asc(hutangTable.id));
+
+    if (!hutang) {
+      res.status(400).json({ error: "Pelanggan ini tidak punya hutang aktif untuk dipotong." });
+      return;
+    }
+
+    const sisaHutang = parseFloat(hutang.sisaHutang);
+    if (potongHutang > sisaHutang) {
+      res.status(400).json({ error: `Potongan hutang (${potongHutang}) melebihi sisa hutang (${sisaHutang}).` });
+      return;
+    }
+
+    targetHutang = hutang;
+  }
+
   const totalDibayarBaru = parseFloat(upah.totalDibayar) + jumlahBayar;
   const sisaBaru = parseFloat(upah.jumlahTotal) - totalDibayarBaru;
   const statusBaru = sisaBaru <= 0 ? "lunas" : "belum_lunas";
 
-  const keteranganKeuangan = `Upah ${pekerja?.nama ?? "Pekerja"} - ${upah.keterangan}`;
+  const keteranganKeuangan = potongHutang > 0
+    ? `Upah ${pekerja?.nama ?? "Pekerja"} - ${upah.keterangan} (potong hutang Rp ${potongHutang.toLocaleString("id")})`
+    : `Upah ${pekerja?.nama ?? "Pekerja"} - ${upah.keterangan}`;
+
+  const jumlahKeuangan = Math.max(0, jumlahBayar - potongHutang);
 
   db.transaction((tx) => {
-    const [keuangan] = tx.insert(keuanganTable).values({
-      usahaId,
-      tanggal: parsed.data.tanggal_bayar,
-      tipe: "keluar",
-      kategori: "Gaji & Upah",
-      keterangan: keteranganKeuangan,
-      jumlah: jumlahBayar.toString(),
-    }).returning().all();
+    let keuanganId: number | null = null;
+
+    if (jumlahKeuangan > 0) {
+      const [keuangan] = tx.insert(keuanganTable).values({
+        usahaId,
+        tanggal: parsed.data.tanggal_bayar,
+        tipe: "keluar",
+        kategori: "Gaji & Upah",
+        keterangan: keteranganKeuangan,
+        jumlah: jumlahKeuangan.toString(),
+      }).returning().all();
+      keuanganId = keuangan.id;
+    }
+
+    let pembayaranId: number | null = null;
+
+    if (potongHutang > 0 && targetHutang) {
+      const sisaHutangSetelah = Math.max(0, parseFloat(targetHutang.sisaHutang) - potongHutang);
+      const totalDibayarHutangBaru = parseFloat(targetHutang.totalDibayar) + potongHutang;
+      const statusHutangBaru = sisaHutangSetelah <= 0 ? "lunas" : "aktif";
+
+      const [pembayaran] = tx.insert(pembayaranTable).values({
+        usahaId,
+        hutangId: targetHutang.id,
+        pelangganId: targetHutang.pelangganId,
+        tanggalBayar: parsed.data.tanggal_bayar,
+        nominalBayar: potongHutang.toString(),
+        catatan: `Potong gaji ${pekerja?.nama ?? "Pekerja"}${parsed.data.catatan ? ` - ${parsed.data.catatan}` : ""}`,
+        nomorKwitansi: null,
+        sisaHutangSetelah: sisaHutangSetelah.toString(),
+        keuanganId: null,
+      }).returning().all();
+
+      pembayaranId = pembayaran.id;
+
+      tx.update(hutangTable).set({
+        totalDibayar: totalDibayarHutangBaru.toString(),
+        sisaHutang: sisaHutangSetelah.toString(),
+        status: statusHutangBaru,
+        updatedAt: new Date(),
+      }).where(eq(hutangTable.id, targetHutang.id)).run();
+    }
 
     tx.insert(bayarUpahTable).values({
       usahaId,
       upahId: params.data.id,
       jumlah: jumlahBayar.toString(),
       tanggalBayar: parsed.data.tanggal_bayar,
-      keuanganId: keuangan.id,
+      keuanganId,
+      pembayaranId,
       catatan: parsed.data.catatan ?? null,
     }).run();
 
@@ -383,10 +454,24 @@ router.delete("/bayar-upah/:id", requireAuth, requireLicense, async (req, res): 
     return;
   }
 
+  let pembayaranTerkait: typeof pembayaranTable.$inferSelect | null = null;
+  if (bayar.pembayaranId) {
+    const [pembayaran] = await db.select().from(pembayaranTable)
+      .where(and(eq(pembayaranTable.id, bayar.pembayaranId), eq(pembayaranTable.usahaId, usahaId)));
+    pembayaranTerkait = pembayaran ?? null;
+  }
+
+  const hutangTerkait = pembayaranTerkait
+    ? (await db.select().from(hutangTable)
+      .where(and(eq(hutangTable.id, pembayaranTerkait.hutangId), eq(hutangTable.usahaId, usahaId))))[0] ?? null
+    : null;
+
   const jumlahBayar = parseFloat(bayar.jumlah);
   const totalDibayarBaru = Math.max(0, parseFloat(upah.totalDibayar) - jumlahBayar);
   const sisaBaru = parseFloat(upah.jumlahTotal) - totalDibayarBaru;
   const statusBaru = sisaBaru <= 0 ? "lunas" : "belum_lunas";
+
+  const potongHutang = pembayaranTerkait ? parseFloat(pembayaranTerkait.nominalBayar) : 0;
 
   // Cek apakah keuangan_id ini dipakai oleh bayar_upah lain (artinya ini bagian dari batch payment)
   let sisaBayarBatch: { jumlah: string }[] = [];
@@ -415,6 +500,21 @@ router.delete("/bayar-upah/:id", requireAuth, requireLicense, async (req, res): 
         tx.delete(keuanganTable).where(eq(keuanganTable.id, bayar.keuanganId)).run();
       }
     }
+
+    if (bayar.pembayaranId && pembayaranTerkait) {
+      if (hutangTerkait) {
+        const totalDibayarHutangBaru = Math.max(0, parseFloat(hutangTerkait.totalDibayar) - potongHutang);
+        const sisaHutangBaru = parseFloat(hutangTerkait.nominalHutang) - totalDibayarHutangBaru;
+        tx.update(hutangTable).set({
+          totalDibayar: totalDibayarHutangBaru.toString(),
+          sisaHutang: Math.max(0, sisaHutangBaru).toString(),
+          status: sisaHutangBaru <= 0 ? "lunas" : "aktif",
+          updatedAt: new Date(),
+        }).where(eq(hutangTable.id, hutangTerkait.id)).run();
+      }
+      tx.delete(pembayaranTable).where(eq(pembayaranTable.id, pembayaranTerkait.id)).run();
+    }
+
     tx.delete(bayarUpahTable).where(eq(bayarUpahTable.id, params.data.id)).run();
     tx.update(upahPekerjaTable).set({
       totalDibayar: totalDibayarBaru.toString(),
