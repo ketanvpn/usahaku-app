@@ -4,9 +4,9 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.62**
+**Current version: 1.0.63**
 
-**Next planned release: 1.0.63**
+**Next planned release: 1.0.64**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -46,7 +46,14 @@ export const sqliteRaw: any = sqlite;
 
 ---
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.62)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.63)
+
+### v1.0.63 — Penyempurnaan Stabilitas Dashboard dan UX Navigasi
+**Isi rilis:**
+- Sinkronisasi status backup diperbaiki agar info di Dashboard/Sidebar lebih konsisten setelah backup manual.
+- Optimasi fetch dashboard melalui pengaturan query agar lebih ringan dan stabil.
+- Penyempurnaan UX navigasi sidebar (badge/status dan kejelasan menu aktif) dilanjutkan.
+- Preset filter laporan dipoles agar pengalaman audit lebih jelas.
 
 ### v1.0.62 — Optimasi Navigasi Sidebar dan Kejelasan Status
 **Isi rilis:**
