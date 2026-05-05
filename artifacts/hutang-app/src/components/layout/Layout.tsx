@@ -134,7 +134,7 @@ export function Layout({ children }: { children: ReactNode }) {
       ],
     },
     {
-      label: "TRANSAKSI",
+      label: "PIUTANG",
       links: [
         { href: "/pelanggan", label: "Pelanggan", icon: Users },
         { href: "/hutang", label: "Hutang", icon: WalletCards },
@@ -177,15 +177,36 @@ export function Layout({ children }: { children: ReactNode }) {
   const renderLink = (link: NavLink) => {
     const isActive = location === link.href || location.startsWith(`${link.href}/`);
     const Icon = link.icon;
+
+    let badge: { text: string; className: string } | null = null;
+    if (!isSuperAdmin && link.href === "/backup" && daysWithoutBackup !== null) {
+      badge = daysWithoutBackup >= 7
+        ? { text: "Perlu", className: "bg-amber-100 text-amber-700" }
+        : { text: "Aman", className: "bg-emerald-100 text-emerald-700" };
+    }
+    if (!isSuperAdmin && link.href === "/lisensi" && licenseStatus) {
+      if (!licenseStatus.aktif || licenseStatus.jam_dimanipulasi) {
+        badge = { text: "Mati", className: "bg-red-100 text-red-700" };
+      } else if ((licenseStatus.sisa_hari ?? 0) <= 7) {
+        badge = { text: `${licenseStatus.sisa_hari}h`, className: "bg-orange-100 text-orange-700" };
+      }
+    }
+
     return (
       <Link key={link.href} href={link.href}>
-        <div className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer ${
+        <div className={`relative flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer ${
           isActive
             ? "bg-primary text-primary-foreground font-medium"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         }`}>
+          {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r bg-primary-foreground/90" />}
           <Icon className="h-5 w-5" />
-          <span>{link.label}</span>
+          <span className="flex-1">{link.label}</span>
+          {badge && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${badge.className}`}>
+              {badge.text}
+            </span>
+          )}
         </div>
       </Link>
     );
@@ -199,8 +220,8 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       ) : (
         ownerGroups.map((group) => (
-          <div key={group.label} className="mb-1">
-            <p className="px-3 pt-3 pb-1 text-[10px] font-semibold tracking-widest text-muted-foreground/60 uppercase">
+          <div key={group.label} className="mb-2">
+            <p className="px-3 pt-3 pb-1 text-[11px] font-bold tracking-[0.14em] text-muted-foreground/80 uppercase">
               {group.label}
             </p>
             {group.links.map(renderLink)}
@@ -250,7 +271,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <p className="text-[10px] text-muted-foreground leading-tight">by KetanTech</p>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto px-3 py-2">
+        <div className="flex-1 overflow-y-auto px-3 py-2 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
           <NavLinks />
         </div>
       </aside>
