@@ -39,6 +39,20 @@ function fmtTanggalPendek(iso: string) {
   return d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 }
 
+function getBackupInfoText(): string {
+  const last = localStorage.getItem("lastBackupDate");
+  if (!last) return "Belum ada backup manual";
+  const diffMs = Date.now() - new Date(last).getTime();
+  if (Number.isNaN(diffMs) || diffMs < 0) return "Backup manual: baru saja";
+  const minutes = Math.floor(diffMs / (1000 * 60));
+  if (minutes < 1) return "Backup manual: baru saja";
+  if (minutes < 60) return `Backup manual: ${minutes} menit lalu`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Backup manual: ${hours} jam lalu`;
+  const days = Math.floor(hours / 24);
+  return `Backup manual: ${days} hari lalu`;
+}
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
@@ -59,23 +73,31 @@ export default function OwnerDashboard() {
   const { data, isLoading } = useGetOwnerDashboard();
 
   useEffect(() => {
-    const last = localStorage.getItem("lastBackupDate");
-    if (!last) {
-      setBackupInfo("Belum ada backup manual");
-      return;
-    }
-    const diffMs = Date.now() - new Date(last).getTime();
-    if (Number.isNaN(diffMs) || diffMs < 0) {
-      setBackupInfo("Backup manual: baru saja");
-      return;
-    }
-    const minutes = Math.floor(diffMs / (1000 * 60));
-    if (minutes < 1) { setBackupInfo("Backup manual: baru saja"); return; }
-    if (minutes < 60) { setBackupInfo(`Backup manual: ${minutes} menit lalu`); return; }
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) { setBackupInfo(`Backup manual: ${hours} jam lalu`); return; }
-    const days = Math.floor(hours / 24);
-    setBackupInfo(`Backup manual: ${days} hari lalu`);
+    const refreshBackupInfo = () => setBackupInfo(getBackupInfoText());
+
+    refreshBackupInfo();
+    const onFocus = () => refreshBackupInfo();
+    const onVisibility = () => {
+      if (!document.hidden) refreshBackupInfo();
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "lastBackupDate") refreshBackupInfo();
+    };
+    const onBackupUpdated = () => refreshBackupInfo();
+    const interval = window.setInterval(refreshBackupInfo, 60_000);
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("backup:updated", onBackupUpdated);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("backup:updated", onBackupUpdated);
+    };
   }, []);
 
   const { data: peringatanStok = [] } = useQuery<BarangPeringatan[]>({
@@ -85,6 +107,8 @@ export default function OwnerDashboard() {
       if (!r.ok) return [];
       return r.json();
     },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: trenData = [], isLoading: trenLoading } = useQuery<TrenItem[]>({
@@ -94,6 +118,8 @@ export default function OwnerDashboard() {
       if (!r.ok) return [];
       return r.json();
     },
+    staleTime: 45_000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: kasirStats } = useQuery<{
@@ -106,6 +132,8 @@ export default function OwnerDashboard() {
       if (!r.ok) return { penjualan_hari_ini: 0, transaksi_hari_ini: 0, penjualan_bulan_ini: 0, transaksi_bulan_ini: 0 };
       return r.json();
     },
+    staleTime: 45_000,
+    refetchOnWindowFocus: false,
   });
 
   const chartData = trenData.map(d => ({

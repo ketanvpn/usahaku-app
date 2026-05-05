@@ -72,6 +72,13 @@ export default function BackupPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const markManualBackupNow = () => {
+    const nowIso = new Date().toISOString();
+    localStorage.setItem("lastBackupDate", nowIso);
+    setLastManualBackup(nowIso);
+    window.dispatchEvent(new Event("backup:updated"));
+  };
+
   const importMutation = useImportBackup();
   const isElectron = !!window.electronApp?.backup;
   const hasGdrive = !!window.electronApp?.gdrive;
@@ -230,8 +237,7 @@ export default function BackupPage() {
           }
           return;
         }
-        localStorage.setItem("lastBackupDate", new Date().toISOString());
-        setLastManualBackup(localStorage.getItem("lastBackupDate"));
+        markManualBackupNow();
         toast({ title: "Backup berhasil disimpan", description: result.filePath });
       } else {
         // Browser biasa: download otomatis
@@ -244,8 +250,7 @@ export default function BackupPage() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        localStorage.setItem("lastBackupDate", new Date().toISOString());
-        setLastManualBackup(localStorage.getItem("lastBackupDate"));
+        markManualBackupNow();
         toast({ title: "Backup berhasil diunduh" });
       }
     } catch (error: any) {

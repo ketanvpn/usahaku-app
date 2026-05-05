@@ -93,13 +93,37 @@ export function Layout({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const lastBackup = localStorage.getItem("lastBackupDate");
-    if (!lastBackup) {
-      setDaysWithoutBackup(999);
-      return;
-    }
-    const selisih = Math.floor((Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24));
-    if (selisih >= 7) setDaysWithoutBackup(selisih);
+    const refreshDaysWithoutBackup = () => {
+      const lastBackup = localStorage.getItem("lastBackupDate");
+      if (!lastBackup) {
+        setDaysWithoutBackup(999);
+        return;
+      }
+      const selisih = Math.floor((Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24));
+      setDaysWithoutBackup(Number.isNaN(selisih) || selisih < 0 ? 0 : selisih);
+    };
+
+    refreshDaysWithoutBackup();
+    const onFocus = () => refreshDaysWithoutBackup();
+    const onVisibility = () => {
+      if (!document.hidden) refreshDaysWithoutBackup();
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "lastBackupDate") refreshDaysWithoutBackup();
+    };
+    const onBackupUpdated = () => refreshDaysWithoutBackup();
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("backup:updated", onBackupUpdated);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("backup:updated", onBackupUpdated);
+    };
   }, []);
 
   const handleCheckUpdate = async () => {
