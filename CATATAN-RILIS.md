@@ -8,13 +8,14 @@ Aturan pakai:
 - Tanggal pakai format `YYYY-MM-DD`.
 - Update bagian `Versi terbaru` setelah rilis sukses.
 
-Versi terbaru: `v1.0.59`
+Versi terbaru: `v1.0.60`
 
-Rilis berikutnya (siap dipublish): `v1.0.60`
+Rilis berikutnya (siap dipublish): `v1.0.61`
 
 | Versi | Tanggal | Status | Catatan Singkat |
 | --- | --- | --- | --- |
-| v1.0.60 | 2026-05-02 | Planned | Penyempurnaan operasional rilis dan peningkatan UX lintas halaman (kandidat berikutnya) |
+| v1.0.61 | 2026-05-02 | Planned | Penyempurnaan operasional rilis dan peningkatan UX lintas halaman (kandidat berikutnya) |
+| v1.0.60 | 2026-05-02 | Published | Peningkatan UX audit: status backup manual terakhir + shortcut Dashboard ke Laporan/Backup |
 | v1.0.59 | 2026-05-02 | Published | Peningkatan UX laporan & backup + stabilisasi pipeline rilis (preset periode cepat, copy path backup, validasi workflow) |
 | v1.0.58 | 2026-05-02 | Published | Peningkatan pipeline release: validasi format tag, trigger manual workflow, migrasi Node 24, dan perbaikan alur verify/release agar stabil |
 | v1.0.57 | 2026-05-02 | Published | Peningkatan workflow release: pisah job verify/release dan penamaan job agar lebih jelas di GitHub Actions |
