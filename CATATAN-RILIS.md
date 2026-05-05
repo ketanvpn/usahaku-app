@@ -8,13 +8,14 @@ Aturan pakai:
 - Tanggal pakai format `YYYY-MM-DD`.
 - Update bagian `Versi terbaru` setelah rilis sukses.
 
-Versi terbaru: `v1.0.65`
+Versi terbaru: `v1.0.67`
 
-Rilis berikutnya (siap dipublish): `v1.0.66`
+Rilis berikutnya (siap dipublish): `v1.0.68`
 
 | Versi | Tanggal | Status | Catatan Singkat |
 | --- | --- | --- | --- |
-| v1.0.66 | 2026-05-02 | Planned | Penyempurnaan operasional rilis dan peningkatan UX lintas halaman (kandidat berikutnya) |
+| v1.0.67 | 2026-05-05 | Published | Hotfix Kasir: daftar item keranjang tetap terlihat saat input pembayaran (area list distabilkan agar tidak tertekan) |
+| v1.0.66 | 2026-05-05 | Published | Fokus Kasir: shortcut keyboard, autofokus pencarian, validasi stok lebih jelas, dan tombol quick bayar (Pas/+nominal) |
 | v1.0.65 | 2026-05-02 | Published | Perbaikan filter laporan keuangan + UX laporan (copy ringkasan, mode custom) serta penyempurnaan dashboard dan backup |
 | v1.0.64 | 2026-05-02 | Published | Perbaikan banner backup (hanya tampil >=7 hari) + peningkatan UX dashboard (CTA empty state, periode chart) dan tombol Refresh Status di Backup |
 | v1.0.63 | 2026-05-02 | Published | Stabilitas dashboard & backup (sinkronisasi status backup), optimasi fetch dashboard, serta penyempurnaan UX sidebar dan filter laporan |

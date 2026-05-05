@@ -4,9 +4,9 @@
 
 This project is a pnpm workspace monorepo using TypeScript, designed to be **Usahaku by KetanTech** — an Aplikasi Manajemen Bisnis (Business Management App) for Indonesian small businesses (warung, toko kelontong, penggilingan padi). It provides comprehensive tools for managing customer debts, financial records (masuk/keluar), stock/inventory, kasir (POS), and reporting, with both web and desktop (Electron) interfaces. The application supports role-based access: Super Admin for global management and Owners for business-specific operations.
 
-**Current version: 1.0.65**
+**Current version: 1.0.67**
 
-**Next planned release: 1.0.66**
+**Next planned release: 1.0.68**
 
 Key features:
 - CRUD for customers, debts, payments
@@ -46,7 +46,20 @@ export const sqliteRaw: any = sqlite;
 
 ---
 
-## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.65)
+## Riwayat Perubahan Terbaru (v1.0.21 – v1.0.67)
+
+### v1.0.67 — Hotfix Tampilan Keranjang Kasir saat Pembayaran
+**Isi rilis:**
+- Memperbaiki layout panel kanan Kasir agar daftar item keranjang tetap terlihat saat nominal pembayaran diisi.
+- Menambahkan batas minimum tinggi area list item dan menstabilkan perilaku scroll di area keranjang.
+- Merapikan kepadatan UI blok pembayaran (input dan quick bayar) agar tidak menekan area item pada layar lebih sempit.
+
+### v1.0.66 — Peningkatan Kecepatan Input di Kasir
+**Isi rilis:**
+- Menambahkan shortcut keyboard kasir: `F2` fokus pencarian, `F4` fokus uang bayar, `Ctrl+Enter` selesaikan transaksi, `Esc` reset fokus/dialog.
+- Input pencarian mendukung `Enter` untuk menambahkan barang pertama hasil filter ke keranjang.
+- Validasi stok dibuat lebih informatif melalui toast yang menyebut sisa stok dan satuan barang.
+- Menambahkan quick bayar: tombol `Pas` dan tombol tambah nominal (`+1k`, `+5k`, `+10k`, `+50k`, `+100k`).
 
 ### v1.0.65 — Perbaikan Filter Laporan dan Penyempurnaan UX Operasional
 **Isi rilis:**
