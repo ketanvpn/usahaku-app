@@ -1010,7 +1010,7 @@ export default function GajiTenagaPage() {
 
       {/* ── Dialog Bayar Upah ────────────────────────────────────────────────── */}
       <Dialog open={isBayarDialogOpen} onOpenChange={(open) => { setIsBayarDialogOpen(open); if (!open) { setSelectedUpahId(null); bayarForm.clearErrors(); setPotongHutangSingleEnabled(false); setPotongHutangSingleAmount(""); } }}>
-        <DialogContent aria-describedby={undefined} className="max-w-lg">
+        <DialogContent aria-describedby={undefined} className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Bayar Upah</DialogTitle>
           </DialogHeader>
