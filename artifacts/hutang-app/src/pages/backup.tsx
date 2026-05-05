@@ -33,6 +33,18 @@ function formatSize(bytes: string): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatRelativeBackup(isoStr: string): string {
+  const diffMs = Date.now() - new Date(isoStr).getTime();
+  if (Number.isNaN(diffMs) || diffMs < 0) return "Baru saja";
+  const minutes = Math.floor(diffMs / (1000 * 60));
+  if (minutes < 1) return "Baru saja";
+  if (minutes < 60) return `${minutes} menit lalu`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} jam lalu`;
+  const days = Math.floor(hours / 24);
+  return `${days} hari lalu`;
+}
+
 export default function BackupPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -44,6 +56,7 @@ export default function BackupPage() {
   const [isRestoringDB, setIsRestoringDB] = useState(false);
   const [isConfirmRestoreDBOpen, setIsConfirmRestoreDBOpen] = useState(false);
   const [restoreErrorMsg, setRestoreErrorMsg] = useState<string | null>(null);
+  const [lastManualBackup, setLastManualBackup] = useState<string | null>(null);
 
   // ── Google Drive state ────────────────────────────────────────────────────
   const [gdriveStatus, setGdriveStatus] = useState<GDriveStatusPayload | null>(null);
@@ -85,6 +98,7 @@ export default function BackupPage() {
     if (window.electronApp?.backup) {
       window.electronApp.backup.getFolder().then(setAutoBackupFolder).catch(() => {});
     }
+    setLastManualBackup(localStorage.getItem("lastBackupDate"));
     refreshGdriveStatus();
 
     // Dengarkan event backup selesai dari Electron
@@ -209,6 +223,7 @@ export default function BackupPage() {
           return;
         }
         localStorage.setItem("lastBackupDate", new Date().toISOString());
+        setLastManualBackup(localStorage.getItem("lastBackupDate"));
         toast({ title: "Backup berhasil disimpan", description: result.filePath });
       } else {
         // Browser biasa: download otomatis
@@ -222,6 +237,7 @@ export default function BackupPage() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         localStorage.setItem("lastBackupDate", new Date().toISOString());
+        setLastManualBackup(localStorage.getItem("lastBackupDate"));
         toast({ title: "Backup berhasil diunduh" });
       }
     } catch (error: any) {
@@ -329,6 +345,11 @@ export default function BackupPage() {
               <span className="text-muted-foreground flex-1 break-all">
                 {autoBackupFolder || "Memuat..."}
               </span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {lastManualBackup
+                ? `Backup manual terakhir: ${formatRelativeBackup(lastManualBackup)} (${formatTanggal(lastManualBackup)})`
+                : "Belum ada backup manual tercatat"}
             </div>
             <Button
               variant="outline"

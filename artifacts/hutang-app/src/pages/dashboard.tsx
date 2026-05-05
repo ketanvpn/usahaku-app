@@ -120,6 +120,12 @@ export default function OwnerDashboard() {
           <Link href="/pembayaran" className="block">
             <Button>Catat Pembayaran</Button>
           </Link>
+          <Link href="/laporan" className="block">
+            <Button variant="secondary">Laporan</Button>
+          </Link>
+          <Link href="/backup" className="block">
+            <Button variant="secondary">Backup</Button>
+          </Link>
         </div>
       </div>
 
