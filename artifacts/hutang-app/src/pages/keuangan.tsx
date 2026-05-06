@@ -607,9 +607,9 @@ export default function KeuanganPage() {
                         variant="outline"
                         size="sm"
                         className="h-7 px-2 text-[11px]"
-                        onClick={() => field.onChange(nominal)}
+                        onClick={() => field.onChange((Number(field.value) || 0) + nominal)}
                       >
-                        {formatRupiah(nominal)}
+                        +{formatRupiah(nominal)}
                       </Button>
                     ))}
                   </div>

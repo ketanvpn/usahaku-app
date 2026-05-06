@@ -1167,10 +1167,13 @@ export default function GajiTenagaPage() {
                                 variant="outline"
                                 size="sm"
                                 className="h-7 px-2 text-[11px]"
-                                onClick={() => field.onChange(Math.min(nominal, upahDetail.sisa_upah))}
+                                onClick={() => {
+                                  const current = Number(field.value) || 0;
+                                  field.onChange(Math.min(upahDetail.sisa_upah, current + nominal));
+                                }}
                                 disabled={upahDetail.sisa_upah <= 0}
                               >
-                                {formatRupiah(nominal)}
+                                +{formatRupiah(nominal)}
                               </Button>
                             ))}
                             <Button
@@ -1559,10 +1562,13 @@ export default function GajiTenagaPage() {
                             variant="outline"
                             size="sm"
                             className="h-7 px-2 text-[11px]"
-                            onClick={() => field.onChange(Math.min(nominal, totalSisaBatch))}
+                            onClick={() => {
+                              const current = Number(field.value) || 0;
+                              field.onChange(Math.min(totalSisaBatch, current + nominal));
+                            }}
                             disabled={totalSisaBatch <= 0}
                           >
-                            {formatRupiah(nominal)}
+                            +{formatRupiah(nominal)}
                           </Button>
                         ))}
                         <Button

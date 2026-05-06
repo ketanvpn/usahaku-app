@@ -614,8 +614,8 @@ export default function StokPage() {
                     </FormControl>
                     <div className="flex flex-wrap gap-1 pt-1">
                       {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
-                        <Button key={nominal} type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={() => field.onChange(nominal)}>
-                          {formatRupiah(nominal)}
+                        <Button key={nominal} type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={() => field.onChange((Number(field.value) || 0) + nominal)}>
+                          +{formatRupiah(nominal)}
                         </Button>
                       ))}
                     </div>
@@ -629,8 +629,8 @@ export default function StokPage() {
                     </FormControl>
                     <div className="flex flex-wrap gap-1 pt-1">
                       {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
-                        <Button key={nominal} type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={() => field.onChange(nominal)}>
-                          {formatRupiah(nominal)}
+                        <Button key={nominal} type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={() => field.onChange((Number(field.value) || 0) + nominal)}>
+                          +{formatRupiah(nominal)}
                         </Button>
                       ))}
                     </div>
@@ -712,8 +712,8 @@ export default function StokPage() {
                     </FormControl>
                     <div className="flex flex-wrap gap-1 pt-1">
                       {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
-                        <Button key={nominal} type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={() => field.onChange(nominal)}>
-                          {formatRupiah(nominal)}
+                        <Button key={nominal} type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={() => field.onChange((Number(field.value) || 0) + nominal)}>
+                          +{formatRupiah(nominal)}
                         </Button>
                       ))}
                     </div>

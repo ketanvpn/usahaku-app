@@ -578,10 +578,13 @@ export default function PembayaranPage() {
                       variant="outline"
                       size="sm"
                       className="h-7 px-2 text-xs"
-                      onClick={() => setNominalTotal(String(nominal))}
+                      onClick={() => {
+                        const current = Number(nominalTotal) || 0;
+                        setNominalTotal(String(Math.min(totalSisaDipilih, current + nominal)));
+                      }}
                       disabled={nominal > totalSisaDipilih}
                     >
-                      {formatRupiah(nominal)}
+                      +{formatRupiah(nominal)}
                     </Button>
                   ))}
                   <Button
