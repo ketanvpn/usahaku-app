@@ -1356,7 +1356,7 @@ export default function GajiTenagaPage() {
       </AlertDialog>
       {/* ── Dialog Bayar Batch ───────────────────────────────────────────────── */}
       <Dialog open={isBatchDialogOpen} onOpenChange={(open) => { setIsBatchDialogOpen(open); if (!open) { setBatchPekerja(null); batchForm.clearErrors(); setPotongHutangBatchEnabled(false); setPotongHutangBatchAmount(""); setSelectedBatchHutangIds([]); } }}>
-        <DialogContent aria-describedby={undefined} className="max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent aria-describedby={undefined} className="max-w-lg w-full max-h-[90vh] !overflow-hidden !flex !flex-col">
           <DialogHeader>
             <DialogTitle>Bayar Upah Batch — {batchPekerja?.nama}</DialogTitle>
           </DialogHeader>
@@ -1399,7 +1399,7 @@ export default function GajiTenagaPage() {
 
                     {potongHutangBatchEnabled && (
                       <>
-                        <div className="space-y-2 rounded-md border bg-white p-2 max-h-44 overflow-y-auto">
+                        <div className="space-y-2 rounded-md border bg-white p-2 max-h-36 overflow-y-auto">
                           {batchHutangAktifTerkait.map((hutang) => {
                             const checked = selectedBatchHutangIds.includes(hutang.id);
                             return (
@@ -1499,7 +1499,7 @@ export default function GajiTenagaPage() {
                 )} />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-3 border-t shrink-0 bg-background">
+                <div className="sticky bottom-0 z-10 -mx-6 px-6 pb-1 pt-3 border-t shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsBatchDialogOpen(false)}>Batal</Button>
                   <Button type="submit" disabled={bayarBatch.isPending}>
                     {bayarBatch.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
