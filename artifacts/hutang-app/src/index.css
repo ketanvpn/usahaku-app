@@ -162,6 +162,7 @@
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -188,6 +189,7 @@
     font-size: 10pt !important;
     margin: 0 !important;
     padding: 0 !important;
+    font-variant-numeric: tabular-nums;
   }
 
   #root {

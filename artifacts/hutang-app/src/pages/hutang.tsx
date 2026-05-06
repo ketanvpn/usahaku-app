@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -257,7 +258,28 @@ export default function HutangPage() {
                 <FormField control={updateForm.control} name="nominal_hutang" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nominal Hutang (Rp)</FormLabel>
-                    <FormControl><Input type="number" min="0" {...field} /></FormControl>
+                    <FormControl>
+                      <CurrencyInput
+                        minValue={1}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="0"
+                      />
+                    </FormControl>
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
+                        <Button
+                          key={nominal}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={() => field.onChange(nominal)}
+                        >
+                          {formatRupiah(nominal)}
+                        </Button>
+                      ))}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -310,7 +332,28 @@ export default function HutangPage() {
                 <FormField control={form.control} name="nominal_hutang" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nominal Hutang (Rp)</FormLabel>
-                    <FormControl><Input type="number" min="0" {...field} /></FormControl>
+                    <FormControl>
+                      <CurrencyInput
+                        minValue={1}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="0"
+                      />
+                    </FormControl>
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
+                        <Button
+                          key={nominal}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={() => field.onChange(nominal)}
+                        >
+                          {formatRupiah(nominal)}
+                        </Button>
+                      ))}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )} />

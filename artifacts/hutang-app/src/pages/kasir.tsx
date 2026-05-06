@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -186,7 +187,9 @@ export default function KasirPage() {
 
   const subtotal = cart.reduce((s, i) => s + i.barang.harga_jual * i.jumlah, 0);
 
-  const diskonAngka = parseFloat(diskonInput) || 0;
+  const diskonAngka = diskonMode === "persen"
+    ? (parseFloat(diskonInput) || 0)
+    : (Number(diskonInput) || 0);
   const nominalDiskon = diskonMode === "persen"
     ? Math.min(subtotal * diskonAngka / 100, subtotal)
     : Math.min(diskonAngka, subtotal);
@@ -539,24 +542,34 @@ export default function KasirPage() {
                 </label>
                 <div className="flex rounded-md overflow-hidden border text-xs">
                   <button
-                    onClick={() => setDiskonMode("persen")}
+                    onClick={() => { setDiskonMode("persen"); setDiskonInput(""); }}
                     className={`px-2.5 py-1 transition-colors font-medium ${diskonMode === "persen" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
                   >%</button>
                   <button
-                    onClick={() => setDiskonMode("nominal")}
+                    onClick={() => { setDiskonMode("nominal"); setDiskonInput(""); }}
                     className={`px-2.5 py-1 transition-colors font-medium ${diskonMode === "nominal" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
                   >Rp</button>
                 </div>
               </div>
-              <Input
-                placeholder={diskonMode === "persen" ? "0 %" : "0"}
-                value={diskonInput}
-                onChange={e => setDiskonInput(e.target.value)}
-                type="number"
-                min={0}
-                max={diskonMode === "persen" ? 100 : undefined}
-                className="text-sm h-8"
-              />
+              {diskonMode === "persen" ? (
+                <Input
+                  placeholder="0 %"
+                  value={diskonInput}
+                  onChange={e => setDiskonInput(e.target.value)}
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="text-sm h-8"
+                />
+              ) : (
+                <CurrencyInput
+                  placeholder="0"
+                  value={diskonInput}
+                  onValueChange={setDiskonInput}
+                  minValue={0}
+                  className="text-sm h-8"
+                />
+              )}
               {nominalDiskon > 0 && (
                 <p className="text-xs text-emerald-600 text-right font-medium">Hemat {formatRupiah(nominalDiskon)}</p>
               )}
@@ -580,13 +593,12 @@ export default function KasirPage() {
           {/* Uang Bayar */}
             <div className="space-y-1">
                   <label className="text-xs text-muted-foreground font-medium">Uang Diterima</label>
-            <Input
+            <CurrencyInput
               ref={bayarInputRef}
               placeholder="Masukkan nominal..."
               value={uangBayar}
-              onChange={e => setUangBayar(e.target.value)}
-              type="number"
-              min={0}
+              onValueChange={setUangBayar}
+              minValue={0}
               className="text-lg font-bold h-10"
             />
             <div className="flex flex-wrap gap-1 pt-1">

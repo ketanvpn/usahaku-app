@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -608,13 +609,31 @@ export default function StokPage() {
               <div className="grid grid-cols-2 gap-3">
                 <FormField control={barangForm.control} name="harga_beli" render={({ field }) => (
                   <FormItem><FormLabel>Harga Beli (Rp)</FormLabel>
-                    <FormControl><Input type="number" min={0} {...field} /></FormControl>
+                    <FormControl>
+                      <CurrencyInput minValue={0} value={field.value} onValueChange={field.onChange} placeholder="0" />
+                    </FormControl>
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
+                        <Button key={nominal} type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={() => field.onChange(nominal)}>
+                          {formatRupiah(nominal)}
+                        </Button>
+                      ))}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={barangForm.control} name="harga_jual" render={({ field }) => (
                   <FormItem><FormLabel>Harga Jual (Rp)</FormLabel>
-                    <FormControl><Input type="number" min={0} {...field} /></FormControl>
+                    <FormControl>
+                      <CurrencyInput minValue={0} value={field.value} onValueChange={field.onChange} placeholder="0" />
+                    </FormControl>
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
+                        <Button key={nominal} type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={() => field.onChange(nominal)}>
+                          {formatRupiah(nominal)}
+                        </Button>
+                      ))}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -686,12 +705,21 @@ export default function StokPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                  <FormField control={transaksiForm.control} name="harga_satuan" render={({ field }) => (
-                    <FormItem><FormLabel>Harga Satuan (Rp)</FormLabel>
-                      <FormControl><Input type="number" min={0} {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
+                <FormField control={transaksiForm.control} name="harga_satuan" render={({ field }) => (
+                  <FormItem><FormLabel>Harga Satuan (Rp)</FormLabel>
+                    <FormControl>
+                      <CurrencyInput minValue={0} value={field.value} onValueChange={field.onChange} placeholder="0" />
+                    </FormControl>
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
+                        <Button key={nominal} type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={() => field.onChange(nominal)}>
+                          {formatRupiah(nominal)}
+                        </Button>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 </div>
                 {transaksiForm.watch("jumlah") > 0 && transaksiForm.watch("harga_satuan") > 0 && (
                   <div className={`text-sm p-2 rounded-md ${transaksiDialog === "masuk" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>

@@ -6,7 +6,7 @@ This project is a pnpm workspace monorepo using TypeScript, designed to be **Usa
 
 **Current version: 1.0.76**
 
-**Next planned release: 1.0.77**
+**Next planned release: 1.0.78**
 
 Key features:
 - CRUD for customers, debts, payments

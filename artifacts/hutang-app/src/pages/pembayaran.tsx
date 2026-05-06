@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -562,14 +563,38 @@ export default function PembayaranPage() {
             {selectedHutangIds.size > 0 && (
               <div className="space-y-2">
                 <label className="text-sm font-semibold">3. Nominal yang Dibayar (Rp)</label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={totalSisaDipilih}
+                <CurrencyInput
+                  minValue={1}
+                  maxValue={totalSisaDipilih}
                   value={nominalTotal}
-                  onChange={e => setNominalTotal(e.target.value)}
+                  onValueChange={setNominalTotal}
                   placeholder="Masukkan jumlah yang dibayar..."
                 />
+                <div className="flex flex-wrap gap-2">
+                  {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
+                    <Button
+                      key={nominal}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setNominalTotal(String(nominal))}
+                      disabled={nominal > totalSisaDipilih}
+                    >
+                      {formatRupiah(nominal)}
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setNominalTotal(String(totalSisaDipilih))}
+                    disabled={totalSisaDipilih <= 0}
+                  >
+                    Pas
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Maksimal: {formatRupiah(totalSisaDipilih)} — boleh dikurangi, sistem akan otomatis bayar dari nota terlama.
                 </p>

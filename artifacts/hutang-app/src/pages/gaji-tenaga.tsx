@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -995,7 +996,14 @@ export default function GajiTenagaPage() {
               <FormField control={upahForm.control} name="jumlah_total" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Total Gaji <span className="text-destructive">*</span></FormLabel>
-                  <FormControl><Input type="number" min={1} placeholder="0" {...field} /></FormControl>
+                  <FormControl>
+                    <CurrencyInput
+                      minValue={1}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="0"
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -1120,12 +1128,11 @@ export default function GajiTenagaPage() {
                             <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-1">
                                 <label className="text-xs font-medium">Potong Hutang</label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={Math.min(jumlahBayarSingle, hutangTertuaTerkait?.sisa_hutang ?? 0)}
+                                <CurrencyInput
+                                  minValue={0}
+                                  maxValue={Math.min(jumlahBayarSingle, hutangTertuaTerkait?.sisa_hutang ?? 0)}
                                   value={potongHutangSingleAmount}
-                                  onChange={(e) => setPotongHutangSingleAmount(e.target.value)}
+                                  onValueChange={setPotongHutangSingleAmount}
                                   placeholder="0"
                                 />
                               </div>
@@ -1143,7 +1150,40 @@ export default function GajiTenagaPage() {
                       <FormField control={bayarForm.control} name="jumlah" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Jumlah Bayar <span className="text-destructive">*</span></FormLabel>
-                          <FormControl><Input type="number" min={1} max={upahDetail.sisa_upah} placeholder="0" {...field} /></FormControl>
+                          <FormControl>
+                            <CurrencyInput
+                              minValue={1}
+                              maxValue={upahDetail.sisa_upah}
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              placeholder="0"
+                            />
+                          </FormControl>
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
+                              <Button
+                                key={nominal}
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-[11px]"
+                                onClick={() => field.onChange(Math.min(nominal, upahDetail.sisa_upah))}
+                                disabled={upahDetail.sisa_upah <= 0}
+                              >
+                                {formatRupiah(nominal)}
+                              </Button>
+                            ))}
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="h-7 px-2 text-[11px]"
+                              onClick={() => field.onChange(upahDetail.sisa_upah)}
+                              disabled={upahDetail.sisa_upah <= 0}
+                            >
+                              Pas
+                            </Button>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )} />
@@ -1444,7 +1484,13 @@ export default function GajiTenagaPage() {
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <label className="text-xs font-medium">Potong Hutang</label>
-                            <Input type="number" min={0} max={Math.min(jumlahBayarBatch, selectedBatchHutangTotal)} value={potongHutangBatchAmount} onChange={(e) => setPotongHutangBatchAmount(e.target.value)} placeholder="0" />
+                            <CurrencyInput
+                              minValue={0}
+                              maxValue={Math.min(jumlahBayarBatch, selectedBatchHutangTotal)}
+                              value={potongHutangBatchAmount}
+                              onValueChange={setPotongHutangBatchAmount}
+                              placeholder="0"
+                            />
                             <p className="text-[11px] text-muted-foreground">Sistem membagi potongan otomatis dari nota terlama.</p>
                           </div>
                           <div className="space-y-1 rounded-md border bg-white p-2">
@@ -1496,7 +1542,40 @@ export default function GajiTenagaPage() {
                   <FormField control={batchForm.control} name="jumlah_total" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Jumlah Bayar <span className="text-destructive">*</span></FormLabel>
-                      <FormControl><Input type="number" min={1} max={totalSisaBatch} placeholder="0" {...field} /></FormControl>
+                      <FormControl>
+                        <CurrencyInput
+                          minValue={1}
+                          maxValue={totalSisaBatch}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="0"
+                        />
+                      </FormControl>
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
+                          <Button
+                            key={nominal}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-[11px]"
+                            onClick={() => field.onChange(Math.min(nominal, totalSisaBatch))}
+                            disabled={totalSisaBatch <= 0}
+                          >
+                            {formatRupiah(nominal)}
+                          </Button>
+                        ))}
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={() => field.onChange(totalSisaBatch)}
+                          disabled={totalSisaBatch <= 0}
+                        >
+                          Pas
+                        </Button>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )} />

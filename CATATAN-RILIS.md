@@ -10,7 +10,7 @@ Aturan pakai:
 
 Versi terbaru: `v1.0.76`
 
-Rilis berikutnya (siap dipublish): `v1.0.77`
+Rilis berikutnya (siap dipublish): `v1.0.78`
 
 | Versi | Tanggal | Status | Catatan Singkat |
 | --- | --- | --- | --- |
