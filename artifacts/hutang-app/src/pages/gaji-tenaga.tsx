@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   useGetPekerjaList, useCreatePekerja, useUpdatePekerja, useDeletePekerja,
   useGetUpahList, useCreateUpah, useUpdateUpah, useDeleteUpah,
@@ -455,6 +455,23 @@ export default function GajiTenagaPage() {
   const potongHutangSingleNum = Number(potongHutangSingleAmount.replace(/[^0-9.]/g, "")) || 0;
   const jumlahBayarBatch = Number(batchForm.watch("jumlah_total")) || 0;
   const potongHutangBatchNum = Number(potongHutangBatchAmount.replace(/[^0-9.]/g, "")) || 0;
+
+  useEffect(() => {
+    if (!potongHutangBatchEnabled) return;
+    const batasMaksimum = Math.min(jumlahBayarBatch, selectedBatchHutangTotal);
+    if (batasMaksimum <= 0) {
+      setPotongHutangBatchAmount("");
+      return;
+    }
+    if (potongHutangBatchNum > batasMaksimum) {
+      setPotongHutangBatchAmount(String(batasMaksimum));
+    }
+  }, [
+    potongHutangBatchEnabled,
+    jumlahBayarBatch,
+    selectedBatchHutangTotal,
+    potongHutangBatchNum,
+  ]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
   const openTambahUpah = () => {

@@ -345,10 +345,18 @@ router.delete("/pembayaran/:id", requireAuth, requireLicense, async (req, res): 
     return;
   }
 
-  const [hutang] = await db.select().from(hutangTable).where(eq(hutangTable.id, pembayaran.hutangId));
+  const [hutang] = await db.select().from(hutangTable)
+    .where(and(eq(hutangTable.id, pembayaran.hutangId), eq(hutangTable.usahaId, usahaId)));
 
   // Cari keuangan ID yang harus dihapus (fallback jika keuanganId tidak tersimpan di record lama)
-  let keuanganIdToDelete: number | null = pembayaran.keuanganId ?? null;
+  let keuanganIdToDelete: number | null = null;
+
+  if (pembayaran.keuanganId) {
+    const [keuanganTerkait] = await db.select().from(keuanganTable)
+      .where(and(eq(keuanganTable.id, pembayaran.keuanganId), eq(keuanganTable.usahaId, usahaId)));
+    keuanganIdToDelete = keuanganTerkait?.id ?? null;
+  }
+
   if (!keuanganIdToDelete) {
     const matched = await db.select({ id: keuanganTable.id })
       .from(keuanganTable)
