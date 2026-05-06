@@ -40,7 +40,7 @@ export default function PelangganDetail() {
         </Link>
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-primary">{data.nama}</h2>
-          <p className="text-muted-foreground">Profil dan riwayat hutang pelanggan.</p>
+          <p className="text-muted-foreground">Profil pelanggan dan riwayat hutangnya.</p>
         </div>
       </div>
 
@@ -83,29 +83,29 @@ export default function PelangganDetail() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Ringkasan Hutang</CardTitle>
+              <CardTitle>Ringkasan Hutang</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between items-center p-3 bg-blue-50/50 rounded-lg border border-blue-100">
-              <div className="text-sm font-medium text-blue-800">Total Nominal Hutang</div>
+                <div className="text-sm font-medium text-blue-800">Total Hutang</div>
               <div className="font-bold text-blue-700">{formatRupiah(data.total_hutang)}</div>
             </div>
             <div className="flex justify-between items-center p-3 bg-emerald-50/50 rounded-lg border border-emerald-100">
-              <div className="text-sm font-medium text-emerald-800">Total Telah Dibayar</div>
+                <div className="text-sm font-medium text-emerald-800">Total Sudah Dibayar</div>
               <div className="font-bold text-emerald-700">{formatRupiah(data.total_dibayar)}</div>
             </div>
             <div className="flex justify-between items-center p-4 bg-orange-50/50 rounded-lg border border-orange-100">
-              <div className="text-sm font-medium text-orange-800">Total Sisa Hutang Aktif</div>
+                <div className="text-sm font-medium text-orange-800">Total Sisa Hutang</div>
               <div className="text-xl font-bold text-orange-700">{formatRupiah(sisaAktif)}</div>
             </div>
             <div className="grid grid-cols-2 gap-2 pt-1">
               <div className="text-center p-2 bg-amber-50 rounded border border-amber-100">
                 <div className="text-lg font-bold text-amber-700">{hutangAktif.length}</div>
-                <div className="text-xs text-amber-600">Hutang Aktif</div>
+                <div className="text-xs text-amber-600">Belum lunas</div>
               </div>
               <div className="text-center p-2 bg-emerald-50 rounded border border-emerald-100">
                 <div className="text-lg font-bold text-emerald-700">{hutangLunas.length}</div>
-                <div className="text-xs text-emerald-600">Hutang Lunas</div>
+                <div className="text-xs text-emerald-600">Lunas</div>
               </div>
             </div>
           </CardContent>
@@ -117,9 +117,9 @@ export default function PelangganDetail() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-amber-600" />
-              <CardTitle>Hutang Aktif</CardTitle>
+              <CardTitle>Hutang Belum Lunas</CardTitle>
             </div>
-            <CardDescription>{hutangAktif.length} hutang belum lunas</CardDescription>
+            <CardDescription>{hutangAktif.length} hutang masih terbuka</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">

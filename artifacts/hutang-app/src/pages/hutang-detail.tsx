@@ -77,7 +77,7 @@ export default function HutangDetail() {
             <CardTitle>Informasi Hutang</CardTitle>
             <Badge variant={data.status === "lunas" ? "outline" : "default"} 
                   className={data.status === "aktif" ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-emerald-100 text-emerald-800 border-emerald-200"}>
-              {data.status === "aktif" ? "Aktif" : "Lunas"}
+              {data.status === "aktif" ? "Belum lunas" : "Lunas"}
             </Badge>
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
@@ -187,16 +187,16 @@ export default function HutangDetail() {
       <AlertDialog open={isDeletePayDialogOpen} onOpenChange={setIsDeletePayDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Pembayaran?</AlertDialogTitle>
+            <AlertDialogTitle>Batalkan Pembayaran?</AlertDialogTitle>
             <AlertDialogDescription>
-              Menghapus pembayaran {formatRupiah(selectedPayNominal)} ini akan mengembalikan sisa hutang ke nominal sebelumnya. Tindakan ini tidak dapat dibatalkan.
+              Pembayaran {formatRupiah(selectedPayNominal)} ini akan dihapus dan sisa hutang dikembalikan seperti semula. Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>Kembali</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeletePayment} className="bg-destructive text-destructive-foreground">
               {deletePayMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-              Hapus Pembayaran
+              Batalkan Pembayaran
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

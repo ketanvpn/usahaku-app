@@ -351,7 +351,7 @@ export default function BackupPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight text-primary">Backup & Restore</h2>
+        <h2 className="text-3xl font-bold tracking-tight text-primary">Cadangan & Pulihkan Data</h2>
         <p className="text-muted-foreground">Amankan data usaha Anda secara berkala.</p>
       </div>
 
@@ -360,10 +360,10 @@ export default function BackupPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary">
               <HardDrive className="h-5 w-5" />
-              Pengaturan Auto-Backup
+              Pengaturan Cadangan Otomatis
             </CardTitle>
             <CardDescription>
-              Setiap kali menutup aplikasi, data otomatis dicadangkan ke folder ini. Maksimal 7 file terakhir disimpan.
+               Setiap kali menutup aplikasi, data otomatis dicadangkan ke folder ini. Maksimal 7 file terakhir disimpan.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -375,8 +375,8 @@ export default function BackupPage() {
             </div>
             <div className="text-xs text-muted-foreground">
               {lastManualBackup
-                ? `Backup manual terakhir: ${formatRelativeBackup(lastManualBackup)} (${formatTanggal(lastManualBackup)})`
-                : "Belum ada backup manual tercatat"}
+                 ? `Cadangan manual terakhir: ${formatRelativeBackup(lastManualBackup)} (${formatTanggal(lastManualBackup)})`
+                 : "Belum ada cadangan manual tercatat"}
             </div>
             <Button
               variant="outline"
@@ -390,7 +390,7 @@ export default function BackupPage() {
               ) : (
                 <FolderOpen className="mr-2 h-4 w-4" />
               )}
-              Ubah Folder Auto-Backup
+               Ubah Folder Cadangan Otomatis
             </Button>
             <Button
               variant="secondary"
@@ -408,7 +408,7 @@ export default function BackupPage() {
               disabled={!isElectron}
               className="w-full sm:w-auto"
             >
-              <FolderOpen className="mr-2 h-4 w-4" /> Buka Folder Backup
+              <FolderOpen className="mr-2 h-4 w-4" /> Buka Folder Cadangan
             </Button>
             <Button
               variant="outline"
@@ -416,7 +416,7 @@ export default function BackupPage() {
               onClick={handleRefreshStatus}
               className="w-full sm:w-auto"
             >
-              <RefreshCw className="mr-2 h-4 w-4" /> Refresh Status
+              <RefreshCw className="mr-2 h-4 w-4" /> Perbarui Status
             </Button>
           </CardContent>
         </Card>
@@ -427,11 +427,11 @@ export default function BackupPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-amber-800">
               <Database className="h-5 w-5" />
-              Restore dari Auto-Backup (.db)
+              Pulihkan dari Cadangan Otomatis (.db)
             </CardTitle>
             <CardDescription className="text-amber-700">
-              Pulihkan data dari file auto-backup yang tersimpan otomatis saat menutup aplikasi.
-              File auto-backup berformat <strong>.db</strong> dan tersimpan di folder auto-backup di atas.
+               Pulihkan data dari file cadangan otomatis yang tersimpan saat aplikasi ditutup.
+               File cadangan otomatis berformat <strong>.db</strong> dan tersimpan di folder cadangan di atas.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -456,7 +456,7 @@ export default function BackupPage() {
               ) : (
                 <RotateCcw className="mr-2 h-4 w-4" />
               )}
-              Pilih File Auto-Backup & Restore...
+              Pilih File Cadangan & Pulihkan...
             </Button>
           </CardFooter>
         </Card>
@@ -472,7 +472,7 @@ export default function BackupPage() {
               ) : (
                 <CloudOff className="h-5 w-5 text-muted-foreground" />
               )}
-              Backup ke Google Drive
+              Cadangan ke Google Drive
               {gdriveStatus.connected && (
                 <span className="ml-auto text-xs font-normal px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 flex items-center gap-1">
                   <CheckCircle2 className="h-3 w-3" /> Terhubung
@@ -482,7 +482,7 @@ export default function BackupPage() {
             <CardDescription>
               {gdriveStatus.connected
                 ? "Data dicadangkan otomatis ke Google Drive setiap kali ada perubahan dan internet tersedia."
-                : "Hubungkan akun Google untuk backup otomatis ke cloud. Aman, gratis, dan mudah dipulihkan."}
+                : "Hubungkan akun Google untuk cadangan otomatis ke cloud. Aman, gratis, dan mudah dipulihkan."}
             </CardDescription>
           </CardHeader>
 
@@ -490,7 +490,7 @@ export default function BackupPage() {
             {!gdriveStatus.configured && (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Belum Dikonfigurasi</AlertTitle>
+                <AlertTitle>Belum Diaktifkan</AlertTitle>
                 <AlertDescription className="text-xs">
                   Fitur Google Drive belum diaktifkan pada versi ini. Hubungi pengembang untuk informasi lebih lanjut.
                 </AlertDescription>
@@ -511,7 +511,7 @@ export default function BackupPage() {
                     </div>
                   )}
                   {!gdriveStatus.lastBackupAt && (
-                    <div className="text-xs text-muted-foreground pl-6">Belum ada backup ke Drive</div>
+                    <div className="text-xs text-muted-foreground pl-6">Belum ada cadangan ke Drive</div>
                   )}
                   {gdriveStatus.lastError && (
                     <div className="text-xs text-destructive pl-6">{gdriveStatus.lastError}</div>
@@ -532,7 +532,7 @@ export default function BackupPage() {
                     ) : (
                       <RefreshCw className="mr-1 h-3 w-3" />
                     )}
-                    {showGdriveBackups ? "Sembunyikan" : `Lihat ${gdriveBackups.length} backup di Drive`}
+                    {showGdriveBackups ? "Sembunyikan" : `Lihat ${gdriveBackups.length} cadangan di Drive`}
                   </Button>
 
                   {showGdriveBackups && gdriveBackups.length > 0 && (
@@ -561,7 +561,7 @@ export default function BackupPage() {
                     </div>
                   )}
                   {showGdriveBackups && gdriveBackups.length === 0 && !isGdriveLoading && (
-                    <p className="text-xs text-muted-foreground mt-2 px-1">Belum ada file backup di Drive.</p>
+                    <p className="text-xs text-muted-foreground mt-2 px-1">Belum ada file cadangan di Drive.</p>
                   )}
                 </div>
               </>
@@ -569,7 +569,7 @@ export default function BackupPage() {
 
             {gdriveStatus.configured && !gdriveStatus.connected && (
               <p className="text-sm text-muted-foreground">
-                Setelah terhubung, backup otomatis berjalan di latar belakang setiap kali ada internet.
+                Setelah terhubung, cadangan otomatis berjalan di latar belakang setiap kali ada internet.
                 Maksimal 7 file backup tersimpan di Drive.
               </p>
             )}
@@ -595,7 +595,7 @@ export default function BackupPage() {
                   className="border-blue-300 text-blue-700 hover:bg-blue-50"
                 >
                   {isGdriveBackingUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Cloud className="mr-2 h-4 w-4" />}
-                  Backup Sekarang
+                  Cadangkan Sekarang
                 </Button>
                 <Button
                   variant="ghost"
@@ -617,7 +617,7 @@ export default function BackupPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Download className="h-5 w-5 text-primary" />
-              Export Data
+              Simpan Cadangan
             </CardTitle>
             <CardDescription>
               {isElectron
@@ -627,8 +627,8 @@ export default function BackupPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Lakukan backup secara rutin untuk menghindari kehilangan data. File yang disimpan
-              dapat digunakan untuk restore kapan saja.
+              Lakukan cadangan secara rutin untuk menghindari kehilangan data. File yang disimpan
+              dapat digunakan untuk memulihkan data kapan saja.
             </p>
           </CardContent>
           <CardFooter>
@@ -638,7 +638,7 @@ export default function BackupPage() {
               ) : (
                 <Download className="mr-2 h-4 w-4" />
               )}
-              {isElectron ? "Simpan File Backup..." : "Unduh File Backup"}
+               {isElectron ? "Simpan File Cadangan..." : "Unduh File Cadangan"}
             </Button>
           </CardFooter>
         </Card>
@@ -647,18 +647,18 @@ export default function BackupPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Upload className="h-5 w-5 text-orange-500" />
-              Restore Data
+              Pulihkan Data
             </CardTitle>
-            <CardDescription>Kembalikan data dari file JSON backup sebelumnya.</CardDescription>
+            <CardDescription>Kembalikan data dari file JSON cadangan sebelumnya.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Perhatian!</AlertTitle>
-              <AlertDescription className="text-xs mt-1">
-                Melakukan restore akan menghapus semua data saat ini dan menggantinya dengan data
-                dari file backup. Pastikan Anda sudah mengunduh backup terbaru sebelum melanjutkan.
-              </AlertDescription>
+                <AlertDescription className="text-xs mt-1">
+                  Melakukan pemulihan akan menghapus semua data saat ini dan menggantinya dengan data
+                  dari file cadangan. Pastikan Anda sudah punya cadangan terbaru sebelum melanjutkan.
+                </AlertDescription>
             </Alert>
 
             <div className="grid w-full items-center gap-1.5">
@@ -738,7 +738,7 @@ export default function BackupPage() {
               ) : (
                 <Upload className="mr-2 h-4 w-4" />
               )}
-              Mulai Restore
+               Mulai Pulihkan
             </Button>
           </CardFooter>
         </Card>
@@ -747,7 +747,7 @@ export default function BackupPage() {
       <AlertDialog open={isConfirmRestoreOpen} onOpenChange={setIsConfirmRestoreOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Konfirmasi Restore Data</AlertDialogTitle>
+            <AlertDialogTitle>Konfirmasi Pulihkan Data</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
@@ -759,7 +759,7 @@ export default function BackupPage() {
                     {preview.nama_usaha && (
                       <div className="font-semibold text-primary">Usaha: {preview.nama_usaha}</div>
                     )}
-                    <div className="font-semibold mb-1">Data yang akan direstore:</div>
+                    <div className="font-semibold mb-1">Data yang akan dipulihkan:</div>
                     <div>{preview.pelanggan} pelanggan</div>
                     <div>{preview.hutang} hutang</div>
                     <div>{preview.pembayaran} pembayaran</div>
@@ -770,7 +770,7 @@ export default function BackupPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>Kembali</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 setIsConfirmRestoreOpen(false);
@@ -778,7 +778,7 @@ export default function BackupPage() {
               }}
               className="bg-destructive text-destructive-foreground"
             >
-              Ya, Restore Sekarang
+              Ya, Pulihkan Sekarang
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -808,7 +808,7 @@ export default function BackupPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>Kembali</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleGdriveRestoreConfirmed}
               className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -822,20 +822,20 @@ export default function BackupPage() {
       <AlertDialog open={isConfirmRestoreDBOpen} onOpenChange={setIsConfirmRestoreDBOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Restore dari Auto-Backup?</AlertDialogTitle>
+            <AlertDialogTitle>Pulihkan dari Cadangan Otomatis?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
-                  Anda akan memilih file <strong>.db</strong> dari folder auto-backup.
+                  Anda akan memilih file <strong>.db</strong> dari folder cadangan otomatis.
                   Semua data saat ini akan <strong>dihapus dan diganti</strong> dengan isi file tersebut.
                 </p>
-                <p>Aplikasi akan memuat ulang otomatis setelah restore selesai.</p>
+                <p>Aplikasi akan memuat ulang otomatis setelah proses selesai.</p>
                 <p className="text-destructive font-medium">Proses ini tidak dapat dibatalkan.</p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>Kembali</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 setIsConfirmRestoreDBOpen(false);
@@ -855,7 +855,7 @@ export default function BackupPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              Restore Data Gagal
+              Pulihkan Data Gagal
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2 text-left">

@@ -403,9 +403,9 @@ export default function GajiTenagaPage() {
     return selectedBatchHutangList.reduce((sum, hutang) => sum + hutang.sisa_hutang, 0);
   }, [selectedBatchHutangList]);
 
-  // ── Export CSV catatan upah ──────────────────────────────────────────────────
+  // ── Unduh CSV catatan gaji ──────────────────────────────────────────────────
   const exportUpahCSV = () => {
-    const header = ["No", "Pekerja", "Jabatan", "Keterangan", "Tgl. Kerja", "Total Upah", "Sudah Dibayar", "Sisa", "Status", "Catatan"];
+    const header = ["No", "Pekerja", "Jabatan", "Keterangan", "Tanggal Kerja", "Total Gaji", "Sudah Dibayar", "Sisa", "Status", "Catatan"];
     const rows = filteredUpah.map((u, i) => [
       i + 1,
       u.pekerja_nama,
@@ -766,8 +766,8 @@ export default function GajiTenagaPage() {
                   ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={exportUpahCSV} disabled={filteredUpah.length === 0} title="Export CSV">
-              <Download className="h-4 w-4 mr-1" /> CSV
+            <Button variant="outline" onClick={exportUpahCSV} disabled={filteredUpah.length === 0} title="Unduh CSV">
+              <Download className="h-4 w-4 mr-1" /> Unduh CSV
             </Button>
             <Button onClick={openTambahUpah} disabled={!lisensiAktif}>
               <Plus className="h-4 w-4 mr-1" /> Tambah Upah
@@ -782,10 +782,10 @@ export default function GajiTenagaPage() {
                     <TableRow>
                       <TableHead>Pekerja</TableHead>
                       <TableHead>Keterangan</TableHead>
-                      <TableHead className="text-right">Total Upah</TableHead>
+                      <TableHead className="text-right">Total Gaji</TableHead>
                       <TableHead className="text-right">Sudah Dibayar</TableHead>
                       <TableHead className="text-right">Sisa</TableHead>
-                      <TableHead>Tgl. Kerja</TableHead>
+                      <TableHead>Tanggal Kerja</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
@@ -797,7 +797,7 @@ export default function GajiTenagaPage() {
                       <TableRow>
                         <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
                           <HardHat className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                          <p>Belum ada catatan upah</p>
+                          <p>Belum ada catatan gaji</p>
                         </TableCell>
                       </TableRow>
                     </TableBody>
@@ -994,7 +994,7 @@ export default function GajiTenagaPage() {
               )} />
               <FormField control={upahForm.control} name="jumlah_total" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Total Upah <span className="text-destructive">*</span></FormLabel>
+                  <FormLabel>Total Gaji <span className="text-destructive">*</span></FormLabel>
                   <FormControl><Input type="number" min={1} placeholder="0" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -1335,7 +1335,7 @@ export default function GajiTenagaPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Pekerja?</AlertDialogTitle>
-            <AlertDialogDescription>Pekerja hanya bisa dihapus jika tidak memiliki catatan upah. Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+            <AlertDialogDescription>Pekerja hanya bisa dihapus jika tidak memiliki catatan gaji. Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setDeletingPekerjaId(null)}>Batal</AlertDialogCancel>
@@ -1410,7 +1410,7 @@ export default function GajiTenagaPage() {
                           }
                         }}
                       >
-                        {potongHutangBatchEnabled ? "Dipakai" : "Pilih hutang"}
+                        {potongHutangBatchEnabled ? "Nonaktifkan" : "Pilih hutang"}
                       </Button>
                     </div>
 
@@ -1437,7 +1437,7 @@ export default function GajiTenagaPage() {
                         </div>
 
                         <div className="rounded-md bg-white border p-2 text-xs flex items-center justify-between">
-                          <span>Terpilih {selectedBatchHutangList.length} hutang</span>
+                          <span>Terpilih {selectedBatchHutangList.length} nota hutang</span>
                           <span className="font-semibold">{formatRupiah(selectedBatchHutangTotal)}</span>
                         </div>
 
@@ -1445,6 +1445,7 @@ export default function GajiTenagaPage() {
                           <div className="space-y-1">
                             <label className="text-xs font-medium">Potong Hutang</label>
                             <Input type="number" min={0} max={Math.min(jumlahBayarBatch, selectedBatchHutangTotal)} value={potongHutangBatchAmount} onChange={(e) => setPotongHutangBatchAmount(e.target.value)} placeholder="0" />
+                            <p className="text-[11px] text-muted-foreground">Sistem membagi potongan otomatis dari nota terlama.</p>
                           </div>
                           <div className="space-y-1 rounded-md border bg-white p-2">
                             <div className="flex justify-between text-xs"><span>Gaji</span><span>{formatRupiah(jumlahBayarBatch)}</span></div>

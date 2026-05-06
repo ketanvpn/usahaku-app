@@ -184,16 +184,16 @@ export default function PelangganPage() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Pelanggan?</AlertDialogTitle>
+            <AlertDialogTitle>Hapus Data Pelanggan?</AlertDialogTitle>
             <AlertDialogDescription>
-              Apakah Anda yakin ingin menghapus {selectedPelanggan?.nama}? Data ini tidak dapat dikembalikan.
+              Data {selectedPelanggan?.nama} akan dihapus. Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>Kembali</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               {deleteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-              Hapus
+              Hapus Data
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

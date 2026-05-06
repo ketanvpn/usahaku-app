@@ -387,7 +387,7 @@ export default function KasirPage() {
             onClick={() => { setShowRiwayat(true); refetchRiwayat(); }}
           >
             <History className="h-4 w-4" />
-            <span className="hidden sm:inline">Riwayat</span>
+            <span className="hidden sm:inline">Riwayat Penjualan</span>
           </Button>
         </div>
 
@@ -408,10 +408,10 @@ export default function KasirPage() {
           <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
             <PackageOpen className="h-12 w-12 opacity-20" />
             <p className="text-sm">
-              {search ? `Tidak ada barang yang cocok dengan "${search}"` : "Belum ada barang dengan stok tersedia"}
+              {search ? `Tidak ada barang yang cocok dengan "${search}"` : "Belum ada barang yang bisa dijual"}
             </p>
             {search && (
-              <Button variant="ghost" size="sm" onClick={() => setSearch("")}>Hapus pencarian</Button>
+              <Button variant="ghost" size="sm" onClick={() => setSearch("")}>Reset pencarian</Button>
             )}
           </div>
         ) : (
@@ -477,7 +477,7 @@ export default function KasirPage() {
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2 py-10">
               <ShoppingCart className="h-8 w-8 opacity-20" />
-              <p className="text-sm">Ketuk barang untuk menambahkan</p>
+              <p className="text-sm">Klik barang untuk menambahkan</p>
             </div>
           ) : (
             cart.map(item => (
@@ -579,7 +579,7 @@ export default function KasirPage() {
 
           {/* Uang Bayar */}
             <div className="space-y-1">
-            <label className="text-xs text-muted-foreground font-medium">Uang Bayar</label>
+                  <label className="text-xs text-muted-foreground font-medium">Uang Diterima</label>
             <Input
               ref={bayarInputRef}
               placeholder="Masukkan nominal..."
@@ -634,17 +634,17 @@ export default function KasirPage() {
           />
 
           {/* Tombol Selesaikan */}
-          <Button
-            className="w-full h-11 text-base font-semibold"
-            disabled={!canSubmit}
-            onClick={() => selesaikanMutation.mutate()}
-          >
-            {selesaikanMutation.isPending ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Memproses...</>
-            ) : (
-              <><CheckCircle className="h-4 w-4 mr-2" />Selesaikan Transaksi</>
-            )}
-          </Button>
+              <Button
+                className="w-full h-11 text-base font-semibold"
+                disabled={!canSubmit}
+                onClick={() => selesaikanMutation.mutate()}
+              >
+                {selesaikanMutation.isPending ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Memproses...</>
+                ) : (
+                  <><CheckCircle className="h-4 w-4 mr-2" />Bayar Sekarang</>
+                )}
+              </Button>
 
           {cart.length > 0 && total > 0 && uangBayarNum > 0 && uangBayarNum < total && (
             <p className="text-xs text-red-500 text-center">
@@ -657,7 +657,7 @@ export default function KasirPage() {
               onClick={resetKasir}
               className="w-full text-xs text-muted-foreground hover:text-destructive transition-colors py-1"
             >
-              Kosongkan keranjang
+              Bersihkan keranjang
             </button>
           )}
         </div>
@@ -729,18 +729,18 @@ export default function KasirPage() {
       <AlertDialog open={hapusId !== null} onOpenChange={(open) => { if (!open) setHapusId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Transaksi Kasir?</AlertDialogTitle>
+            <AlertDialogTitle>Batalkan Transaksi Penjualan?</AlertDialogTitle>
             <AlertDialogDescription>
-              Transaksi #{String(hapusId ?? 0).padStart(4, "0")} akan dihapus permanen. Data keuangan terkait juga ikut dihapus. Stok barang akan dikembalikan jika barang masih ada.
+              Transaksi #{String(hapusId ?? 0).padStart(4, "0")} akan dibatalkan. Stok barang dan catatan keuangan akan dikembalikan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel>Kembali</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => { if (hapusId !== null) { hapusMutation.mutate(hapusId); setHapusId(null); } }}
             >
-              Ya, Hapus
+              Ya, Batalkan
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -752,7 +752,7 @@ export default function KasirPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-700">
               <CheckCircle className="h-5 w-5" />
-              Transaksi Berhasil!
+              Pembayaran Berhasil!
             </DialogTitle>
           </DialogHeader>
           {hasil && (
@@ -782,7 +782,7 @@ export default function KasirPage() {
                     <span className="text-primary">{formatRupiah(hasil.total)}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Uang Bayar</span>
+                    <span>Uang Diterima</span>
                     <span>{formatRupiah(hasil.uang_bayar)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-emerald-700">
@@ -793,7 +793,7 @@ export default function KasirPage() {
               </div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Receipt className="h-3 w-3" />
-                Stok dan keuangan otomatis terupdate
+                Stok dan catatan keuangan otomatis diperbarui
               </p>
               <div className="flex gap-2">
                 <Button
@@ -805,7 +805,7 @@ export default function KasirPage() {
                   Cetak Struk
                 </Button>
                 <Button className="flex-1" onClick={() => { setShowHasil(false); resetKasir(); }}>
-                  Transaksi Baru
+                  Mulai Transaksi Baru
                 </Button>
               </div>
             </div>

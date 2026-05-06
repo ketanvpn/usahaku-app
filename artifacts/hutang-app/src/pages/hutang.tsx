@@ -52,9 +52,9 @@ function getJatuhTempoBadge(tanggalJatuhTempo: string | null | undefined, status
     );
   }
   if (tanggalJatuhTempo <= sevenDaysLater) {
-    return (
-      <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-[10px] px-1.5 py-0.5 flex items-center gap-1 w-fit">
-        <CalendarClock className="h-3 w-3" /> Segera JT
+      return (
+        <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-[10px] px-1.5 py-0.5 flex items-center gap-1 w-fit">
+        <CalendarClock className="h-3 w-3" /> Segera jatuh tempo
       </Badge>
     );
   }
@@ -247,7 +247,7 @@ export default function HutangPage() {
                 )} />
                 <FormField control={updateForm.control} name="tanggal_jatuh_tempo" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Jatuh Tempo <span className="text-muted-foreground font-normal">(Opsional)</span></FormLabel>
+                    <FormLabel>Jatuh Tempo <span className="text-muted-foreground font-normal">(Opsional, untuk pengingat)</span></FormLabel>
                     <FormControl>
                       <Input type="date" {...field} value={field.value ?? ""} />
                     </FormControl>
@@ -334,16 +334,16 @@ export default function HutangPage() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Hutang?</AlertDialogTitle>
+            <AlertDialogTitle>Hapus Catatan Hutang?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tindakan ini juga akan menghapus semua riwayat pembayaran untuk hutang ini. Data tidak dapat dikembalikan.
+              Catatan hutang ini beserta semua riwayat pembayarannya akan dihapus. Data tidak dapat dikembalikan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               {deleteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-              Hapus
+              Hapus Catatan
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -417,7 +417,7 @@ export default function HutangPage() {
                         <TableCell>
                           <Badge variant={h.status === "lunas" ? "outline" : "default"} 
                                 className={h.status === "aktif" ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-emerald-100 text-emerald-800 border-emerald-200"}>
-                            {h.status === "aktif" ? "Aktif" : "Lunas"}
+                            {h.status === "aktif" ? "Belum lunas" : "Lunas"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">

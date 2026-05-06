@@ -146,7 +146,7 @@ function buildPrintHutang(opts: {
         <td class="nowrap">${fmtDate(r.tanggal_hutang)}</td>
         <td class="bold">${r.nama_pelanggan}</td>
         <td class="muted">${r.keterangan || "—"}</td>
-        <td><span class="badge ${r.status === "aktif" ? "badge-aktif" : "badge-lunas"}">${r.status === "aktif" ? "Aktif" : "Lunas"}</span></td>
+        <td><span class="badge ${r.status === "aktif" ? "badge-aktif" : "badge-lunas"}">${r.status === "aktif" ? "Belum lunas" : "Lunas"}</span></td>
         <td class="right">${fmtRupiah(r.nominal_hutang)}</td>
         <td class="right green">${fmtRupiah(r.total_dibayar)}</td>
         <td class="right orange bold">${fmtRupiah(r.sisa_hutang)}</td>
@@ -293,7 +293,7 @@ ${filterTableHtml([
 <p style="font-weight:bold;margin:14px 0 4px">Top Produk Terlaris</p>
 <table class="data-table" style="width:60%">
 <colgroup><col style="width:50%"/><col style="width:25%"/><col style="width:25%"/></colgroup>
-<thead><tr><th>Nama Produk</th><th class="right">Qty Terjual</th><th class="right">Total Omset</th></tr></thead>
+<thead><tr><th>Nama Produk</th><th class="right">Jumlah Terjual</th><th class="right">Total Omset</th></tr></thead>
 <tbody>${topRows}</tbody>
 </table>` + printFoot();
 }
@@ -374,7 +374,7 @@ export default function LaporanPage() {
     },
   });
 
-  // ── Gaji & Upah data ─────────────────────────────────────────────────────────
+  // ── Gaji & Tenaga data ───────────────────────────────────────────────────────
   const { data: allUpahLaporan = [], isLoading: upahLoading } = useGetUpahList({});
   const { data: pekerjaLaporan = [] } = useGetPekerjaList();
 
@@ -397,11 +397,11 @@ export default function LaporanPage() {
 
   const handleExportUpahCsv = () => {
     if (!allUpahLaporan.length) return;
-    const header = ["No","Pekerja","Jabatan","Keterangan","Tgl. Kerja","Total Upah","Sudah Dibayar","Sisa","Status","Catatan"];
+    const header = ["No","Pekerja","Jabatan","Keterangan","Tanggal Kerja","Total Gaji","Sudah Dibayar","Sisa","Status","Catatan"];
     const rows = allUpahLaporan.map((u, i) => [
       i + 1, u.pekerja_nama, u.pekerja_jabatan ?? "", u.keterangan,
       u.tanggal_kerja, u.jumlah_total, u.total_dibayar, u.sisa_upah,
-      u.status === "lunas" ? "Lunas" : "Belum Lunas", u.catatan ?? "",
+      u.status === "lunas" ? "Lunas" : "Belum lunas", u.catatan ?? "",
     ]);
     const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
@@ -501,7 +501,7 @@ export default function LaporanPage() {
 
   const hutangFilterLines: { label: string; value: string }[] = [];
   if (selectedPelanggan) hutangFilterLines.push({ label: "Pelanggan", value: selectedPelanggan.nama });
-  if (filterStatus) hutangFilterLines.push({ label: "Status", value: filterStatus === "aktif" ? "Aktif" : "Lunas" });
+  if (filterStatus) hutangFilterLines.push({ label: "Status", value: filterStatus === "aktif" ? "Belum lunas" : "Lunas" });
   if (dateFrom || dateTo) {
     const fmt = (d: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(d));
     hutangFilterLines.push({ label: "Periode", value: `${dateFrom ? fmt(dateFrom) : "awal"} – ${dateTo ? fmt(dateTo) : "sekarang"}` });
@@ -625,7 +625,7 @@ export default function LaporanPage() {
         r.tanggal_hutang.split("T")[0],
         r.nama_pelanggan,
         r.keterangan || "",
-        r.status === "aktif" ? "Aktif" : "Lunas",
+        r.status === "aktif" ? "Belum lunas" : "Lunas",
         r.nominal_hutang,
         r.total_dibayar,
         r.sisa_hutang,
@@ -718,7 +718,7 @@ export default function LaporanPage() {
       const rowsTop: (string | number)[][] = [
         [`Top Produk Terlaris — ${bulanNama} ${kasirTahun}`],
         [],
-        ["Nama Produk","Satuan","Qty Terjual","Total Omset"],
+        ["Nama Produk","Satuan","Jumlah Terjual","Total Omset"],
         ...kasirTopProduk.map(r => [r.nama_barang, r.satuan, r.total_qty, r.total_omset]),
       ];
       const wsTop = XLSX.utils.aoa_to_sheet(rowsTop);
@@ -743,7 +743,7 @@ export default function LaporanPage() {
           <TabsTrigger value="hutang">Hutang & Pembayaran</TabsTrigger>
           <TabsTrigger value="keuangan">Keuangan</TabsTrigger>
           <TabsTrigger value="stok">Stok Barang</TabsTrigger>
-          <TabsTrigger value="gaji">Gaji & Upah</TabsTrigger>
+          <TabsTrigger value="gaji">Gaji & Tenaga</TabsTrigger>
         </TabsList>
 
         {/* ── Tab Penjualan Kasir ─────────────────────────────────────────────── */}
@@ -753,10 +753,10 @@ export default function LaporanPage() {
             <p className="text-sm text-muted-foreground">Rekap penjualan kasir per bulan dengan grafik dan top produk.</p>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleExportKasirCsv} disabled={!kasirHarian.length}>
-                <Download className="mr-2 h-4 w-4" /> Export CSV
+                <Download className="mr-2 h-4 w-4" /> Unduh CSV
               </Button>
               <Button variant="outline" onClick={handleExportKasirXlsx} disabled={!kasirHarian.length} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
-                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Excel
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Unduh Excel
               </Button>
               <Button onClick={handlePrintKasir} disabled={!kasirRingkasan || !kasirHarian.length}>
                 <Printer className="mr-2 h-4 w-4" /> Cetak / PDF
@@ -921,7 +921,7 @@ export default function LaporanPage() {
                         <TableRow>
                           <TableHead className="w-8">#</TableHead>
                           <TableHead>Nama Produk</TableHead>
-                          <TableHead className="text-right">Qty Terjual</TableHead>
+                          <TableHead className="text-right">Jumlah Terjual</TableHead>
                           <TableHead className="text-right">Total Omset</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -949,10 +949,10 @@ export default function LaporanPage() {
             <p className="text-sm text-muted-foreground">Data hutang dan pembayaran pelanggan.</p>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleExportHutangCsv} disabled={!laporanData?.length}>
-                <Download className="mr-2 h-4 w-4" /> Export CSV
+                <Download className="mr-2 h-4 w-4" /> Unduh CSV
               </Button>
               <Button variant="outline" onClick={handleExportHutangXlsx} disabled={!laporanData?.length} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
-                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Excel
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Unduh Excel
               </Button>
               <Button onClick={handlePrintHutang} disabled={!laporanData?.length}>
                 <Printer className="mr-2 h-4 w-4" /> Cetak / PDF
@@ -1000,7 +1000,7 @@ export default function LaporanPage() {
                     <SelectTrigger className="bg-background"><SelectValue placeholder="Semua" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="semua">Semua Status</SelectItem>
-                      <SelectItem value="aktif">Aktif</SelectItem>
+                      <SelectItem value="aktif">Belum lunas</SelectItem>
                       <SelectItem value="lunas">Lunas</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1047,7 +1047,7 @@ export default function LaporanPage() {
                                 <span className={row.status === "aktif"
                                   ? "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800"
                                   : "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800"}>
-                                  {row.status === "aktif" ? "Aktif" : "Lunas"}
+                                  {row.status === "aktif" ? "Belum lunas" : "Lunas"}
                                 </span>
                               </TableCell>
                               <TableCell className="text-right">{formatRupiah(row.nominal_hutang)}</TableCell>
@@ -1080,13 +1080,13 @@ export default function LaporanPage() {
             <div className="flex gap-2">
               <Button variant="outline" onClick={copyKeuanganRingkasan}>
                 <Copy className="mr-2 h-4 w-4" />
-                {copyKeuState === "done" ? "Tersalin" : copyKeuState === "error" ? "Gagal Salin" : "Copy Ringkasan"}
+                {copyKeuState === "done" ? "Tersalin" : copyKeuState === "error" ? "Gagal Salin" : "Salin Ringkasan"}
               </Button>
               <Button variant="outline" onClick={handleExportKeuanganCsv} disabled={!keuanganData.length}>
-                <Download className="mr-2 h-4 w-4" /> Export CSV
+                <Download className="mr-2 h-4 w-4" /> Unduh CSV
               </Button>
               <Button variant="outline" onClick={handleExportKeuanganXlsx} disabled={!keuanganData.length} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
-                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Excel
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Unduh Excel
               </Button>
               <Button onClick={handlePrintKeuangan} disabled={!keuanganData.length}>
                 <Printer className="mr-2 h-4 w-4" /> Cetak / PDF
@@ -1227,10 +1227,10 @@ export default function LaporanPage() {
             <p className="text-sm text-muted-foreground">Laporan stok barang saat ini beserta status ketersediaan.</p>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleExportStokCsv} disabled={!barangData.length}>
-                <Download className="mr-2 h-4 w-4" /> Export CSV
+                <Download className="mr-2 h-4 w-4" /> Unduh CSV
               </Button>
               <Button variant="outline" onClick={handleExportStokXlsx} disabled={!barangData.length} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
-                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Excel
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Unduh Excel
               </Button>
               <Button onClick={handlePrintStok} disabled={!barangData.length}>
                 <Printer className="mr-2 h-4 w-4" /> Cetak / PDF
@@ -1302,19 +1302,19 @@ export default function LaporanPage() {
           </Card>
         </TabsContent>
 
-        {/* ── Tab Gaji & Upah ────────────────────────────────────────────────── */}
+        {/* ── Tab Gaji & Tenaga ───────────────────────────────────────────────── */}
         <TabsContent value="gaji" className="space-y-4 mt-4">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-            <p className="text-sm text-muted-foreground">Rekap upah seluruh tenaga kerja dan status pembayaran.</p>
+            <p className="text-sm text-muted-foreground">Rekap gaji seluruh tenaga kerja dan status pembayaran.</p>
             <Button variant="outline" onClick={handleExportUpahCsv} disabled={!allUpahLaporan.length}>
-              <Download className="mr-2 h-4 w-4" /> Export CSV
+              <Download className="mr-2 h-4 w-4" /> Unduh CSV
             </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="border-l-4 border-l-primary">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium">Total Upah Dicatat</CardTitle>
+                <CardTitle className="text-sm font-medium">Total Gaji Dicatat</CardTitle>
                 <Wallet className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent><p className="text-2xl font-bold">{fmtRupiah(totalUpahDicatat)}</p></CardContent>
@@ -1328,7 +1328,7 @@ export default function LaporanPage() {
             </Card>
             <Card className="border-l-4 border-l-red-500">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium">Belum Dibayar</CardTitle>
+                <CardTitle className="text-sm font-medium">Sisa Gaji</CardTitle>
                 <TrendingDown className="h-4 w-4 text-red-600" />
               </CardHeader>
               <CardContent><p className="text-2xl font-bold text-red-700">{fmtRupiah(totalUpahBelumDibayar)}</p></CardContent>
@@ -1345,8 +1345,8 @@ export default function LaporanPage() {
                       <TableRow>
                         <TableHead>Nama</TableHead>
                         <TableHead>Jabatan</TableHead>
-                        <TableHead className="text-right">Jml. Catatan</TableHead>
-                        <TableHead className="text-right">Total Upah</TableHead>
+                        <TableHead className="text-right">Jumlah Catatan</TableHead>
+                        <TableHead className="text-right">Total Gaji</TableHead>
                         <TableHead className="text-right">Dibayar</TableHead>
                         <TableHead className="text-right">Sisa</TableHead>
                       </TableRow>
@@ -1370,7 +1370,7 @@ export default function LaporanPage() {
           )}
 
           <Card>
-            <CardHeader><CardTitle className="text-sm font-medium">Semua Catatan Upah</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-sm font-medium">Semua Catatan Gaji</CardTitle></CardHeader>
             <CardContent className="p-0">
               {upahLoading
                 ? <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
@@ -1381,8 +1381,8 @@ export default function LaporanPage() {
                         <TableRow>
                           <TableHead>Pekerja</TableHead>
                           <TableHead>Keterangan</TableHead>
-                          <TableHead>Tgl. Kerja</TableHead>
-                          <TableHead className="text-right">Total Upah</TableHead>
+                          <TableHead>Tanggal Kerja</TableHead>
+                          <TableHead className="text-right">Total Gaji</TableHead>
                           <TableHead className="text-right">Dibayar</TableHead>
                           <TableHead className="text-right">Sisa</TableHead>
                           <TableHead>Status</TableHead>
@@ -1390,7 +1390,7 @@ export default function LaporanPage() {
                       </TableHeader>
                       <TableBody>
                         {!allUpahLaporan.length
-                          ? <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Tidak ada data catatan upah.</TableCell></TableRow>
+                           ? <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Tidak ada data catatan gaji.</TableCell></TableRow>
                           : allUpahLaporan.map(u => (
                             <TableRow key={u.id}>
                               <TableCell className="font-medium">{u.pekerja_nama}</TableCell>
@@ -1402,7 +1402,7 @@ export default function LaporanPage() {
                               <TableCell>
                                 {u.status === "lunas"
                                   ? <Badge variant="outline" className="border-emerald-400 text-emerald-700 bg-emerald-50">Lunas</Badge>
-                                  : <Badge variant="outline" className="border-orange-400 text-orange-700 bg-orange-50">Belum Lunas</Badge>}
+                                  : <Badge variant="outline" className="border-orange-400 text-orange-700 bg-orange-50">Belum lunas</Badge>}
                               </TableCell>
                             </TableRow>
                           ))}

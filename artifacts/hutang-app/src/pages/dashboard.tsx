@@ -237,15 +237,15 @@ export default function OwnerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-600">{formatRupiah(data.sisa_hutang)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Dari <span className="font-semibold">{data.jumlah_hutang_aktif}</span> hutang aktif
-            </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Dari <span className="font-semibold">{data.jumlah_hutang_aktif}</span> hutang yang belum lunas
+              </p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Dibayar</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Sudah Dibayar</CardTitle>
             <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center">
               <TrendingUp className="h-4 w-4 text-emerald-600" />
             </div>
@@ -260,7 +260,7 @@ export default function OwnerDashboard() {
 
         <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Hutang</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Hutang Tercatat</CardTitle>
             <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center">
               <Wallet className="h-4 w-4 text-blue-600" />
             </div>
@@ -273,14 +273,14 @@ export default function OwnerDashboard() {
 
         <Card className="border-l-4 border-l-primary shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pelanggan Berhutang</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pelanggan yang Masih Punya Hutang</CardTitle>
             <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
               <Users className="h-4 w-4 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">{data.jumlah_pelanggan_berhutang}</div>
-            <p className="text-xs text-muted-foreground mt-1">Pelanggan aktif</p>
+            <p className="text-xs text-muted-foreground mt-1">Masih punya sisa hutang</p>
           </CardContent>
         </Card>
       </div>
@@ -458,9 +458,9 @@ export default function OwnerDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-amber-600" />
-              Hutang Terbesar
+              Hutang Belum Lunas Terbesar
             </CardTitle>
-            <CardDescription>5 sisa hutang aktif terbesar</CardDescription>
+            <CardDescription>5 sisa hutang terbesar yang belum lunas</CardDescription>
           </CardHeader>
           <CardContent className="px-0 md:px-6">
             <div className="overflow-x-auto">
@@ -478,7 +478,7 @@ export default function OwnerDashboard() {
                       <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
                         <div className="flex flex-col items-center gap-1">
                           <Activity className="h-7 w-7 opacity-25 mb-1" />
-                          Tidak ada hutang aktif.
+                          Tidak ada hutang yang belum lunas.
                           <Link href="/hutang">
                             <Button variant="outline" size="sm" className="mt-2">Lihat Hutang</Button>
                           </Link>
@@ -498,7 +498,7 @@ export default function OwnerDashboard() {
                             className={h.status === "aktif"
                               ? "border-amber-300 bg-amber-50 text-amber-700"
                               : "border-emerald-300 bg-emerald-50 text-emerald-700"}>
-                            {h.status === "aktif" ? "Aktif" : "Lunas"}
+                            {h.status === "aktif" ? "Belum lunas" : "Lunas"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-semibold text-amber-600">

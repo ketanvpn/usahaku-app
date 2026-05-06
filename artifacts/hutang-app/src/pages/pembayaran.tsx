@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import {
   useGetPembayaranList, useDeletePembayaran, useGetPelangganList, useGetHutangList,
@@ -303,6 +303,11 @@ export default function PembayaranPage() {
     return hutangAktifList.filter(h => selectedHutangIds.has(h.id));
   }, [hutangAktifList, selectedHutangIds]);
 
+  const selectedPelanggan = useMemo(() => {
+    if (!formPelangganId || !pelangganList) return null;
+    return pelangganList.find((p) => p.id === formPelangganId) ?? null;
+  }, [formPelangganId, pelangganList]);
+
   const totalSisaDipilih = useMemo(() => {
     return hutangDipilih.reduce((sum, h) => sum + h.sisa_hutang, 0);
   }, [hutangDipilih]);
@@ -316,6 +321,17 @@ export default function PembayaranPage() {
     if (hutangDipilih.length === 0 || nominalAngka <= 0) return [];
     return hitungDistribusiFIFO(hutangDipilih, nominalAngka);
   }, [hutangDipilih, nominalAngka]);
+
+  useEffect(() => {
+    if (selectedHutangIds.size === 0) return;
+    if (totalSisaDipilih <= 0) {
+      setNominalTotal("");
+      return;
+    }
+    if (nominalAngka > totalSisaDipilih) {
+      setNominalTotal(totalSisaDipilih.toString());
+    }
+  }, [nominalAngka, selectedHutangIds.size, totalSisaDipilih]);
 
   const batchMutation = useMutation({
     mutationFn: async (body: { hutang_ids: number[]; tanggal_bayar: string; nominal_total: number; catatan?: string }) => {
@@ -428,7 +444,7 @@ export default function PembayaranPage() {
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-primary">Pembayaran</h2>
-          <p className="text-muted-foreground">Catat penerimaan pembayaran hutang.</p>
+          <p className="text-muted-foreground">Catat pembayaran hutang dari pelanggan.</p>
         </div>
         <Button onClick={handleOpenDialog} disabled={!lisensiAktif}>
           <Plus className="mr-2 h-4 w-4" />
@@ -461,12 +477,12 @@ export default function PembayaranPage() {
 
       {/* Dialog Terima Pembayaran */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent aria-describedby={undefined} className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent aria-describedby={undefined} className="max-w-lg w-full max-h-[90vh] !overflow-hidden !flex !flex-col">
           <DialogHeader>
             <DialogTitle>Terima Pembayaran</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-5 pt-1">
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-5 pt-1">
             {/* Step 1: Pilih Pelanggan */}
             <div className="space-y-2">
               <label className="text-sm font-semibold">1. Pilih Pelanggan</label>
@@ -480,27 +496,33 @@ export default function PembayaranPage() {
                 pelangganList={pelangganList}
                 placeholder="Cari atau pilih pelanggan..."
               />
+              {selectedPelanggan && (
+                <div className="rounded-md border bg-blue-50/60 px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">Pelanggan terpilih:</span>{" "}
+                  <span className="font-semibold text-foreground">{selectedPelanggan.nama}</span>
+                </div>
+              )}
             </div>
 
             {/* Step 2: Pilih Nota Hutang */}
             {formPelangganId && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold">2. Pilih Nota Hutang Aktif</label>
+                  <label className="text-sm font-semibold">2. Pilih Nota yang Akan Dibayar</label>
                   {hutangAktifList && hutangAktifList.length > 1 && (
                     <button
                       type="button"
                       onClick={handleSelectAll}
                       className="text-xs text-primary hover:underline"
                     >
-                      {isAllSelected ? "Batal Pilih Semua" : "Pilih Semua"}
+                      {isAllSelected ? "Batalkan semua pilihan" : "Pilih semua nota"}
                     </button>
                   )}
                 </div>
 
                 {!hutangAktifList || hutangAktifList.length === 0 ? (
                   <div className="text-sm text-muted-foreground py-3 text-center border rounded-md">
-                    Tidak ada hutang aktif
+                    Pelanggan ini belum punya nota aktif.
                   </div>
                 ) : (
                   <div className="border rounded-md divide-y max-h-[180px] overflow-y-auto">
@@ -539,7 +561,7 @@ export default function PembayaranPage() {
             {/* Step 3: Nominal Bayar */}
             {selectedHutangIds.size > 0 && (
               <div className="space-y-2">
-                <label className="text-sm font-semibold">3. Nominal Bayar (Rp)</label>
+                <label className="text-sm font-semibold">3. Nominal yang Dibayar (Rp)</label>
                 <Input
                   type="number"
                   min={1}
@@ -549,7 +571,7 @@ export default function PembayaranPage() {
                   placeholder="Masukkan jumlah yang dibayar..."
                 />
                 <p className="text-xs text-muted-foreground">
-                  Maksimal: {formatRupiah(totalSisaDipilih)} — boleh dikurangi, sistem akan otomatis distribusikan dari hutang terlama
+                  Maksimal: {formatRupiah(totalSisaDipilih)} — boleh dikurangi, sistem akan otomatis bayar dari nota terlama.
                 </p>
                 {nominalAngka > totalSisaDipilih + 0.01 && (
                   <p className="text-xs text-destructive font-medium">
@@ -595,7 +617,7 @@ export default function PembayaranPage() {
                       <div key={h.id} className="flex items-center gap-3 px-3 py-2 opacity-40">
                         <Clock className="h-4 w-4 shrink-0" />
                         <div className="flex-1 text-sm">{formatDate(h.tanggal_hutang)}{h.keterangan ? ` — ${h.keterangan}` : ""}</div>
-                        <Badge variant="outline" className="shrink-0 text-xs">Belum terkena</Badge>
+                  <Badge variant="outline" className="shrink-0 text-xs">Belum dibayar</Badge>
                       </div>
                     ))
                   }
@@ -622,17 +644,24 @@ export default function PembayaranPage() {
                     placeholder="Contoh: Transfer BCA, Tunai, dll."
                   />
                 </div>
-                <Button
-                  className="w-full"
-                  onClick={handleSubmit}
-                  disabled={!isFormValid || batchMutation.isPending}
-                >
-                  {batchMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Simpan Pembayaran
-                </Button>
-              </>
-            )}
+                  <p className="text-xs text-muted-foreground">
+                    Tekan tombol di bawah untuk menyimpan pembayaran.
+                  </p>
+                </>
+              )}
+
           </div>
+
+          <DialogFooter className="sticky bottom-0 z-10 -mx-6 px-6 pb-1 pt-3 border-t shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+            <Button
+              className="w-full sm:w-auto"
+              onClick={handleSubmit}
+              disabled={!isFormValid || batchMutation.isPending}
+            >
+              {batchMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Bayar Sekarang
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -656,7 +685,7 @@ export default function PembayaranPage() {
             </div>
           )}
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setBatchResult(null)}>Nanti Saja</Button>
+            <Button variant="outline" onClick={() => setBatchResult(null)}>Nanti dulu</Button>
             <Button
               onClick={() => {
                 if (batchResult) openKwitansiGabungan(batchResult);
@@ -674,16 +703,16 @@ export default function PembayaranPage() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Batal Pembayaran?</AlertDialogTitle>
+            <AlertDialogTitle>Batalkan Pembayaran?</AlertDialogTitle>
             <AlertDialogDescription>
-              Menghapus pembayaran ini akan mengembalikan sisa hutang ke nominal sebelumnya. Lanjutkan?
+              Pembayaran ini akan dihapus dan sisa hutang dikembalikan seperti semula. Lanjutkan?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Kembali</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               {deleteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-              Hapus & Batalkan
+              Batalkan Pembayaran
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -740,7 +769,7 @@ export default function PembayaranPage() {
                           <Button
                             variant="ghost" size="icon"
                             onClick={() => { setSelectedPembayaran(p); setIsDeleteDialogOpen(true); }}
-                            title="Hapus/Batal"
+                            title="Batalkan Pembayaran"
                             className="text-destructive"
                             disabled={!lisensiAktif}
                           >

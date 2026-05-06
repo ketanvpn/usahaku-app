@@ -8,12 +8,13 @@ Aturan pakai:
 - Tanggal pakai format `YYYY-MM-DD`.
 - Update bagian `Versi terbaru` setelah rilis sukses.
 
-Versi terbaru: `v1.0.68`
+Versi terbaru: `v1.0.76`
 
-Rilis berikutnya (siap dipublish): `v1.0.69`
+Rilis berikutnya (siap dipublish): `v1.0.77`
 
 | Versi | Tanggal | Status | Catatan Singkat |
 | --- | --- | --- | --- |
+| v1.0.76 | 2026-05-06 | Published | Penyempurnaan Gaji & Tenaga ↔ Piutang: pilih banyak hutang saat batch, dialog batch dibuat lebih stabil, dan rollback pembayaran lebih aman |
 | v1.0.68 | 2026-05-06 | Published | Sinkronisasi Gaji & Tenaga ↔ Piutang: link pekerja ke pelanggan, opsi potong hutang saat bayar upah (single/batch), dan backup/restore relasi baru |
 | v1.0.67 | 2026-05-05 | Published | Hotfix Kasir: daftar item keranjang tetap terlihat saat input pembayaran (area list distabilkan agar tidak tertekan) |
 | v1.0.66 | 2026-05-05 | Published | Fokus Kasir: shortcut keyboard, autofokus pencarian, validasi stok lebih jelas, dan tombol quick bayar (Pas/+nominal) |

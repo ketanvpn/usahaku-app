@@ -316,7 +316,7 @@ export default function KeuanganPage() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => handleExportCSV(items, filterBulan, filterTahun)} disabled={items.length === 0}>
-            <Download className="h-4 w-4 mr-2" /> Export CSV
+            <Download className="h-4 w-4 mr-2" /> Unduh CSV
           </Button>
           <Button variant="outline" size="sm" onClick={() => handlePrint(items, rekapPeriode, filterBulan, filterTahun, namaUsaha)} disabled={items.length === 0}>
             <Printer className="h-4 w-4 mr-2" /> Cetak
