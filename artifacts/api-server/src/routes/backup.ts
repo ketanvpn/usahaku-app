@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import express from "express";
-import { db, sqliteRaw, usahaTable, pelangganTable, hutangTable, pembayaranTable, keuanganTable, barangTable, transaksiStokTable, transaksiKasirTable, transaksiKasirItemTable, pekerjaTable, upahPekerjaTable, bayarUpahTable } from "@workspace/db";
+import { db, sqliteRaw, usahaTable, pelangganTable, hutangTable, pembayaranTable, keuanganTable, barangTable, transaksiStokTable, transaksiKasirTable, transaksiKasirItemTable, pekerjaTable, upahPekerjaTable, bayarUpahTable, pengaturanTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
@@ -33,6 +33,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   const pekerjaList         = await db.select().from(pekerjaTable).where(eq(pekerjaTable.usahaId, usahaId));
   const upahList            = await db.select().from(upahPekerjaTable).where(eq(upahPekerjaTable.usahaId, usahaId));
   const bayarUpahList       = await db.select().from(bayarUpahTable).where(eq(bayarUpahTable.usahaId, usahaId));
+  const pengaturanList      = await db.select().from(pengaturanTable).where(eq(pengaturanTable.usahaId, usahaId));
 
   // Ambil semua item kasir sekaligus
   const allKasirItems = transaksiKasirList.length > 0
@@ -43,7 +44,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   const transaksiKasirItemList = allKasirItems.flat();
 
   const backup = {
-    version: "1.7",
+    version: "1.8",
     exported_at: new Date().toISOString(),
     usaha_id: usahaId,
     usaha: {
@@ -180,6 +181,14 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       pembayaran_id: b.pembayaranId ?? null,
       catatan: b.catatan ?? null,
       created_at: b.createdAt.toISOString(),
+    })),
+    // v1.8: backup pengaturan (key-value per usaha). File logo TIDAK di-include
+    // karena server tidak punya akses ke userData/logos/. Setelah restore, user
+    // perlu upload ulang logo dari halaman Pengaturan.
+    pengaturan: pengaturanList.map((p) => ({
+      key: p.key,
+      value: p.value,
+      updated_at: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : new Date(p.updatedAt).toISOString(),
     })),
   };
 
@@ -424,6 +433,24 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
           backup.usaha.catatan   ?? null,
           usahaId
         );
+      }
+
+      // ── 13. Restore pengaturan (v1.8+) ────────────────────────────────────
+      // Backup lama (v1.7) tidak punya field ini — dilewati. Backup v1.8 akan
+      // mengganti semua pengaturan untuk usaha ini.
+      if (Array.isArray(backup.pengaturan)) {
+        sqliteRaw.prepare("DELETE FROM pengaturan WHERE usaha_id = ?").run(usahaId);
+        const stmtPengaturan = sqliteRaw.prepare(
+          "INSERT INTO pengaturan (usaha_id, key, value) VALUES (?, ?, ?)"
+        );
+        // Whitelist key di sini juga, mirroring routes/pengaturan.ts. Kalau backup
+        // dari versi yang lebih baru bawa key tambahan, kita simpan apa adanya
+        // (forward-compat). Hanya validasi tipe.
+        for (const p of backup.pengaturan) {
+          if (typeof p?.key !== "string" || p.key.length === 0 || p.key.length > 64) continue;
+          if (p.value !== null && typeof p.value !== "string") continue;
+          stmtPengaturan.run(usahaId, p.key, p.value ?? null);
+        }
       }
     });
 
