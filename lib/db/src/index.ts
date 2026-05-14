@@ -114,6 +114,18 @@ sqlite.exec(`
 `);
 
 sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS pengaturan (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usaha_id INTEGER NOT NULL REFERENCES usaha(id),
+    key TEXT NOT NULL,
+    value TEXT,
+    updated_at INTEGER NOT NULL DEFAULT (CAST((julianday('now') - 2440587.5)*86400000 AS INTEGER))
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS pengaturan_usaha_key
+    ON pengaturan (usaha_id, key);
+`);
+
+sqlite.exec(`
   CREATE TABLE IF NOT EXISTS barang (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     usaha_id INTEGER NOT NULL REFERENCES usaha(id),
