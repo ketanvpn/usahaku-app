@@ -52,4 +52,12 @@ contextBridge.exposeInMainWorld("electronApp", {
       return () => ipcRenderer.removeListener("gdrive:backupDone", handler);
     },
   },
+  pengaturan: {
+    saveLogo: (payload: { usahaId: number; data: string; ext: string }): Promise<{ success: boolean; filename?: string; message?: string }> =>
+      ipcRenderer.invoke("pengaturan:saveLogo", payload),
+    getLogoData: (usahaId: number, filename: string): Promise<string | null> =>
+      ipcRenderer.invoke("pengaturan:getLogoData", usahaId, filename),
+    deleteLogo: (usahaId: number): Promise<{ success: boolean; message?: string }> =>
+      ipcRenderer.invoke("pengaturan:deleteLogo", usahaId),
+  },
 });

@@ -43,6 +43,11 @@ declare global {
         restoreFromDrive: (fileId: string) => Promise<{ success: boolean; message?: string }>;
         onBackupDone: (cb: () => void) => () => void;
       };
+      pengaturan?: {
+        saveLogo: (payload: { usahaId: number; data: string; ext: string }) => Promise<{ success: boolean; filename?: string; message?: string }>;
+        getLogoData: (usahaId: number, filename: string) => Promise<string | null>;
+        deleteLogo: (usahaId: number) => Promise<{ success: boolean; message?: string }>;
+      };
     };
   }
 }
