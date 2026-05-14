@@ -25,6 +25,7 @@ import {
   ShieldOff,
   HardHat,
   HelpCircle,
+  Settings,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -272,6 +273,7 @@ export function Layout({ children }: { children: ReactNode }) {
     {
       label: "SISTEM",
       links: [
+        { href: "/pengaturan", label: "Pengaturan", icon: Settings },
         { href: "/backup", label: "Backup & Restore", icon: DatabaseBackup, badgeKey: "backup" },
         { href: "/lisensi", label: "Lisensi", icon: ShieldCheck, badgeKey: "lisensi" },
       ],
