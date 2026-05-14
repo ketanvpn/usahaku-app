@@ -310,16 +310,30 @@ Verifikasi:
 
 Tidak menyentuh DB / migrasi / endpoint baru. Restore backup lama tetap jalan.
 
-### Rilis 1.2.0 — Pengaturan minimal (🟢→🟡)
+### Rilis v1.0.83 — Pengaturan minimal (🟢→🟡)
 
-Status: ⏸ Menunggu 1.1.0 selesai & diobservasi
+Status: **✅ Selesai (siap dipublish)** — 2026-05-15 pagi
 
-- Tabel baru `pengaturan` (key-value)
-- Halaman `/pengaturan` dengan 2 tab: Usaha & Struk
-- Pindah field profil usaha (nama_usaha/alamat/telepon) ke Tab Usaha (form di Profil tetap atau di-redirect)
-- Logo upload via IPC ke `userData/logos/<usaha_id>.png`
-- Update format backup `.usahaku-bak` agar include logo (base64 embed di JSON backup)
-- Verifikasi tambahan: **uji restore backup 1.1.x di app 1.2.0** + uji restore backup 1.2.0 di app 1.2.0
+7 commit bertahap, semua self-contained, typecheck 0 error, test 30/30 pass:
+
+- [x] Commit 1 (`5afa373`): Tabel baru `pengaturan` (CREATE IF NOT EXISTS) + schema Drizzle
+- [x] Commit 2 (`b64911b`): API `/api/pengaturan` GET + PUT batch + whitelist key + 11 unit test baru
+- [x] Commit 3 (`27f59a9`): IPC `pengaturan:saveLogo`/`getLogoData`/`deleteLogo` di Electron main + preload + electron.d.ts
+- [x] Commit 4 (`a1c2430`): Hook `usePengaturan()` + halaman `/pengaturan` 2 tab (Data Usaha + Struk & Cetak) + entry sidebar grup SISTEM
+- [x] Commit 5 (`c25ba16`): Backup format 1.7 → 1.8 dengan field `pengaturan` (file logo tidak di-include karena server tidak akses userData; user upload ulang setelah restore antar mesin)
+- [x] Commit 6 (`f53c9f6`): Helper bersama `lib/struk.ts` + integrasi ke struk Kasir (logo, alamat, telepon, header, footer, ukuran kertas). Halaman lain (laporan/pembayaran/gaji-tenaga/keuangan) defer ke rilis berikut
+- [ ] Commit 7: Catatan rilis (file ini)
+
+Verifikasi lapangan yang masih perlu user lakukan:
+- [ ] Smoke test login owner → buka /pengaturan → upload logo → simpan struk → cetak transaksi kasir
+- [ ] Restore backup v1.7 lama di app v1.0.83 (pengaturan tetap kosong, app tidak crash)
+- [ ] Backup v1.0.83 → restore di v1.0.83 lain (pengaturan ikut dipulihkan, logo perlu upload ulang antar mesin)
+
+### Backlog v1.0.84+ (defer dari 1.2.0)
+
+- Migrasi struk halaman lain ke helper `lib/struk.ts` (laporan, pembayaran, gaji-tenaga, keuangan)
+- Logo embed di backup (butuh API server/IPC bridge untuk akses userData)
+- Bersih-bersih form usaha duplikat di profil.tsx (sekarang masih ada di 2 tempat)
 
 ### Rilis 1.3.0 — Master Supplier (🟢)
 

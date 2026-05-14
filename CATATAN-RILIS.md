@@ -14,6 +14,7 @@ Rilis berikutnya (siap dipublish): `v1.0.83`
 
 | Versi | Tanggal | Status | Catatan Singkat |
 | --- | --- | --- | --- |
+| v1.0.83 | 2026-05-15 | Siap dipublish | Halaman Pengaturan baru (tab Data Usaha + Struk & Cetak): upload logo (PNG/JPG, maks 1 MB), atur teks header/footer struk, ukuran kertas default (58/80mm/A4), toggle tampilkan logo. Struk Kasir otomatis mengikuti pengaturan (logo + alamat + telepon + footer kustom). Backup format naik ke v1.8 dengan include data pengaturan; backup lama tetap kompatibel saat di-restore |
 | v1.0.82 | 2026-05-14 | Published | Penataan ulang menu sidebar (grup baru: PIUTANG/PENJUALAN/KEUANGAN/SISTEM), label "Pekerja & Upah" + "Barang & Stok", Profil & Bantuan pindah ke footer sidebar, badge angka peringatan di sidebar (stok rendah, upah belum lunas, hutang lewat jatuh tempo), dan dialog Bantuan terintegrasi |
 | v1.0.79 | 2026-05-06 | Published | Penyempurnaan input nominal uang: format ribuan otomatis, prefix Rp, angka lebih mudah dibaca, dan tombol nominal cepat dibuat sebagai penambah nilai |
 | v1.0.76 | 2026-05-06 | Published | Penyempurnaan Gaji & Tenaga ↔ Piutang: pilih banyak hutang saat batch, dialog batch dibuat lebih stabil, dan rollback pembayaran lebih aman |
