@@ -12,6 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, Loader2, Receipt, Printer, Tag, History, PackageOpen } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
 import { useLicense } from "@/context/license-context";
+import { usePengaturan, type Pengaturan } from "@/hooks/use-pengaturan";
+import { useAuth } from "@/hooks/use-auth";
+import { getBodyWidth, getLogoMime, getPageCss, loadLogoBase64ForPrint } from "@/lib/struk";
 
 function escHtml(s: string | number): string {
   return String(s)
@@ -22,7 +25,19 @@ function escHtml(s: string | number): string {
     .replace(/'/g, "&#x27;");
 }
 
-function openPrintStruk(hasil: HasilTransaksi) {
+interface PrintStrukOptions {
+  pengaturan?: Pengaturan;
+  logoBase64?: string | null;
+  alamatUsaha?: string | null;
+  teleponUsaha?: string | null;
+}
+
+async function openPrintStruk(hasil: HasilTransaksi, opts: PrintStrukOptions = {}) {
+  const { pengaturan, logoBase64, alamatUsaha, teleponUsaha } = opts;
+  const ukuran = pengaturan?.struk_ukuran_kertas ?? "80mm";
+  const headerExtra = (pengaturan?.struk_header ?? "").trim();
+  const footerText = (pengaturan?.struk_footer ?? "Terima kasih atas kunjungan Anda").trim();
+
   const tgl = new Date(hasil.tanggal + "T00:00:00").toLocaleDateString("id-ID", {
     day: "numeric", month: "long", year: "numeric",
   });
@@ -34,21 +49,39 @@ function openPrintStruk(hasil: HasilTransaksi) {
     ? `<tr><td colspan="3">Diskon</td><td class="right">-${fmt(hasil.diskon)}</td></tr>`
     : "";
 
+  // Header logo (kalau ada). Tag <img> dengan max-height konsisten antar ukuran.
+  const logoTag = logoBase64
+    ? `<img src="data:${getLogoMime(pengaturan?.logo_filename)};base64,${logoBase64}" style="max-height:50px;max-width:100%;display:block;margin:0 auto 4px" alt="Logo"/>`
+    : "";
+  const alamatLine = alamatUsaha
+    ? `<div class="center" style="font-size:9pt">${escHtml(alamatUsaha)}</div>`
+    : "";
+  const teleponLine = teleponUsaha
+    ? `<div class="center" style="font-size:9pt">Telp: ${escHtml(teleponUsaha)}</div>`
+    : "";
+  const headerExtraLine = headerExtra
+    ? `<div class="center" style="font-size:9pt;margin-top:2px">${escHtml(headerExtra)}</div>`
+    : "";
+
   const html = `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
 <style>
-@page{size:80mm auto;margin:4mm 4mm}
+${getPageCss(ukuran)}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:monospace;font-size:11pt;color:#000;width:72mm}
+body{font-family:monospace;font-size:11pt;color:#000;width:${getBodyWidth(ukuran)}}
 .center{text-align:center}.right{text-align:right}
 .bold{font-weight:bold}.sep{border-top:1px dashed #000;margin:4px 0}
 table{width:100%;border-collapse:collapse}
 td{padding:1px 2px;font-size:10pt}
 .total td{font-weight:bold;font-size:11pt;border-top:1px solid #000;padding-top:3px}
+img{display:block}
 </style>
 <script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);})<\/script>
 </head><body>
+${logoTag}
 <div class="center bold" style="font-size:13pt">${escHtml(hasil.nama_usaha || "Usahaku")}</div>
-<div class="center" style="font-size:9pt;margin-bottom:4px">by KetanTech</div>
+${alamatLine}
+${teleponLine}
+${headerExtraLine}
 <div class="sep"></div>
 <div style="font-size:9pt">Tanggal : ${escHtml(tgl)}</div>
 <div style="font-size:9pt">No      : #${escHtml(String(hasil.id).padStart(4,"0"))}</div>
@@ -65,11 +98,11 @@ ${hasil.diskon > 0 ? `<tr><td>Subtotal</td><td class="right" colspan="3">${fmt(h
 <tr><td>Kembali</td><td class="right" colspan="3">${fmt(hasil.kembalian)}</td></tr>
 </table>
 <div class="sep"></div>
-<div class="center" style="font-size:9pt;margin-top:4px">Terima kasih!</div>
+<div class="center" style="font-size:9pt;margin-top:4px">${escHtml(footerText)}</div>
 </body></html>`;
 
   if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
-    window.electronApp.openInBrowser(html);
+    await window.electronApp.openInBrowser(html);
   } else {
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -127,6 +160,39 @@ export default function KasirPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { lisensiAktif } = useLicense();
+  const { user } = useAuth();
+  const usahaId = user?.usaha_id ?? null;
+
+  // Ambil pengaturan struk + data usaha untuk dipakai di header struk.
+  const { data: pengaturan } = usePengaturan();
+  const { data: usahaData } = useQuery({
+    queryKey: ["usaha-mine", usahaId],
+    enabled: !!usahaId,
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/usaha/${usahaId}`, { credentials: "include" });
+      if (!r.ok) return null;
+      return r.json() as Promise<{
+        id: number;
+        nama_usaha: string;
+        telepon: string | null;
+        alamat: string | null;
+      }>;
+    },
+  });
+
+  // Wrapper async: load logo dari Electron, lalu call openPrintStruk dengan opsi.
+  const handlePrintStruk = async (h: HasilTransaksi) => {
+    let logoBase64: string | null = null;
+    if (usahaId) {
+      logoBase64 = await loadLogoBase64ForPrint(usahaId, pengaturan);
+    }
+    await openPrintStruk(h, {
+      pengaturan,
+      logoBase64,
+      alamatUsaha: usahaData?.alamat ?? null,
+      teleponUsaha: usahaData?.telepon ?? null,
+    });
+  };
 
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -811,7 +877,7 @@ export default function KasirPage() {
                 <Button
                   variant="outline"
                   className="flex-1"
-                  onClick={() => openPrintStruk(hasil)}
+                  onClick={() => handlePrintStruk(hasil)}
                 >
                   <Printer className="h-4 w-4 mr-2" />
                   Cetak Struk
