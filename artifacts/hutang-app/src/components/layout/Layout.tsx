@@ -1,14 +1,15 @@
 import { ReactNode, useState, useEffect, useMemo } from "react";
 import { LicenseContext } from "@/context/license-context";
 import { UpdateBanner } from "./UpdateBanner";
+import { HelpDialog } from "./HelpDialog";
 import { Link, useLocation } from "wouter";
-import { 
-  LayoutDashboard, 
-  Users, 
-  WalletCards, 
-  CreditCard, 
-  FileText, 
-  DatabaseBackup, 
+import {
+  LayoutDashboard,
+  Users,
+  WalletCards,
+  CreditCard,
+  FileText,
+  DatabaseBackup,
   UserCircle,
   Building2,
   LogOut,
@@ -22,7 +23,8 @@ import {
   X,
   ShieldAlert,
   ShieldOff,
-  HardHat
+  HardHat,
+  HelpCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -37,17 +39,41 @@ interface LicenseStatus {
   expires_at: string | null;
   jam_dimanipulasi?: boolean;
 }
+
+interface BarangPeringatanItem {
+  id: number;
+  stok: number;
+  stok_minimum: number;
+}
+
+interface UpahItem {
+  id: number;
+  status: "lunas" | "belum_lunas";
+}
+
+interface HutangItem {
+  id: number;
+  status: string;
+  tanggal_jatuh_tempo: string | null;
+  sisa_hutang: number;
+}
+
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-type NavLink = { href: string; label: string; icon: React.ElementType };
+type NavLink = {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  badgeKey?: "stok" | "upah" | "hutang_tempo" | "backup" | "lisensi";
+};
 type NavGroup = { label: string; links: NavLink[] };
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { isSuperAdmin, logout } = useAuth();
+  const { isSuperAdmin, logout, user } = useAuth();
   const [location] = useLocation();
   const logoutMutation = useLogout();
   const qc = useQueryClient();
@@ -57,6 +83,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const [backupReminderDismissed, setBackupReminderDismissed] = useState(false);
   const [daysWithoutBackup, setDaysWithoutBackup] = useState<number | null>(null);
   const [recheckingLisensi, setRecheckingLisensi] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const { data: licenseStatus } = useQuery<LicenseStatus>({
     queryKey: ["lisensi-status"],
@@ -70,6 +97,61 @@ export function Layout({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: true,
     refetchInterval: 60 * 1000,
   });
+
+  // ── D1: Badge data sources ────────────────────────────────────────────────
+  // Lisensi mati / jam dimanipulasi → tidak perlu fetch badge data, hemat request
+  const lisensiOK = isSuperAdmin || (
+    (licenseStatus?.aktif ?? true) && !(licenseStatus?.jam_dimanipulasi ?? false)
+  );
+  const enableBadges = !isSuperAdmin && lisensiOK;
+
+  const { data: barangPeringatan } = useQuery<BarangPeringatanItem[]>({
+    queryKey: ["badge-barang-peringatan"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/barang/peringatan`, { credentials: "include" });
+      if (!r.ok) return [];
+      return r.json();
+    },
+    enabled: enableBadges,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: upahBelumLunas } = useQuery<UpahItem[]>({
+    queryKey: ["badge-upah-belum-lunas"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/upah?status=belum_lunas`, { credentials: "include" });
+      if (!r.ok) return [];
+      return r.json();
+    },
+    enabled: enableBadges,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: hutangAktif } = useQuery<HutangItem[]>({
+    queryKey: ["badge-hutang-aktif"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/hutang?status=aktif`, { credentials: "include" });
+      if (!r.ok) return [];
+      return r.json();
+    },
+    enabled: enableBadges,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  // Hitung hutang yang sudah lewat jatuh tempo (hari ini > tanggal_jatuh_tempo)
+  const hutangJatuhTempo = useMemo(() => {
+    if (!hutangAktif) return 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return hutangAktif.filter((h) => {
+      if (!h.tanggal_jatuh_tempo) return false;
+      const due = new Date(`${h.tanggal_jatuh_tempo}T00:00:00`);
+      return due.getTime() < today.getTime() && (h.sisa_hutang ?? 0) > 0;
+    }).length;
+  }, [hutangAktif]);
 
   const handleRecheckLisensi = async () => {
     setRecheckingLisensi(true);
@@ -150,6 +232,8 @@ export function Layout({ children }: { children: ReactNode }) {
     logoutMutation.mutate(undefined, { onSuccess: () => logout() });
   };
 
+  // ── A1 Opsi 1: Restruktur grup sidebar owner ──────────────────────────────
+  // ── A2: Rename "Gaji & Tenaga" → "Pekerja & Upah", "Stok Barang" → "Barang & Stok"
   const ownerGroups: NavGroup[] = [
     {
       label: "UTAMA",
@@ -161,17 +245,22 @@ export function Layout({ children }: { children: ReactNode }) {
       label: "PIUTANG",
       links: [
         { href: "/pelanggan", label: "Pelanggan", icon: Users },
-        { href: "/hutang", label: "Hutang", icon: WalletCards },
+        { href: "/hutang", label: "Hutang", icon: WalletCards, badgeKey: "hutang_tempo" },
         { href: "/pembayaran", label: "Pembayaran", icon: CreditCard },
       ],
     },
     {
-      label: "BISNIS",
+      label: "PENJUALAN",
       links: [
         { href: "/kasir", label: "Kasir", icon: ShoppingBag },
-        { href: "/stok", label: "Stok Barang", icon: Package },
+        { href: "/stok", label: "Barang & Stok", icon: Package, badgeKey: "stok" },
+      ],
+    },
+    {
+      label: "KEUANGAN",
+      links: [
         { href: "/keuangan", label: "Keuangan", icon: BookOpen },
-        { href: "/gaji-tenaga", label: "Gaji & Tenaga", icon: HardHat },
+        { href: "/gaji-tenaga", label: "Pekerja & Upah", icon: HardHat, badgeKey: "upah" },
       ],
     },
     {
@@ -183,9 +272,8 @@ export function Layout({ children }: { children: ReactNode }) {
     {
       label: "SISTEM",
       links: [
-        { href: "/backup", label: "Backup & Restore", icon: DatabaseBackup },
-        { href: "/lisensi", label: "Lisensi", icon: ShieldCheck },
-        { href: "/profil", label: "Profil", icon: UserCircle },
+        { href: "/backup", label: "Backup & Restore", icon: DatabaseBackup, badgeKey: "backup" },
+        { href: "/lisensi", label: "Lisensi", icon: ShieldCheck, badgeKey: "lisensi" },
       ],
     },
   ];
@@ -195,7 +283,6 @@ export function Layout({ children }: { children: ReactNode }) {
     { href: "/admin/usaha", label: "Daftar Usaha", icon: Building2 },
     { href: "/admin/owners", label: "Kelola Owner", icon: Users },
     { href: "/admin/lisensi", label: "Lisensi Key", icon: KeyRound },
-    { href: "/profil", label: "Profil", icon: UserCircle },
   ];
 
   const renderLink = (link: NavLink) => {
@@ -203,17 +290,37 @@ export function Layout({ children }: { children: ReactNode }) {
     const Icon = link.icon;
 
     let badge: { text: string; className: string } | null = null;
-    if (!isSuperAdmin && link.href === "/backup" && daysWithoutBackup !== null) {
+
+    if (!isSuperAdmin && link.badgeKey === "backup" && daysWithoutBackup !== null) {
       badge = daysWithoutBackup >= 7
         ? { text: "Perlu", className: "bg-amber-100 text-amber-700" }
         : { text: "Aman", className: "bg-emerald-100 text-emerald-700" };
     }
-    if (!isSuperAdmin && link.href === "/lisensi" && licenseStatus) {
+    if (!isSuperAdmin && link.badgeKey === "lisensi" && licenseStatus) {
       if (!licenseStatus.aktif || licenseStatus.jam_dimanipulasi) {
         badge = { text: "Mati", className: "bg-red-100 text-red-700" };
       } else if ((licenseStatus.sisa_hari ?? 0) <= 7) {
         badge = { text: `${licenseStatus.sisa_hari}h`, className: "bg-orange-100 text-orange-700" };
       }
+    }
+    // ── D1: Badge angka untuk stok rendah, upah belum lunas, hutang jatuh tempo
+    if (link.badgeKey === "stok" && (barangPeringatan?.length ?? 0) > 0) {
+      badge = {
+        text: String(barangPeringatan!.length),
+        className: "bg-amber-100 text-amber-700",
+      };
+    }
+    if (link.badgeKey === "upah" && (upahBelumLunas?.length ?? 0) > 0) {
+      badge = {
+        text: String(upahBelumLunas!.length),
+        className: "bg-orange-100 text-orange-700",
+      };
+    }
+    if (link.badgeKey === "hutang_tempo" && hutangJatuhTempo > 0) {
+      badge = {
+        text: String(hutangJatuhTempo),
+        className: "bg-red-100 text-red-700",
+      };
     }
 
     return (
@@ -236,6 +343,62 @@ export function Layout({ children }: { children: ReactNode }) {
     );
   };
 
+  // ── A3: Profil di footer sidebar ──────────────────────────────────────────
+  const FooterArea = () => (
+    <div className="border-t mx-3 pt-3 mt-2 space-y-1">
+      {/* E: Tombol Bantuan */}
+      <button
+        onClick={() => setHelpOpen(true)}
+        className="flex w-full items-center gap-3 px-3 py-2 rounded-md transition-colors text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+      >
+        <HelpCircle className="h-5 w-5" />
+        <span>Bantuan</span>
+      </button>
+
+      {/* A3: Profil pindah ke footer */}
+      <Link href="/profil">
+        <div className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer ${
+          location === "/profil"
+            ? "bg-primary text-primary-foreground font-medium"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        }`}>
+          <UserCircle className="h-5 w-5" />
+          <span className="flex-1 truncate">{user?.nama ?? "Profil"}</span>
+        </div>
+      </Link>
+
+      {window.electronApp && (
+        <div className="px-3 py-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-muted-foreground">
+              Versi {appVersion ?? "..."}
+            </span>
+          </div>
+          <button
+            onClick={handleCheckUpdate}
+            disabled={checking}
+            className="flex w-full items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
+            <span>{checking ? "Memeriksa..." : "Cek Pembaruan"}</span>
+          </button>
+          {checkResult && (
+            <p className="text-xs text-muted-foreground/70 mt-1 pl-5">{checkResult}</p>
+          )}
+        </div>
+      )}
+
+      <button
+        onClick={handleLogout}
+        disabled={logoutMutation.isPending}
+        className="flex w-full items-center gap-3 px-3 py-2 rounded-md transition-colors text-destructive hover:bg-destructive/10 cursor-pointer"
+      >
+        <LogOut className="h-5 w-5" />
+        <span>Keluar</span>
+      </button>
+    </div>
+  );
+
   const NavLinks = () => (
     <div className="py-3 space-y-1">
       {isSuperAdmin ? (
@@ -252,36 +415,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         ))
       )}
-      <div className="pt-3 mt-2 border-t mx-3 space-y-1">
-        {window.electronApp && (
-          <div className="px-3 py-2">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-muted-foreground">
-                Versi {appVersion ?? "..."}
-              </span>
-            </div>
-            <button
-              onClick={handleCheckUpdate}
-              disabled={checking}
-              className="flex w-full items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
-              <span>{checking ? "Memeriksa..." : "Cek Pembaruan"}</span>
-            </button>
-            {checkResult && (
-              <p className="text-xs text-muted-foreground/70 mt-1 pl-5">{checkResult}</p>
-            )}
-          </div>
-        )}
-        <button
-          onClick={handleLogout}
-          disabled={logoutMutation.isPending}
-          className="flex w-full items-center gap-3 px-3 py-2 rounded-md transition-colors text-destructive hover:bg-destructive/10 cursor-pointer"
-        >
-          <LogOut className="h-5 w-5" />
-          <span>Keluar</span>
-        </button>
-      </div>
+      <FooterArea />
     </div>
   );
 
@@ -399,6 +533,9 @@ export function Layout({ children }: { children: ReactNode }) {
           </LicenseContext.Provider>
         </div>
       </main>
+
+      {/* E: Help dialog */}
+      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
     </div>
   );
 }
