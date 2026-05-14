@@ -8,8 +8,12 @@ import fs from "fs";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { resolveSecret } from "./lib/security-secrets";
+import { enforcePasswordChange } from "./middlewares/auth";
 
 const app: Express = express();
+
+// Sembunyikan header "X-Powered-By: Express" — info disclosure ringan.
+app.disable("x-powered-by");
 
 app.use(
   pinoHttp({
@@ -63,8 +67,10 @@ const corsOptions: CorsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true }));
+// Body limit default 1 MB untuk semua endpoint. Endpoint khusus (mis. restore JSON
+// yang bisa berukuran besar) memasang limit 50 MB sendiri di route-nya.
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cookieParser());
 
 const sessionSecret = resolveSecret({
@@ -92,6 +98,11 @@ app.use("/api", (_req, res, next) => {
   res.set("Cache-Control", "no-store");
   next();
 });
+
+// Enforce ganti password default sebelum mengakses endpoint bisnis.
+// Allowlist (auth/me, change-password, logout, healthz) di middleware itu sendiri.
+app.use(enforcePasswordChange);
+
 app.use("/api", router);
 
 if (process.env.SERVE_STATIC === "true") {

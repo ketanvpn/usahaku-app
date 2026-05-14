@@ -2,6 +2,19 @@ import bcrypt from "bcrypt";
 import { db, usahaTable, usersTable, pelangganTable, hutangTable, pembayaranTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
+// Seeder ini menanam akun developer (admin/admin123, owner1/owner123) untuk
+// memudahkan testing lokal. JANGAN dijalankan di lingkungan production —
+// password lemah dan tidak dipaksa rotasi. Untuk seed Super Admin di
+// production gunakan path API server (`artifacts/api-server/src/seed.ts`)
+// yang memakai mustChangePassword=true.
+if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEV_SEED !== "true") {
+  console.error(
+    "[seed] Dilarang menjalankan dev-seed di production. " +
+    "Set ALLOW_DEV_SEED=true secara eksplisit jika benar-benar dibutuhkan."
+  );
+  process.exit(1);
+}
+
 async function seed() {
   console.log("Seeding database...");
 

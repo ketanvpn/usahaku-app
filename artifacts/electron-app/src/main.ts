@@ -328,23 +328,35 @@ function startBackend(): void {
 
   backendProcess.on("exit", (code: number) => {
     writeLog(`[backend] Exited with code ${code}`);
+    // Catat detail stderr ke log file saja — JANGAN tampilkan ke user supaya
+    // path absolut, env, dan stack trace tidak bocor di screenshot dialog.
+    if (backendStderrBuffer.trim()) {
+      writeLog(`[backend:exit-detail]\n${backendStderrBuffer.slice(-2000)}`);
+    }
     backendProcess = null;
 
     if (!isQuitting && !isRestoring && mainWindow && !mainWindow.isDestroyed()) {
-      const errorDetail = backendStderrBuffer.trim()
-        ? `\n\nDetail error:\n${backendStderrBuffer.slice(-1000)}`
-        : "";
-      const logInfo = logFilePath ? `\n\nLog tersimpan di:\n${logFilePath}` : "";
+      const logInfo = logFilePath ? `\n\nDetail teknis tersimpan di:\n${logFilePath}` : "";
+      const buttons = logFilePath ? ["Tutup Aplikasi", "Buka File Log"] : ["Tutup Aplikasi"];
 
       dialog
         .showMessageBox(mainWindow, {
           type: "error",
           title: "Layanan Aplikasi Berhenti",
-          message: `Server berhenti tidak terduga (kode: ${code}).\n\nAplikasi perlu ditutup dan dibuka kembali.${errorDetail}${logInfo}`,
-          buttons: ["Tutup Aplikasi"],
+          message:
+            `Server berhenti tidak terduga (kode: ${code}).\n\n` +
+            `Aplikasi perlu ditutup dan dibuka kembali. Jika masalah berulang, ` +
+            `kirim isi file log di bawah ke pengembang.${logInfo}`,
+          buttons,
           defaultId: 0,
+          cancelId: 0,
         })
-        .then(() => app.quit());
+        .then((result) => {
+          if (result.response === 1 && logFilePath) {
+            shell.openPath(logFilePath).catch((e) => writeLog(`[dialog] gagal buka log: ${e}`));
+          }
+          app.quit();
+        });
     }
   });
 }
@@ -605,15 +617,15 @@ app.whenReady().then(async () => {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     writeLog("FATAL: " + message);
+    if (backendStderrBuffer.trim()) {
+      writeLog(`[startup-failure-stderr]\n${backendStderrBuffer.slice(-2000)}`);
+    }
 
-    const stderrDetail = backendStderrBuffer.trim()
-      ? `\n\nOutput error backend:\n${backendStderrBuffer.slice(-800)}`
-      : "";
-    const logInfo = logFilePath ? `\n\nLog: ${logFilePath}` : "";
+    const logInfo = logFilePath ? `\n\nDetail teknis tersimpan di:\n${logFilePath}` : "";
 
     dialog.showErrorBox(
       "Gagal Memulai Usahaku",
-      `${message}${stderrDetail}${logInfo}`
+      `${message}${logInfo}`,
     );
     app.quit();
   }

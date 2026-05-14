@@ -292,7 +292,7 @@ router.post("/pekerja/:id/bayar-batch", requireAuth, requireLicense, async (req,
     }
   }
 
-  type Distribusi = { upah: typeof upahPekerjaTable.$inferSelect; alokasi: number; statusBaru: string };
+  type Distribusi = { upah: typeof upahPekerjaTable.$inferSelect; alokasi: number; statusBaru: "lunas" | "belum_lunas" };
   const distribusi: Distribusi[] = [];
   let sisa = jumlahBayar;
 

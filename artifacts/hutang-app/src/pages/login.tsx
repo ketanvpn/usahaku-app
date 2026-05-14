@@ -66,12 +66,11 @@ export default function LoginPage() {
   }, [authLoading, isAuthenticated, user, setLocation]);
 
   useEffect(() => {
-    if (showReset) {
-      const timer = setTimeout(() => {
-        resetUsernameRef.current?.focus();
-      }, 50);
-      return () => clearTimeout(timer);
-    }
+    if (!showReset) return undefined;
+    const timer = setTimeout(() => {
+      resetUsernameRef.current?.focus();
+    }, 50);
+    return () => clearTimeout(timer);
   }, [showReset]);
 
   if (authLoading) {

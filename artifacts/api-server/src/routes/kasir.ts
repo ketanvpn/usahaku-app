@@ -9,15 +9,15 @@ const router: IRouter = Router();
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 
 const KasirItemSchema = z.object({
-  barang_id: z.coerce.number({ error: "barang_id harus berupa angka" }).int().positive("barang_id tidak valid"),
-  jumlah: z.coerce.number({ error: "Jumlah harus berupa angka" }).positive("Jumlah harus lebih dari 0"),
-  harga_satuan: z.coerce.number({ error: "Harga satuan harus berupa angka" }).min(0).optional(),
+  barang_id: z.coerce.number({ invalid_type_error: "barang_id harus berupa angka" }).int().positive("barang_id tidak valid"),
+  jumlah: z.coerce.number({ invalid_type_error: "Jumlah harus berupa angka" }).positive("Jumlah harus lebih dari 0"),
+  harga_satuan: z.coerce.number({ invalid_type_error: "Harga satuan harus berupa angka" }).min(0).optional(),
 });
 
 const KasirTransaksiSchema = z.object({
   tanggal: z.string().min(1, "Tanggal wajib diisi").regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal tidak valid (YYYY-MM-DD)"),
-  uang_bayar: z.coerce.number({ error: "Uang bayar harus berupa angka" }).positive("Uang bayar harus lebih dari 0"),
-  diskon: z.coerce.number({ error: "Diskon harus berupa angka" }).min(0).default(0),
+  uang_bayar: z.coerce.number({ invalid_type_error: "Uang bayar harus berupa angka" }).positive("Uang bayar harus lebih dari 0"),
+  diskon: z.coerce.number({ invalid_type_error: "Diskon harus berupa angka" }).min(0).default(0),
   catatan: z.string().trim().optional(),
   items: z.array(KasirItemSchema).min(1, "Minimal 1 item harus dimasukkan"),
 });
@@ -197,7 +197,8 @@ router.delete("/kasir/transaksi/:id", requireAuth, requireLicense, async (req, r
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const id = parseInt(req.params.id);
+  const idParam = typeof req.params.id === "string" ? req.params.id : "";
+  const id = parseInt(idParam, 10);
   if (isNaN(id)) { res.status(400).json({ error: "ID tidak valid" }); return; }
 
   // Pastikan transaksi milik usaha ini

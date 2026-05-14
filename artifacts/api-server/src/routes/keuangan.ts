@@ -10,10 +10,10 @@ const router: IRouter = Router();
 
 const KeuanganBodySchema = z.object({
   tanggal: z.string().min(1, "Tanggal wajib diisi").regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal tidak valid (YYYY-MM-DD)"),
-  tipe: z.enum(["masuk", "keluar"], { error: "Tipe harus 'masuk' atau 'keluar'" }),
+  tipe: z.enum(["masuk", "keluar"], { invalid_type_error: "Tipe harus 'masuk' atau 'keluar'", required_error: "Tipe wajib diisi" }),
   kategori: z.string().trim().optional(),
   keterangan: z.string().min(1, "Keterangan wajib diisi").trim(),
-  jumlah: z.coerce.number({ error: "Jumlah harus berupa angka" }).positive("Jumlah harus lebih dari 0"),
+  jumlah: z.coerce.number({ invalid_type_error: "Jumlah harus berupa angka" }).positive("Jumlah harus lebih dari 0"),
 });
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -175,7 +175,8 @@ router.put("/keuangan/:id", requireAuth, requireLicense, async (req, res): Promi
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const id = parseInt(req.params.id);
+  const idParam = typeof req.params.id === "string" ? req.params.id : "";
+  const id = parseInt(idParam, 10);
   if (isNaN(id)) { res.status(400).json({ error: "ID tidak valid" }); return; }
 
   const [existing] = await db.select().from(keuanganTable)
@@ -206,7 +207,8 @@ router.delete("/keuangan/:id", requireAuth, requireLicense, async (req, res): Pr
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const id = parseInt(req.params.id);
+  const idParam = typeof req.params.id === "string" ? req.params.id : "";
+  const id = parseInt(idParam, 10);
   if (isNaN(id)) { res.status(400).json({ error: "ID tidak valid" }); return; }
 
   const [existing] = await db.select().from(keuanganTable)

@@ -12,20 +12,20 @@ const BarangBodySchema = z.object({
   nama: z.string().min(1, "Nama barang wajib diisi").trim(),
   satuan: z.string().min(1, "Satuan wajib diisi").trim(),
   kategori: z.string().trim().optional(),
-  harga_beli: z.coerce.number({ error: "Harga beli harus berupa angka" }).min(0, "Harga beli tidak boleh negatif").default(0),
-  harga_jual: z.coerce.number({ error: "Harga jual harus berupa angka" }).min(0, "Harga jual tidak boleh negatif").default(0),
-  stok_minimum: z.coerce.number({ error: "Stok minimum harus berupa angka" }).min(0, "Stok minimum tidak boleh negatif").default(0),
+  harga_beli: z.coerce.number({ invalid_type_error: "Harga beli harus berupa angka" }).min(0, "Harga beli tidak boleh negatif").default(0),
+  harga_jual: z.coerce.number({ invalid_type_error: "Harga jual harus berupa angka" }).min(0, "Harga jual tidak boleh negatif").default(0),
+  stok_minimum: z.coerce.number({ invalid_type_error: "Stok minimum harus berupa angka" }).min(0, "Stok minimum tidak boleh negatif").default(0),
 });
 
 const BarangCreateSchema = BarangBodySchema.extend({
-  stok_awal: z.coerce.number({ error: "Stok awal harus berupa angka" }).min(0, "Stok awal tidak boleh negatif").default(0),
+  stok_awal: z.coerce.number({ invalid_type_error: "Stok awal harus berupa angka" }).min(0, "Stok awal tidak boleh negatif").default(0),
 });
 
 const StokMasukSchema = z.object({
-  barang_id: z.coerce.number({ error: "barang_id harus berupa angka" }).int().positive("barang_id tidak valid"),
+  barang_id: z.coerce.number({ invalid_type_error: "barang_id harus berupa angka" }).int().positive("barang_id tidak valid"),
   tanggal: z.string().min(1, "Tanggal wajib diisi").regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal tidak valid (YYYY-MM-DD)"),
-  jumlah: z.coerce.number({ error: "Jumlah harus berupa angka" }).positive("Jumlah harus lebih dari 0"),
-  harga_satuan: z.coerce.number({ error: "Harga satuan harus berupa angka" }).min(0).optional(),
+  jumlah: z.coerce.number({ invalid_type_error: "Jumlah harus berupa angka" }).positive("Jumlah harus lebih dari 0"),
+  harga_satuan: z.coerce.number({ invalid_type_error: "Harga satuan harus berupa angka" }).min(0).optional(),
   keterangan: z.string().trim().optional(),
 });
 
@@ -126,7 +126,8 @@ router.put("/barang/:id", requireAuth, requireLicense, async (req, res): Promise
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const id = parseInt(req.params.id);
+  const idParam = typeof req.params.id === "string" ? req.params.id : "";
+  const id = parseInt(idParam, 10);
   if (isNaN(id)) { res.status(400).json({ error: "ID tidak valid" }); return; }
 
   const [existing] = await db.select().from(barangTable)
@@ -158,7 +159,8 @@ router.delete("/barang/:id", requireAuth, requireLicense, async (req, res): Prom
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const id = parseInt(req.params.id);
+  const idParam = typeof req.params.id === "string" ? req.params.id : "";
+  const id = parseInt(idParam, 10);
   if (isNaN(id)) { res.status(400).json({ error: "ID tidak valid" }); return; }
 
   const [existing] = await db.select().from(barangTable)
@@ -325,7 +327,8 @@ router.delete("/stok/transaksi/:id", requireAuth, requireLicense, async (req, re
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const id = parseInt(req.params.id);
+  const idParam = typeof req.params.id === "string" ? req.params.id : "";
+  const id = parseInt(idParam, 10);
   if (isNaN(id)) { res.status(400).json({ error: "ID tidak valid" }); return; }
 
   const [transaksi] = await db.select().from(transaksiStokTable)

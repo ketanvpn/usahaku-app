@@ -227,10 +227,16 @@ export default function GajiTenagaPage() {
   const { data: pekerjaList, isLoading: loadingPekerja } = useGetPekerjaList();
   const { data: pelangganList = [] } = useGetPelangganList();
   const { data: upahDetail, isLoading: loadingDetail } = useGetUpah(selectedUpahId ?? 0, {
-    query: { enabled: !!selectedUpahId },
+    query: {
+      enabled: !!selectedUpahId,
+      queryKey: getGetUpahQueryKey(selectedUpahId ?? 0),
+    },
   });
   const { data: batchPelangganDetail } = useGetPelanggan(batchPekerja?.pelanggan_id ?? 0, {
-    query: { enabled: !!batchPekerja?.pelanggan_id },
+    query: {
+      enabled: !!batchPekerja?.pelanggan_id,
+      queryKey: getGetPelangganQueryKey(batchPekerja?.pelanggan_id ?? 0),
+    },
   });
   const selectedUpahPekerja = useMemo(
     () => pekerjaList?.find((p) => p.id === upahDetail?.pekerja_id) ?? null,
@@ -238,7 +244,10 @@ export default function GajiTenagaPage() {
   );
   const linkedPelangganId = selectedUpahPekerja?.pelanggan_id ?? null;
   const { data: linkedPelangganDetail } = useGetPelanggan(linkedPelangganId ?? 0, {
-    query: { enabled: !!linkedPelangganId },
+    query: {
+      enabled: !!linkedPelangganId,
+      queryKey: getGetPelangganQueryKey(linkedPelangganId ?? 0),
+    },
   });
   const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, {
     query: { enabled: !!user?.usaha_id, queryKey: getGetUsahaQueryKey(user?.usaha_id ?? 0) },

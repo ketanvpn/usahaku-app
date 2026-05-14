@@ -57,7 +57,8 @@ router.get("/lisensi", requireSuperAdmin, async (_req, res): Promise<void> => {
 });
 
 router.delete("/lisensi/:id", requireSuperAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const idParam = typeof req.params.id === "string" ? req.params.id : "";
+  const id = parseInt(idParam, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "ID tidak valid." });
     return;

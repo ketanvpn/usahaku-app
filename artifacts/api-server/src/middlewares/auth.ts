@@ -1,5 +1,5 @@
 import { type Request, type Response, type NextFunction } from "express";
-import { db, usahaTable } from "@workspace/db";
+import { db, usahaTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 declare module "express-session" {
@@ -8,6 +8,52 @@ declare module "express-session" {
     role: "super_admin" | "owner";
     usahaId: number | null;
   }
+}
+
+// Endpoint yang tetap boleh diakses walau user belum mengganti password default.
+// Tujuannya: user harus bisa lihat profil sendiri, ganti password, dan logout —
+// tanpa bisa mengakses fitur bisnis lain.
+const PASSWORD_CHANGE_ALLOWLIST = new Set<string>([
+  "/api/auth/me",
+  "/api/auth/change-password",
+  "/api/auth/logout",
+  "/api/healthz",
+]);
+
+export async function enforcePasswordChange(req: Request, res: Response, next: NextFunction): Promise<void> {
+  // Skip bila belum login — endpoint yang butuh auth akan ditangani oleh
+  // requireAuth/requireSuperAdmin/requireOwner masing-masing.
+  if (!req.session.userId) {
+    next();
+    return;
+  }
+
+  // Path Express sudah include "/api" karena middleware ini dipasang di level app.
+  const path = req.path;
+  if (PASSWORD_CHANGE_ALLOWLIST.has(path)) {
+    next();
+    return;
+  }
+
+  try {
+    const [user] = await db
+      .select({ mustChangePassword: usersTable.mustChangePassword })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.session.userId));
+
+    if (user?.mustChangePassword) {
+      res.status(403).json({
+        error: "PASSWORD_CHANGE_REQUIRED",
+        message: "Password default wajib diganti sebelum mengakses fitur lain. Buka menu Profil → Ganti Password.",
+      });
+      return;
+    }
+  } catch {
+    // Jika DB tidak bisa diakses, jangan blokir — biarkan request lanjut dan
+    // gagal di handler masing-masing dengan error yang lebih informatif.
+  }
+
+  next();
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {

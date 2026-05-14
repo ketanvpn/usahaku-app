@@ -273,7 +273,13 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
   });
 });
 
-router.get("/auth/usernames", async (req, res): Promise<void> => {
+// GET /auth/usernames — public by design (no requireAuth).
+// Dipakai oleh halaman Login untuk menampilkan daftar akun owner ketika user
+// lupa username. Tidak mengembalikan password hash, hanya username + nama.
+// Aman untuk Electron desktop karena backend hanya listen di loopback (127.0.0.1).
+// Kalau backend pernah di-host di network publik/LAN, endpoint ini perlu
+// dikunci ke loopback-only (requireLoopback) atau dihapus.
+router.get("/auth/usernames", async (_req, res): Promise<void> => {
   const users = await db
     .select({ username: usersTable.username, nama: usersTable.nama })
     .from(usersTable)

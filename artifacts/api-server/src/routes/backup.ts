@@ -1,9 +1,14 @@
 import { Router, type IRouter } from "express";
+import express from "express";
 import { db, sqliteRaw, usahaTable, pelangganTable, hutangTable, pembayaranTable, keuanganTable, barangTable, transaksiStokTable, transaksiKasirTable, transaksiKasirItemTable, pekerjaTable, upahPekerjaTable, bayarUpahTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
+
+// Restore JSON bisa besar (data ribuan transaksi). Override body limit 50 MB
+// hanya di route ini supaya endpoint lain tetap dibatasi 1 MB di app.ts.
+const restoreBodyParser = express.json({ limit: "50mb" });
 
 router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
@@ -181,7 +186,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   res.json(backup);
 });
 
-router.post("/backup/restore", requireAuth, async (req, res): Promise<void> => {
+router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
   if (!usahaId) {
     res.status(403).json({ error: "Akses ditolak." });
