@@ -16,6 +16,7 @@ import kasirRouter from "./kasir";
 import setupRouter from "./setup";
 import pekerjaRouter from "./pekerja";
 import upahRouter from "./upah";
+import pengaturanRouter from "./pengaturan";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(stokRouter);
 router.use(kasirRouter);
 router.use(pekerjaRouter);
 router.use(upahRouter);
+router.use(pengaturanRouter);
 
 export default router;
