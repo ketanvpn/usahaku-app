@@ -6,7 +6,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { formatRupiah, formatDate } from "@/lib/format";
+import { formatRupiah, formatDate, getErrorMessage } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +46,7 @@ export default function HutangDetail() {
           queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
           setIsDeletePayDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
+        onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
       }
     );
   };

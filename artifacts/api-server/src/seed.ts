@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "./lib/logger";
+import { resolveSecret } from "./lib/security-secrets";
 
 async function seed() {
   logger.info("Starting seed...");
@@ -12,7 +13,17 @@ async function seed() {
     return;
   }
 
-  const adminHash = await bcrypt.hash("maduTJ150", 10);
+  // Password admin awal bisa di-override lewat env SUPER_ADMIN_PASSWORD.
+  // Jika tidak diset, fallback ke nilai default — tapi user akan dipaksa
+  // mengganti password setelah login pertama (mustChangePassword = true).
+  const initialPassword = resolveSecret({
+    key: "SUPER_ADMIN_PASSWORD",
+    value: process.env.SUPER_ADMIN_PASSWORD,
+    fallback: "maduTJ150",
+    reason: "password awal Super Admin (wajib diganti setelah login pertama)",
+  });
+
+  const adminHash = await bcrypt.hash(initialPassword, 10);
   await db.insert(usersTable).values({
     nama: "Super Admin",
     username: "admin",
@@ -20,9 +31,10 @@ async function seed() {
     role: "super_admin",
     usahaId: null,
     isActive: true,
+    mustChangePassword: true,
   });
 
-  logger.info("Seed completed: Super Admin created.");
+  logger.info("Seed completed: Super Admin created. Password wajib diganti setelah login pertama.");
 }
 
 export { seed };

@@ -42,6 +42,23 @@ export function requireOwner(req: Request, res: Response, next: NextFunction): v
   next();
 }
 
+// Endpoint internal hanya boleh dipanggil dari Electron main process di mesin
+// yang sama. Tolak request yang remote-address-nya bukan loopback.
+const LOOPBACK_ADDRESSES = new Set([
+  "127.0.0.1",
+  "::1",
+  "::ffff:127.0.0.1",
+]);
+
+export function requireLoopback(req: Request, res: Response, next: NextFunction): void {
+  const remote = req.socket?.remoteAddress ?? "";
+  if (!LOOPBACK_ADDRESSES.has(remote)) {
+    res.status(403).json({ error: "Endpoint internal hanya dapat diakses dari aplikasi Usahaku." });
+    return;
+  }
+  next();
+}
+
 export async function requireLicense(req: Request, res: Response, next: NextFunction): Promise<void> {
   if (req.session.role === "super_admin") {
     next();

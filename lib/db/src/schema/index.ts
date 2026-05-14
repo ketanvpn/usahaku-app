@@ -9,3 +9,4 @@ export * from "./stok";
 export * from "./kasir";
 export * from "./pekerja";
 export * from "./upah";
+export * from "./password-reset";

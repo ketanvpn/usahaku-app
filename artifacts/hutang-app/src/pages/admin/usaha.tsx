@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useGetUsahaList, useCreateUsaha, useUpdateUsaha, getGetUsahaListQueryKey, Usaha } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { formatDate } from "@/lib/format";
+import { formatDate, getErrorMessage } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,8 +70,8 @@ export default function AdminUsahaPage() {
             queryClient.invalidateQueries({ queryKey: getGetUsahaListQueryKey() });
             setIsDialogOpen(false);
           },
-          onError: (err: any) => {
-            toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" });
+          onError: (err: unknown) => {
+            toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) });
           }
         }
       );
@@ -84,8 +84,8 @@ export default function AdminUsahaPage() {
             queryClient.invalidateQueries({ queryKey: getGetUsahaListQueryKey() });
             setIsDialogOpen(false);
           },
-          onError: (err: any) => {
-            toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" });
+          onError: (err: unknown) => {
+            toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) });
           }
         }
       );

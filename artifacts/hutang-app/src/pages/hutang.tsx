@@ -20,7 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { formatRupiah, formatDate } from "@/lib/format";
+import { formatRupiah, formatDate, getErrorMessage } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Loader2, Plus, Edit, Trash2, Eye, Filter, Search, FileText, CalendarClock } from "lucide-react";
@@ -128,7 +128,7 @@ export default function HutangPage() {
           queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
           setIsDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
+        onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
       }
     );
   };
@@ -143,7 +143,7 @@ export default function HutangPage() {
           queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
           setIsDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
+        onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
       }
     );
   };
@@ -162,7 +162,7 @@ export default function HutangPage() {
           queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
           setIsDeleteDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
+        onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
       }
     );
   };

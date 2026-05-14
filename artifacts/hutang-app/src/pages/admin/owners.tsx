@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useGetUsers, useCreateUser, useUpdateUser, useDeleteUser, useResetUserPassword, useToggleUserActive, useGetUsahaList, getGetUsersQueryKey, User } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { formatDate } from "@/lib/format";
+import { formatDate, getErrorMessage } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,7 +102,7 @@ export default function AdminOwnersPage() {
             queryClient.invalidateQueries({ queryKey: getGetUsersQueryKey() });
             setIsUserDialogOpen(false);
           },
-          onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
+          onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
         }
       );
     } else {
@@ -114,7 +114,7 @@ export default function AdminOwnersPage() {
             queryClient.invalidateQueries({ queryKey: getGetUsersQueryKey() });
             setIsUserDialogOpen(false);
           },
-          onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
+          onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
         }
       );
     }
@@ -129,7 +129,7 @@ export default function AdminOwnersPage() {
           toast({ title: "Password berhasil direset" });
           setIsResetPwdDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
+        onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
       }
     );
   };
@@ -142,7 +142,7 @@ export default function AdminOwnersPage() {
           toast({ title: `User berhasil di${user.is_active ? 'nonaktifkan' : 'aktifkan'}` });
           queryClient.invalidateQueries({ queryKey: getGetUsersQueryKey() });
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
+        onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
       }
     );
   };
@@ -157,7 +157,7 @@ export default function AdminOwnersPage() {
           queryClient.invalidateQueries({ queryKey: getGetUsersQueryKey() });
           setIsDeleteDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
+        onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
       }
     );
   };

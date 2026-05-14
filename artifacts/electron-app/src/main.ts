@@ -5,6 +5,7 @@ import * as http from "http";
 import * as https from "https";
 import * as fs from "fs";
 import * as os from "os";
+import * as crypto from "crypto";
 import { autoUpdater } from "electron-updater";
 // Credentials di-inject saat build oleh scripts/inject-credentials.js → baked-in ke binary
 import { GDRIVE_CLIENT_ID, GDRIVE_CLIENT_SECRET } from "./credentials";
@@ -75,6 +76,60 @@ const LOADING_HTML = `<!DOCTYPE html>
 
 function getDbPath(): string {
   return path.join(app.getPath("userData"), "app.db");
+}
+
+interface InstallSecrets {
+  sessionSecret: string;
+  licenseSecret: string;
+  resetSecret: string;
+}
+
+// Generate (atau muat) secret unik per-instalasi dan simpan di userData.
+// Berkas hanya dibaca/ditulis oleh aplikasi sendiri, jadi mode read-write biasa
+// di Windows sudah cukup untuk membatasi akses dari user lain di mesin yang sama.
+function loadOrCreateInstallSecrets(): InstallSecrets {
+  const userData = app.getPath("userData");
+  const file = path.join(userData, "install-secrets.json");
+
+  function generate(): InstallSecrets {
+    return {
+      sessionSecret: crypto.randomBytes(32).toString("hex"),
+      licenseSecret: crypto.randomBytes(32).toString("hex"),
+      resetSecret: crypto.randomBytes(32).toString("hex"),
+    };
+  }
+
+  try {
+    if (fs.existsSync(file)) {
+      const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as Partial<InstallSecrets>;
+      const fresh = generate();
+      const merged: InstallSecrets = {
+        sessionSecret: parsed.sessionSecret && parsed.sessionSecret.length >= 32 ? parsed.sessionSecret : fresh.sessionSecret,
+        licenseSecret: parsed.licenseSecret && parsed.licenseSecret.length >= 32 ? parsed.licenseSecret : fresh.licenseSecret,
+        resetSecret: parsed.resetSecret && parsed.resetSecret.length >= 32 ? parsed.resetSecret : fresh.resetSecret,
+      };
+      // Tulis ulang hanya jika ada field yang baru di-generate, supaya secret lama tidak berubah.
+      if (
+        merged.sessionSecret !== parsed.sessionSecret ||
+        merged.licenseSecret !== parsed.licenseSecret ||
+        merged.resetSecret !== parsed.resetSecret
+      ) {
+        fs.writeFileSync(file, JSON.stringify(merged, null, 2), { encoding: "utf8", mode: 0o600 });
+      }
+      return merged;
+    }
+  } catch (e) {
+    writeLog(`[secrets] Gagal baca ${file}: ${e instanceof Error ? e.message : String(e)} — generate baru`);
+  }
+
+  const fresh = generate();
+  try {
+    fs.mkdirSync(userData, { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(fresh, null, 2), { encoding: "utf8", mode: 0o600 });
+  } catch (e) {
+    writeLog(`[secrets] Gagal tulis ${file}: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  return fresh;
 }
 
 function initLogFile(): void {
@@ -233,9 +288,10 @@ function startBackend(): void {
     writeLog(`WARNING: Frontend path not found: ${frontendPath}`);
   }
 
-  const sessionSecret =
-    process.env.SESSION_SECRET ||
-    `usahaku-${Buffer.from(app.getPath("userData")).toString("base64").slice(0, 20)}`;
+  // Generate dan persist secret unik per-instalasi.
+  // Saat build rilis, fallback bawaan di backend di-tolak (STRICT_SECRET_POLICY=fail),
+  // jadi semua secret WAJIB datang dari env yang kita inject di sini.
+  const installSecrets = loadOrCreateInstallSecrets();
 
   backendStderrBuffer = "";
 
@@ -247,7 +303,10 @@ function startBackend(): void {
       NODE_ENV: "production",
       SERVE_STATIC: "true",
       STATIC_PATH: frontendPath,
-      SESSION_SECRET: sessionSecret,
+      SESSION_SECRET: installSecrets.sessionSecret,
+      LICENSE_SECRET: installSecrets.licenseSecret,
+      RESET_SECRET: installSecrets.resetSecret,
+      STRICT_SECRET_POLICY: isDev ? "warn" : "fail",
       BETTER_SQLITE3_PATH: betterSqlite3Path,
     },
     stdio: "pipe",
@@ -367,10 +426,30 @@ ipcMain.handle("update:install", () => {
 });
 
 // ── IPC: write HTML to temp file and open in default browser for print/PDF ──
-ipcMain.handle("open-in-browser", async (_event, html: string) => {
+const MAX_PRINT_HTML_BYTES = 5 * 1024 * 1024; // 5 MB cap
+const printTempDir = path.join(os.tmpdir(), "usahaku-print");
+
+ipcMain.handle("open-in-browser", async (_event, html: unknown) => {
   try {
-    const tempPath = path.join(os.tmpdir(), "usahaku-laporan.html");
-    fs.writeFileSync(tempPath, html, "utf8");
+    if (typeof html !== "string") {
+      writeLog("open-in-browser: payload bukan string, ditolak");
+      return "Payload tidak valid.";
+    }
+    const byteLen = Buffer.byteLength(html, "utf8");
+    if (byteLen === 0) {
+      writeLog("open-in-browser: payload kosong, ditolak");
+      return "Payload kosong.";
+    }
+    if (byteLen > MAX_PRINT_HTML_BYTES) {
+      writeLog(`open-in-browser: payload ${byteLen} byte > ${MAX_PRINT_HTML_BYTES}, ditolak`);
+      return "Konten cetak terlalu besar.";
+    }
+    fs.mkdirSync(printTempDir, { recursive: true });
+    // Filename random per panggilan supaya tidak menimpa file lain dan tidak
+    // bisa ditebak proses lokal lain di mesin yang sama.
+    const fileName = `usahaku-laporan-${crypto.randomBytes(8).toString("hex")}.html`;
+    const tempPath = path.join(printTempDir, fileName);
+    fs.writeFileSync(tempPath, html, { encoding: "utf8", mode: 0o600 });
     const err = await shell.openPath(tempPath);
     if (err) writeLog(`open-in-browser shell.openPath error: ${err}`);
     return err;

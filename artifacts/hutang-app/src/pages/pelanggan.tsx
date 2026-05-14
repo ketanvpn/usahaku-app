@@ -17,6 +17,7 @@ import * as z from "zod";
 import { Loader2, Plus, Edit, Trash2, Eye, Search } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useLicense } from "@/context/license-context";
+import { getErrorMessage } from "@/lib/format";
 
 const pelangganSchema = z.object({
   nama: z.string().min(1, { message: "Nama wajib diisi" }),
@@ -75,7 +76,7 @@ export default function PelangganPage() {
             queryClient.invalidateQueries({ queryKey: getGetPelangganListQueryKey() });
             setIsDialogOpen(false);
           },
-          onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
+          onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
         }
       );
     } else {
@@ -87,7 +88,7 @@ export default function PelangganPage() {
             queryClient.invalidateQueries({ queryKey: getGetPelangganListQueryKey() });
             setIsDialogOpen(false);
           },
-          onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
+          onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
         }
       );
     }
@@ -103,7 +104,7 @@ export default function PelangganPage() {
           queryClient.invalidateQueries({ queryKey: getGetPelangganListQueryKey() });
           setIsDeleteDialogOpen(false);
         },
-        onError: (err: any) => toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" })
+        onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
       }
     );
   };

@@ -18,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { PelangganCombobox } from "@/components/pelanggan-combobox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { formatRupiah, formatDate } from "@/lib/format";
+import { formatRupiah, formatDate, escapeHtml, getErrorMessage } from "@/lib/format";
 import { Loader2, Plus, Trash2, Filter, Printer, ArrowRight, CheckCircle2, Clock } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useLicense } from "@/context/license-context";
@@ -99,8 +99,8 @@ function buildKwitansiGabunganHtml(batch: BatchResult): string {
 
   const rowsHtml = batch.pembayaran_list.map(p => {
     const label = p.hutang_keterangan
-      ? `${fmtDate(p.hutang_tanggal)} — ${p.hutang_keterangan}`
-      : fmtDate(p.hutang_tanggal);
+      ? `${escapeHtml(fmtDate(p.hutang_tanggal))} — ${escapeHtml(p.hutang_keterangan)}`
+      : escapeHtml(fmtDate(p.hutang_tanggal));
     const statusHtml = p.status_baru === "lunas"
       ? `<span class="green">✓ LUNAS</span>`
       : `Sisa ${fmtRupiah(p.sisa_hutang_setelah)}`;
@@ -116,7 +116,7 @@ function buildKwitansiGabunganHtml(batch: BatchResult): string {
 <html lang="id">
 <head>
 <meta charset="UTF-8"/>
-<title>Kwitansi ${nomorLabel}</title>
+<title>Kwitansi ${escapeHtml(nomorLabel)}</title>
 <style>
 @page { size: A5 portrait; margin: 12mm; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -152,13 +152,13 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; 
 <body>
 <div class="kwt">
   <div class="header">
-    <div class="nama-usaha">${namaUsaha}</div>
+    <div class="nama-usaha">${escapeHtml(namaUsaha)}</div>
     <div class="judul-kwt">KWITANSI PEMBAYARAN HUTANG</div>
-    <div class="nomor-kwt">No: ${nomorLabel} &nbsp;&bull;&nbsp; Tanggal: ${tanggal}</div>
+    <div class="nomor-kwt">No: ${escapeHtml(nomorLabel)} &nbsp;&bull;&nbsp; Tanggal: ${escapeHtml(tanggal)}</div>
   </div>
 
   <table class="info-tbl">
-    <tr><td class="lbl">Diterima dari</td><td class="sep">:</td><td><strong>${pelangganNama}</strong></td></tr>
+    <tr><td class="lbl">Diterima dari</td><td class="sep">:</td><td><strong>${escapeHtml(pelangganNama)}</strong></td></tr>
   </table>
 
   <div class="nominal-box">
@@ -186,7 +186,7 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; 
     </tfoot>
   </table>
 
-  ${catatan ? `<div class="catatan-box">Catatan: ${catatan}</div>` : ""}
+  ${catatan ? `<div class="catatan-box">Catatan: ${escapeHtml(catatan)}</div>` : ""}
 
   <div class="ttd-area">
     <div class="ttd-box">
@@ -226,7 +226,7 @@ function openKwitansiLama(p: PembayaranFull) {
 
   const html = `<!DOCTYPE html>
 <html lang="id"><head><meta charset="UTF-8"/>
-<title>Kwitansi ${nomorKwitansi}</title>
+<title>Kwitansi ${escapeHtml(nomorKwitansi)}</title>
 <style>
 @page{size:A5 portrait;margin:12mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:10pt;color:#111}
 .kwt{border:2px solid #333;padding:12px}.header{text-align:center;border-bottom:1px dashed #888;padding-bottom:8px;margin-bottom:10px}
@@ -246,12 +246,12 @@ function openKwitansiLama(p: PembayaranFull) {
 </style>
 <script>window.addEventListener('load',function(){setTimeout(function(){window.print();},600);});<\/script>
 </head><body><div class="kwt">
-<div class="header"><div class="nama-usaha">${namaUsaha}</div>
+<div class="header"><div class="nama-usaha">${escapeHtml(namaUsaha)}</div>
 <div class="judul-kwt">KWITANSI PEMBAYARAN HUTANG</div>
-<div class="nomor-kwt">No: ${nomorKwitansi} &bull; Tanggal: ${tanggal}</div></div>
+<div class="nomor-kwt">No: ${escapeHtml(nomorKwitansi)} &bull; Tanggal: ${escapeHtml(tanggal)}</div></div>
 <table class="info-tbl">
-<tr><td class="lbl">Diterima dari</td><td class="sep">:</td><td><strong>${p.pelanggan_nama}</strong></td></tr>
-<tr><td class="lbl">Keterangan Hutang</td><td class="sep">:</td><td>${keterangan}</td></tr>
+<tr><td class="lbl">Diterima dari</td><td class="sep">:</td><td><strong>${escapeHtml(p.pelanggan_nama)}</strong></td></tr>
+<tr><td class="lbl">Keterangan Hutang</td><td class="sep">:</td><td>${escapeHtml(keterangan)}</td></tr>
 </table>
 <div class="nominal-box"><div class="nominal-label">Jumlah Dibayar</div><div class="nominal-nilai">${fmtRupiah(nominalBayar)}</div></div>
 <table class="detail-tbl">
@@ -259,7 +259,7 @@ function openKwitansiLama(p: PembayaranFull) {
 <tr><td>Dibayar Kali Ini</td><td class="right green">+ ${fmtRupiah(nominalBayar)}</td></tr>
 <tr class="total-row"><td>Sisa Hutang</td><td class="right ${sisaHutang<=0?"green":"orange"}">${sisaHutang<=0?"✓ LUNAS":fmtRupiah(sisaHutang)}</td></tr>
 </table>
-${catatan?`<div style="font-size:9pt;color:#555;font-style:italic;margin:6px 4px">Catatan: ${catatan}</div>`:""}
+${catatan?`<div style="font-size:9pt;color:#555;font-style:italic;margin:6px 4px">Catatan: ${escapeHtml(catatan)}</div>`:""}
 <div class="ttd-area"><div class="ttd-box"><div>Penerima,</div><div class="ttd-space"></div><div class="ttd-line">(________________)</div></div></div>
 <div class="footer-kwt">Terima kasih atas pembayarannya &bull; Simpan kwitansi ini sebagai bukti pembayaran</div>
 </div></body></html>`;
@@ -431,8 +431,8 @@ export default function PembayaranPage() {
           queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
           setIsDeleteDialogOpen(false);
         },
-        onError: (err: any) =>
-          toast({ variant: "destructive", title: "Gagal", description: err?.data?.error || err?.message || "Terjadi kesalahan" }),
+        onError: (err: unknown) =>
+          toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) }),
       }
     );
   };

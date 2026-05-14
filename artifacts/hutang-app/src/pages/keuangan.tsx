@@ -20,7 +20,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import * as z from "zod";
-import { formatRupiah, formatDate } from "@/lib/format";
+import { formatRupiah, formatDate, escapeHtml } from "@/lib/format";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
@@ -153,13 +153,13 @@ function handlePrint(items: KeuanganItem[], rekap: Rekap | undefined, bulan: str
     <tr>
       <td>${fmtTgl(i.tanggal)}</td>
       <td><span class="badge ${i.tipe === "masuk" ? "badge-masuk" : "badge-keluar"}">${i.tipe === "masuk" ? "Masuk" : "Keluar"}</span></td>
-      <td>${i.kategori ?? "-"}</td>
-      <td>${i.keterangan}</td>
+      <td>${escapeHtml(i.kategori ?? "-")}</td>
+      <td>${escapeHtml(i.keterangan)}</td>
       <td class="right">${fmtRp(i.jumlah)}</td>
     </tr>`).join("");
 
   const html = `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8">
-  <title>Laporan Keuangan ${namaBulan} ${tahun}</title>
+  <title>Laporan Keuangan ${escapeHtml(namaBulan)} ${escapeHtml(tahun)}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: Arial, sans-serif; font-size: 10pt; color: #222; padding: 20px; }
@@ -185,9 +185,9 @@ function handlePrint(items: KeuanganItem[], rekap: Rekap | undefined, bulan: str
   </style>
   </head><body>
   <div class="header">
-    <div class="header-usaha">${namaUsaha}</div>
-    <div class="header-judul">Laporan Keuangan — ${namaBulan} ${tahun}</div>
-    <div class="header-meta">Dicetak: ${tanggalCetak}</div>
+    <div class="header-usaha">${escapeHtml(namaUsaha)}</div>
+    <div class="header-judul">Laporan Keuangan — ${escapeHtml(namaBulan)} ${escapeHtml(tahun)}</div>
+    <div class="header-meta">Dicetak: ${escapeHtml(tanggalCetak)}</div>
   </div>
   <div class="summary">
     <div class="summary-box"><div class="label">Total Masuk</div><div class="value masuk-val">${fmtRp(rekap?.total_masuk ?? 0)}</div></div>

@@ -12,7 +12,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { formatRupiah, formatDate } from "@/lib/format";
+import { formatRupiah, formatDate, escapeHtml } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
@@ -99,7 +99,7 @@ tr { page-break-inside: avoid; }
 `;
 
 function printHead(judul: string) {
-  return `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/><title>${judul}</title>
+  return `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/><title>${escapeHtml(judul)}</title>
 <style>${PRINT_CSS}</style>
 <script>window.addEventListener('load',function(){setTimeout(function(){window.print();},600);});<\/script>
 </head><body>`;
@@ -109,7 +109,7 @@ function printFoot() {
 }
 function filterTableHtml(lines: { label: string; value: string }[]) {
   return `<table class="fi-table"><tbody>${lines.map(f =>
-    `<tr><td class="fi-label">${f.label}</td><td class="fi-colon">:</td><td>${f.value}</td></tr>`
+    `<tr><td class="fi-label">${escapeHtml(f.label)}</td><td class="fi-colon">:</td><td>${escapeHtml(f.value)}</td></tr>`
   ).join("")}</tbody></table>`;
 }
 
@@ -134,7 +134,7 @@ function buildPrintHutang(opts: {
   const fiLines = [{ label: "Tanggal Cetak", value: tanggalCetak }, ...filterLines,
     ...(filterLines.length === 0 ? [{ label: "Filter", value: "Semua data" }] : [])];
   const summaryBlock = isSinglePelanggan
-    ? `<div class="summary-box"><div class="summary-title">Ringkasan: ${pelangganNama}</div>
+    ? `<div class="summary-box"><div class="summary-title">Ringkasan: ${escapeHtml(pelangganNama)}</div>
        <table class="sum-tbl">
          <tr><td>Total Hutang</td><td>:</td><td>${fmtRupiah(totalHutang)}</td></tr>
          <tr><td>Total Dibayar</td><td>:</td><td class="green">${fmtRupiah(totalDibayar)}</td></tr>
@@ -144,8 +144,8 @@ function buildPrintHutang(opts: {
     ? `<tr><td colspan="7" style="text-align:center;padding:20px;color:#666">Tidak ada data.</td></tr>`
     : rows.map(r => `<tr>
         <td class="nowrap">${fmtDate(r.tanggal_hutang)}</td>
-        <td class="bold">${r.nama_pelanggan}</td>
-        <td class="muted">${r.keterangan || "—"}</td>
+        <td class="bold">${escapeHtml(r.nama_pelanggan)}</td>
+        <td class="muted">${escapeHtml(r.keterangan || "—")}</td>
         <td><span class="badge ${r.status === "aktif" ? "badge-aktif" : "badge-lunas"}">${r.status === "aktif" ? "Belum lunas" : "Lunas"}</span></td>
         <td class="right">${fmtRupiah(r.nominal_hutang)}</td>
         <td class="right green">${fmtRupiah(r.total_dibayar)}</td>
@@ -153,7 +153,7 @@ function buildPrintHutang(opts: {
       </tr>`).join("");
 
   return printHead(judul) + `
-<div class="header"><div class="header-usaha">${namaUsaha}</div><div class="header-judul">${judul}</div></div>
+<div class="header"><div class="header-usaha">${escapeHtml(namaUsaha)}</div><div class="header-judul">${escapeHtml(judul)}</div></div>
 ${filterTableHtml(fiLines)}
 ${summaryBlock}
 <table class="data-table">
@@ -180,13 +180,13 @@ function buildPrintKeuangan(opts: {
     : rows.map(r => `<tr>
         <td class="nowrap">${fmtDate(r.tanggal)}</td>
         <td><span class="badge ${r.tipe === "masuk" ? "badge-masuk" : "badge-keluar"}">${r.tipe === "masuk" ? "Masuk" : "Keluar"}</span></td>
-        <td>${r.kategori}</td>
-        <td class="muted">${r.keterangan || "—"}</td>
+        <td>${escapeHtml(r.kategori)}</td>
+        <td class="muted">${escapeHtml(r.keterangan || "—")}</td>
         <td class="right ${r.tipe === "masuk" ? "green" : "red"}">${r.tipe === "masuk" ? "+" : "-"}${fmtRupiah(r.jumlah)}</td>
       </tr>`).join("");
 
   return printHead(judul) + `
-<div class="header"><div class="header-usaha">${namaUsaha}</div><div class="header-judul">${judul}</div></div>
+<div class="header"><div class="header-usaha">${escapeHtml(namaUsaha)}</div><div class="header-judul">${escapeHtml(judul)}</div></div>
 ${filterTableHtml(fiLines)}
 <div class="summary-box">
   <div class="summary-title">Ringkasan Keuangan</div>
@@ -215,8 +215,8 @@ function buildPrintStok(opts: {
   const dataRows = rows.length === 0
     ? `<tr><td colspan="7" style="text-align:center;padding:20px;color:#666">Tidak ada data.</td></tr>`
     : rows.map(b => `<tr>
-        <td class="bold">${b.nama}</td>
-        <td>${b.satuan}</td>
+        <td class="bold">${escapeHtml(b.nama)}</td>
+        <td>${escapeHtml(b.satuan)}</td>
         <td class="right bold ${b.stok <= b.stok_minimum ? "orange" : "green"}">${b.stok}</td>
         <td class="right muted">${b.stok_minimum}</td>
         <td><span class="badge ${b.stok <= b.stok_minimum ? "badge-habis" : "badge-aman"}">${b.stok <= b.stok_minimum ? "Hampir Habis" : "Aman"}</span></td>
@@ -225,7 +225,7 @@ function buildPrintStok(opts: {
       </tr>`).join("");
 
   return printHead(judul) + `
-<div class="header"><div class="header-usaha">${namaUsaha}</div><div class="header-judul">${judul}</div></div>
+<div class="header"><div class="header-usaha">${escapeHtml(namaUsaha)}</div><div class="header-judul">${escapeHtml(judul)}</div></div>
 ${filterTableHtml([
   { label: "Tanggal Cetak", value: tanggalCetak },
   { label: "Total Barang", value: `${rows.length} jenis` },
@@ -265,13 +265,13 @@ function buildPrintKasir(opts: {
   const topRows = topProduk.length === 0
     ? `<tr><td colspan="3" style="text-align:center;padding:16px;color:#666">Tidak ada data.</td></tr>`
     : topProduk.map((r, i) => `<tr>
-        <td>${i + 1}. ${r.nama_barang}</td>
-        <td class="right">${r.total_qty} ${r.satuan}</td>
+        <td>${i + 1}. ${escapeHtml(r.nama_barang)}</td>
+        <td class="right">${r.total_qty} ${escapeHtml(r.satuan)}</td>
         <td class="right green bold">${fmtRupiah(r.total_omset)}</td>
       </tr>`).join("");
 
   return printHead(judul) + `
-<div class="header"><div class="header-usaha">${namaUsaha}</div><div class="header-judul">${judul}</div></div>
+<div class="header"><div class="header-usaha">${escapeHtml(namaUsaha)}</div><div class="header-judul">${escapeHtml(judul)}</div></div>
 ${filterTableHtml([
   { label: "Tanggal Cetak", value: tanggalCetak },
   { label: "Periode", value: `${bulanNama} ${tahun}` },

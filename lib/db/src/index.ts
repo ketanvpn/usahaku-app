@@ -100,6 +100,18 @@ try { sqlite.exec(`ALTER TABLE transaksi_kasir ADD COLUMN diskon TEXT NOT NULL D
 try { sqlite.exec(`ALTER TABLE transaksi_kasir ADD COLUMN keuangan_id INTEGER`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE pekerja ADD COLUMN pelanggan_id INTEGER REFERENCES pelanggan(id) ON DELETE SET NULL`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE bayar_upah ADD COLUMN pembayaran_id INTEGER REFERENCES pembayaran(id) ON DELETE SET NULL`); } catch { /* column already exists */ }
+try { sqlite.exec(`ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0`); } catch { /* column already exists */ }
+
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS password_reset_uses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    expiry_ts INTEGER NOT NULL,
+    used_at TEXT NOT NULL
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS password_reset_uses_username_expiry
+    ON password_reset_uses (username, expiry_ts);
+`);
 
 sqlite.exec(`
   CREATE TABLE IF NOT EXISTS barang (

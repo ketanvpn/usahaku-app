@@ -1,5 +1,5 @@
 import express, { type Express } from "express";
-import cors from "cors";
+import cors, { type CorsOptions } from "cors";
 import pinoHttp from "pino-http";
 import cookieParser from "cookie-parser";
 import session from "express-session";
@@ -31,10 +31,38 @@ app.use(
   }),
 );
 
-app.use(cors({
-  origin: true,
+// Whitelist origin: default ke localhost/127.0.0.1 (Electron + dev Vite).
+// Tambah origin lain via env CORS_ORIGINS (comma-separated) bila perlu.
+const defaultAllowedOrigins = [
+  "http://localhost",
+  "http://127.0.0.1",
+];
+
+const extraAllowedOrigins = (process.env.CORS_ORIGINS ?? "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter((o) => o.length > 0);
+
+const allowedOriginPrefixes = [...defaultAllowedOrigins, ...extraAllowedOrigins];
+
+const corsOptions: CorsOptions = {
   credentials: true,
-}));
+  origin(origin, callback) {
+    // Request same-origin atau dari Electron file:// tidak mengirim Origin header.
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    const ok = allowedOriginPrefixes.some((prefix) => origin === prefix || origin.startsWith(prefix + ":") || origin.startsWith(prefix + "/"));
+    if (ok) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Origin tidak diizinkan oleh kebijakan CORS: ${origin}`));
+    }
+  },
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -54,6 +82,7 @@ app.use(
     cookie: {
       secure: false,
       httpOnly: true,
+      sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   })

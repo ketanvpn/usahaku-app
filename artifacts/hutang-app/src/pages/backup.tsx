@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { getExportBackupUrl, useImportBackup } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -335,14 +336,13 @@ export default function BackupPage() {
               if (fileInputRef.current) fileInputRef.current.value = "";
               queryClient.invalidateQueries();
             },
-            onError: (err: any) => {
-              const msg = err?.data?.error || err?.message || "Terjadi kesalahan tidak diketahui";
-              setRestoreErrorMsg(msg);
+            onError: (err: unknown) => {
+              setRestoreErrorMsg(getErrorMessage(err, "Terjadi kesalahan tidak diketahui"));
             },
           }
         );
-      } catch (error: any) {
-        toast({ variant: "destructive", title: "Gagal membaca file", description: error.message });
+      } catch (error: unknown) {
+        toast({ variant: "destructive", title: "Gagal membaca file", description: getErrorMessage(error) });
       }
     };
     reader.readAsText(file);

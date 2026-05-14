@@ -14,7 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Shield, LogOut, Loader2, KeyRound, Check, Store, Phone, MapPin, Pencil, X } from "lucide-react";
-import { formatDate } from "@/lib/format";
+import { formatDate, getErrorMessage } from "@/lib/format";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -89,8 +89,8 @@ export default function ProfilPage() {
       queryClient.invalidateQueries({ queryKey: ["usaha-mine"] });
       setEditingUsaha(false);
     },
-    onError: (err: any) => {
-      toast({ variant: "destructive", title: "Gagal", description: err.message });
+    onError: (err: unknown) => {
+      toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) });
     },
   });
 
@@ -137,11 +137,11 @@ export default function ProfilPage() {
           pwdForm.reset();
           setPwdSuccess(true);
         },
-        onError: (err: any) => {
+        onError: (err: unknown) => {
           toast({
             variant: "destructive",
             title: "Gagal mengubah password",
-            description: err.message || "Terjadi kesalahan",
+            description: getErrorMessage(err),
           });
         },
       }

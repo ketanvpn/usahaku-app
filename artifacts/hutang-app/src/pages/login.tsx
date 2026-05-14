@@ -12,6 +12,7 @@ import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/format";
 import { Loader2, BookOpen, ShieldCheck, TrendingUp, Package, KeyRound, ArrowLeft, User } from "lucide-react";
 
 const loginSchema = z.object({
@@ -91,11 +92,11 @@ export default function LoginPage() {
           toast({ title: "Selamat datang kembali!" });
           queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           toast({
             variant: "destructive",
             title: "Login gagal",
-            description: error?.data?.error || error?.message || "Username atau password salah",
+            description: getErrorMessage(error, "Username atau password salah"),
           });
         },
       }

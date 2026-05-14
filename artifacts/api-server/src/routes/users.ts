@@ -23,6 +23,7 @@ function formatUser(u: typeof usersTable.$inferSelect) {
     role: u.role,
     usaha_id: u.usahaId ?? null,
     is_active: u.isActive,
+    must_change_password: u.mustChangePassword ?? false,
     created_at: u.createdAt.toISOString(),
   };
 }
@@ -126,7 +127,10 @@ router.post("/users/:id/reset-password", requireSuperAdmin, async (req, res): Pr
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.new_password, 10);
-  const [user] = await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, params.data.id)).returning();
+  const [user] = await db.update(usersTable)
+    .set({ passwordHash, mustChangePassword: true })
+    .where(eq(usersTable.id, params.data.id))
+    .returning();
 
   if (!user) {
     res.status(404).json({ error: "User tidak ditemukan." });

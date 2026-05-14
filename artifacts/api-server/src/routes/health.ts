@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { HealthCheckResponse } from "@workspace/api-zod";
 import { sqliteRaw } from "@workspace/db";
+import { requireLoopback } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
@@ -10,8 +11,8 @@ router.get("/healthz", (_req, res) => {
 });
 
 // Endpoint internal: flush WAL ke file .db utama sebelum backup
-// Tidak perlu auth — hanya bisa diakses dari localhost (Electron main process)
-router.post("/internal/wal-checkpoint", (_req, res) => {
+// Hanya dapat diakses dari proses lokal (loopback) — Electron main process.
+router.post("/internal/wal-checkpoint", requireLoopback, (_req, res) => {
   try {
     sqliteRaw.pragma("wal_checkpoint(TRUNCATE)");
     res.json({ ok: true });
@@ -22,7 +23,7 @@ router.post("/internal/wal-checkpoint", (_req, res) => {
 
 // Endpoint internal: verifikasi integritas database setelah restore
 // Jalankan PRAGMA integrity_check — harus kembali "ok" jika DB valid
-router.post("/internal/db-integrity", (_req, res) => {
+router.post("/internal/db-integrity", requireLoopback, (_req, res) => {
   try {
     const rows = sqliteRaw.pragma("integrity_check") as Array<{ integrity_check: string }>;
     const result = rows[0]?.integrity_check ?? "unknown";

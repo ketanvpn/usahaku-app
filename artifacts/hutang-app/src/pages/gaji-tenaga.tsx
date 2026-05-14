@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { formatRupiah, formatDate } from "@/lib/format";
+import { formatRupiah, formatDate, escapeHtml } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
@@ -78,7 +78,7 @@ function buildKwitansiUpahHtml(d: KwitansiUpahData): string {
   const judulKet = d.type === "batch" ? "Pembayaran seluruh upah tertunggak" : d.keterangan;
 
   return `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
-<title>Kwitansi ${noKwitansi}</title>
+<title>Kwitansi ${escapeHtml(noKwitansi)}</title>
 <style>
 @page { size: A5 landscape; margin: 8mm 10mm; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -105,16 +105,16 @@ table.detail td.colon { width: 10px; }
 </head><body>
 <div class="wrap">
   <div class="header">
-    <div><div class="usaha-nama">${d.namaUsaha}</div></div>
+    <div><div class="usaha-nama">${escapeHtml(d.namaUsaha)}</div></div>
     <div><div class="judul-kwt">KWITANSI PEMBAYARAN UPAH</div>
-    <div class="nomor-kwt">No: ${noKwitansi} &bull; Tgl: ${fmtTgl(d.tanggal_bayar)}</div></div>
+    <div class="nomor-kwt">No: ${escapeHtml(noKwitansi)} &bull; Tgl: ${escapeHtml(fmtTgl(d.tanggal_bayar))}</div></div>
   </div>
   <table class="detail">
-    <tr><td>Nama Pekerja</td><td class="colon">:</td><td><strong>${d.pekerja_nama}</strong></td></tr>
-    ${d.pekerja_jabatan ? `<tr><td>Jabatan</td><td class="colon">:</td><td>${d.pekerja_jabatan}</td></tr>` : ""}
-    <tr><td>Keterangan</td><td class="colon">:</td><td>${judulKet}</td></tr>
-    <tr><td>Tanggal Bayar</td><td class="colon">:</td><td>${fmtTgl(d.tanggal_bayar)}</td></tr>
-    ${d.catatan ? `<tr><td>Catatan</td><td class="colon">:</td><td>${d.catatan}</td></tr>` : ""}
+    <tr><td>Nama Pekerja</td><td class="colon">:</td><td><strong>${escapeHtml(d.pekerja_nama)}</strong></td></tr>
+    ${d.pekerja_jabatan ? `<tr><td>Jabatan</td><td class="colon">:</td><td>${escapeHtml(d.pekerja_jabatan)}</td></tr>` : ""}
+    <tr><td>Keterangan</td><td class="colon">:</td><td>${escapeHtml(judulKet)}</td></tr>
+    <tr><td>Tanggal Bayar</td><td class="colon">:</td><td>${escapeHtml(fmtTgl(d.tanggal_bayar))}</td></tr>
+    ${d.catatan ? `<tr><td>Catatan</td><td class="colon">:</td><td>${escapeHtml(d.catatan)}</td></tr>` : ""}
   </table>
   <div class="nominal-box">
     <span class="nominal-label">Jumlah Diterima</span>
