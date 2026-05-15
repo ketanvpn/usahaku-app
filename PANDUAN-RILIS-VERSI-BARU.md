@@ -141,4 +141,49 @@ Tujuannya supaya riwayat versi rapi, gampang rollback, dan gampang cek user paka
 
 ---
 
+## Troubleshooting Build Gagal di GitHub Actions
+
+Kalau build di GitHub Actions tiba-tiba gagal padahal kode tidak diubah, biasanya penyebabnya **environment runner GitHub yang berubah**. Workflow `.github/workflows/build-release.yml` sudah di-set defensif (windows-2022 + setup-msbuild + retry install), tapi kalau masih gagal cek pola error berikut:
+
+### Pola 1: `better-sqlite3 install gagal: could not find any Visual Studio installation`
+
+**Penyebab:** Image runner GitHub di-upgrade ke versi Visual Studio yang lebih baru dari yang dikenali `node-gyp`. Pernah kejadian di v1.0.87 saat `windows-latest` migrasi ke VS 2026.
+
+**Cara fix:**
+1. Cek `.github/workflows/build-release.yml` — pastikan `runs-on: windows-2022` (bukan `windows-latest`).
+2. Pastikan ada step `microsoft/setup-msbuild@v2` setelah Setup Node.js di kedua job.
+3. Pastikan env `npm_config_msvs_version: "2022"` ada di top-level workflow.
+4. Kalau `windows-2022` di-deprecate Microsoft (biasanya ada heads-up 6-12 bulan), pindah ke runner berikutnya yang masih support — `windows-2025` saat itu menjadi jagoannya.
+
+### Pola 2: `prebuild-install warn install Request timed out`
+
+**Penyebab:** `better-sqlite3` coba download prebuilt binary dari GitHub Releases, tapi koneksi runner timeout. Ini sporadis — kadang sukses, kadang tidak.
+
+**Cara fix:** Workflow sudah punya retry 3x untuk `pnpm install`. Kalau retry juga gagal semua 3x, biasanya ini masalah jaringan GitHub yang sedang turun. Tunggu 30 menit, lalu re-run job (di tab Actions, klik run yang gagal → Re-run failed jobs).
+
+### Pola 3: `Lockfile is not up to date with package.json`
+
+**Penyebab:** `pnpm-lock.yaml` tidak match dengan `package.json` setelah ada perubahan dependency. Biasa terjadi kalau ada commit yang ubah dependency di package.json tapi lupa commit lock-file-nya.
+
+**Cara fix:** Lokal jalankan `pnpm install` (tanpa `--frozen-lockfile`) → commit `pnpm-lock.yaml` yang ter-update → push.
+
+### Apa yang harus dilakukan kalau build gagal di tag yang sudah ada?
+
+Kalau release sudah ke-publish tapi build gagal:
+
+1. **Push fix ke `main`** (workflow tidak akan auto-trigger karena tidak ada release event baru, jadi tidak perlu khawatir double-build).
+2. **Pindah tag ke commit fix.** Lewat git lokal:
+   ```
+   git tag -d v1.0.XX
+   git push origin :refs/tags/v1.0.XX
+   git tag v1.0.XX <commit-hash-fix>
+   git push origin v1.0.XX
+   ```
+3. **Hapus release lama di GitHub** (Releases → klik release → Delete release; **JANGAN delete tag** karena tag sudah pindah ke commit yang benar).
+4. **Re-create release dari tag yang sama** → Publish → workflow auto-trigger lagi dengan code yang sudah ada fix.
+
+Aman dilakukan **kalau release lama belum punya installer ter-upload** (build pertama gagal). Kalau installer sudah ada dan user mungkin sudah download, jangan pindah tag — buat versi baru saja (v1.0.XX+1) dengan fix-nya.
+
+---
+
 *Panduan ini berlaku untuk Usahaku by KetanTech — dibuat oleh KetanTech*
