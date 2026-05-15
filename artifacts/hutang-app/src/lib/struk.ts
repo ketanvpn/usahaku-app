@@ -218,6 +218,11 @@ export interface BuildStrukOptions {
   logoBase64?: string | null;
   alamatUsaha?: string | null;
   teleponUsaha?: string | null;
+  /**
+   * Kalau true, script auto-print di-skip. Dipakai untuk preview live di
+   * halaman Pengaturan (rendering di iframe sandbox).
+   */
+  forPreview?: boolean;
 }
 
 /**
@@ -264,12 +269,18 @@ export function buildStrukHtml(hasil: StrukData, opts: BuildStrukOptions = {}): 
       ? cssA4()
       : css80mm();
 
+  // Preview di Pengaturan render HTML ini di iframe → script print akan
+  // otomatis trigger dialog cetak browser, yang sangat mengganggu. Skip-nya.
+  const printScript = opts.forPreview
+    ? ""
+    : `<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);})<\/script>`;
+
   return `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
 <style>
 ${getPageCss(ukuran)}
 ${styles}
 </style>
-<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);})<\/script>
+${printScript}
 </head><body>
 ${logoTag}
 <div class="center bold nama">${escapeHtml(hasil.nama_usaha || "Usahaku")}</div>

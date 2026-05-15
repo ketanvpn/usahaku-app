@@ -53,6 +53,7 @@ import {
   Check,
   ImageIcon,
 } from "lucide-react";
+import { StrukPreview } from "@/components/struk-preview";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -523,6 +524,7 @@ export default function PengaturanPage() {
               <CardTitle>Struk &amp; Cetak</CardTitle>
               <CardDescription>
                 Atur teks tambahan, ukuran kertas, dan tampilan logo pada struk.
+                Pratinjau di kanan akan ikut berubah saat field diedit.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -531,6 +533,7 @@ export default function PengaturanPage() {
                   <Loader2 className="h-4 w-4 animate-spin" /> Memuat...
                 </div>
               ) : (
+                <div className="grid gap-6 lg:grid-cols-2">
                 <Form {...strukForm}>
                   <form
                     onSubmit={strukForm.handleSubmit((v) => updateStrukMutation.mutate(v))}
@@ -634,6 +637,24 @@ export default function PengaturanPage() {
                     </Button>
                   </form>
                 </Form>
+
+                {/* Live preview — sinkron dengan field di atas */}
+                {pengaturan && (
+                  <StrukPreview
+                    pengaturan={{
+                      struk_header: strukForm.watch("struk_header") ?? "",
+                      struk_footer: strukForm.watch("struk_footer") ?? "",
+                      struk_ukuran_kertas: strukForm.watch("struk_ukuran_kertas"),
+                      struk_tampilkan_logo: strukForm.watch("struk_tampilkan_logo") ? "1" : "0",
+                      logo_filename: pengaturan.logo_filename,
+                    }}
+                    namaUsaha={usahaForm.watch("nama_usaha") || usahaData?.nama_usaha || "Usahaku"}
+                    alamat={usahaForm.watch("alamat") || usahaData?.alamat || null}
+                    telepon={usahaForm.watch("telepon") || usahaData?.telepon || null}
+                    usahaId={usahaId}
+                  />
+                )}
+                </div>
               )}
             </CardContent>
           </Card>

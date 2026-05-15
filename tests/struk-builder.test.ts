@@ -141,6 +141,33 @@ describe("buildStrukHtml — layout 80mm/A4 (regression)", () => {
   });
 });
 
+describe("buildStrukHtml — forPreview (live preview di Pengaturan)", () => {
+  it("default (tanpa forPreview): HTML mengandung script auto-print", () => {
+    const html = buildStrukHtml(baseHasil, { pengaturan: pengaturan80mm });
+    expect(html).toContain("window.print()");
+  });
+
+  it("forPreview=true: script auto-print di-skip supaya iframe tidak munculkan dialog cetak", () => {
+    const html = buildStrukHtml(baseHasil, {
+      pengaturan: pengaturan80mm,
+      forPreview: true,
+    });
+    expect(html).not.toContain("window.print()");
+    // Konten tetap utuh
+    expect(html).toContain(baseHasil.nama_usaha);
+    expect(html).toContain("17.000");
+  });
+
+  it("forPreview=true di 58mm tetap pakai layout 2-baris", () => {
+    const html = buildStrukHtml(baseHasil, {
+      pengaturan: pengaturan58mm,
+      forPreview: true,
+    });
+    expect(html).not.toContain("window.print()");
+    expect(html).toContain('class="item"');
+  });
+});
+
 describe("buildStrukHtml — keamanan HTML", () => {
   it("nama barang dengan tag HTML di-escape (no XSS)", () => {
     const evil: StrukData = {

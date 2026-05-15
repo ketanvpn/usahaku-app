@@ -387,7 +387,7 @@ Tidak menyentuh DB / API / format backup / endpoint baru. Endpoint `PUT /api/usa
 
 ### Rilis v1.0.86 — Cetak ulang struk + header kwitansi konsisten (🟢)
 
-Status: **✅ Selesai (siap dipublish)** — 2026-05-15 sore
+Status: **✅ Published** — 2026-05-15 sore
 
 Dua peningkatan UX yang user-facing langsung kelihatan:
 
@@ -413,7 +413,28 @@ Verifikasi:
 
 Tidak menyentuh DB / API / format backup. Halaman `laporan.tsx` (4 template print A4 landscape) sengaja **defer** ke rilis berikut karena scope-nya 4 template internal yang risiko regresinya beda dengan kwitansi user-facing.
 
-### Backlog v1.0.87+ (defer dari 1.2.0)
+### Rilis v1.0.87 — Pratinjau struk live di Pengaturan (🟢)
+
+Status: **✅ Selesai (siap dipublish)** — 2026-05-15 sore
+
+Friction yang di-solve: dulu user harus simpan setting → buka Kasir → buat transaksi dummy → cetak → kembali → revisi → ulang. Sekarang panel Pratinjau di tab "Struk & Cetak" langsung update tiap kali field berubah, jadi user tidak perlu siklus simpan-cetak-revisi sama sekali.
+
+Yang berubah:
+- `artifacts/hutang-app/src/lib/struk.ts` — tambah opsi `forPreview: true` di `BuildStrukOptions`. Kalau aktif, script `window.print()` di-skip supaya iframe preview tidak trigger dialog cetak browser. Default behavior (cetak transaksi nyata) tidak berubah.
+- `artifacts/hutang-app/src/components/struk-preview.tsx` (baru) — komponen `StrukPreview` yang render iframe sandbox dengan `srcDoc`. Logo di-load via IPC sesuai toggle. Debounce 200ms saat field berubah supaya typing di textarea header/footer tidak rebuild iframe per huruf.
+- `artifacts/hutang-app/src/pages/pengaturan.tsx` — tab "Struk & Cetak" jadi grid 2 kolom (form di kiri, preview di kanan). `form.watch()` di-wire ke kedua tab (Data Usaha + Struk) supaya preview menampilkan komposit yang akurat — termasuk kalau user mengubah nama usaha di tab Data Usaha tanpa simpan dulu.
+- `tests/struk-builder.test.ts` — +3 test untuk opsi `forPreview` (default tetap auto-print, forPreview skip auto-print, layout tetap konsisten).
+
+Verifikasi:
+- [x] `pnpm vitest run` — 60/60 pass (57 lama + 3 baru) ✅
+- [x] `pnpm --filter @workspace/hutang-app typecheck` — 0 error ✅
+- [x] `pnpm --filter @workspace/hutang-app build:electron` — sukses ✅
+- [ ] Smoke test manual: buka /pengaturan tab Struk & Cetak → ubah header/footer/ukuran → preview ikut berubah
+- [ ] Smoke test manual: ubah nama usaha di tab Data Usaha (tanpa simpan) → buka tab Struk → preview menampilkan nama yang baru
+
+Tidak menyentuh DB / API / format backup. Iframe pakai `sandbox=""` (no scripts, no same-origin) sehingga isolasi penuh dari halaman induk — `forPreview` skip auto-print sebagai defense in depth tapi sandbox sudah block script execution juga.
+
+### Backlog v1.0.88+ (defer dari 1.2.0)
 
 - Migrasi 4 template print di `laporan.tsx` ke helper `buildPrintHeaderHtml` (A4 landscape — laporan keuangan, kasir, hutang, stok)
 - Logo embed di backup (butuh API server/IPC bridge untuk akses userData)
