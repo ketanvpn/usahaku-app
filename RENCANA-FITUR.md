@@ -359,7 +359,7 @@ Tidak menyentuh DB / API / format backup. Tidak ada migrasi. Restore backup lama
 
 ### Rilis v1.0.85 — Cleanup form usaha duplikat (🟢)
 
-Status: **✅ Selesai (siap dipublish)** — 2026-05-15 sore
+Status: **✅ Published** — 2026-05-15 sore
 
 Sebelum: form edit data usaha (nama_usaha, telepon, alamat, catatan) ada di **2 tempat**:
 - `/profil` Card "Info Usaha / Toko"
@@ -385,9 +385,37 @@ Verifikasi:
 
 Tidak menyentuh DB / API / format backup / endpoint baru. Endpoint `PUT /api/usaha/mine` tetap ada (dipakai oleh `/pengaturan`). Restore backup lama tetap jalan.
 
-### Backlog v1.0.86+ (defer dari 1.2.0)
+### Rilis v1.0.86 — Cetak ulang struk + header kwitansi konsisten (🟢)
 
-- Migrasi struk halaman lain ke helper `lib/struk.ts` (laporan, pembayaran, gaji-tenaga, keuangan) — A4/A5, bukan terkait bug 58mm, cuma konsistensi header logo + alamat + footer
+Status: **✅ Selesai (siap dipublish)** — 2026-05-15 sore
+
+Dua peningkatan UX yang user-facing langsung kelihatan:
+
+**A. Cetak ulang struk dari Riwayat Penjualan Kasir.** Sebelumnya tombol di dialog Riwayat hanya bisa hapus. Sekarang tiap baris ada tombol Printer yang panggil `buildStrukHtml` yang sama dengan transaksi baru — header logo, alamat, footer kustom, ukuran kertas semua ikut pengaturan. Subtotal direkonstruksi dari `total + diskon` supaya angka sama persis dengan struk pertama.
+
+**B. Header kwitansi pembayaran hutang + kwitansi upah konsisten dengan struk Kasir.** Sebelumnya kedua kwitansi cuma render `nama usaha` polos dari snapshot lama. Sekarang menampilkan logo + alamat + telepon + teks header tambahan dari Pengaturan yang sama dengan struk Kasir.
+
+File yang berubah:
+- `artifacts/hutang-app/src/lib/struk.ts` — tambah `buildPrintHeaderHtml()` + `getDefaultPrintHeaderCss()` untuk dipakai di dokumen non-thermal (kwitansi, laporan).
+- `artifacts/hutang-app/src/hooks/use-print-context.tsx` (baru) — hook `usePrintContext()` yang gabungkan data usaha + pengaturan jadi satu objek. Plus helper async `loadLogoForPrint()`.
+- `artifacts/hutang-app/src/pages/kasir.tsx` — interface `RiwayatTransaksi` dilengkapi `harga_satuan`, `uang_bayar`, `kembalian`. Tambah `handlePrintRiwayat()` dan tombol Cetak per baris di dialog Riwayat.
+- `artifacts/hutang-app/src/pages/pembayaran.tsx` — `buildKwitansiGabunganHtml` dan `buildKwitansiLamaHtml` pakai header bersama. CSS lama yang spesifik dipindah ke `getDefaultPrintHeaderCss`.
+- `artifacts/hutang-app/src/pages/gaji-tenaga.tsx` — `buildKwitansiUpahHtml` pakai header bersama (override CSS supaya kompak di A5 landscape).
+- `tests/struk-builder.test.ts` — +7 test baru untuk `buildPrintHeaderHtml` dan `getDefaultPrintHeaderCss` (smoke + escape XSS + edge case).
+
+Verifikasi:
+- [x] `pnpm vitest run` — 57/57 pass (50 lama + 7 baru) ✅
+- [x] `pnpm --filter @workspace/hutang-app typecheck` — 0 error ✅
+- [x] `pnpm --filter @workspace/hutang-app build:electron` — sukses ✅
+- [ ] Smoke test manual: cetak ulang struk dari Riwayat Kasir → muncul logo + footer dari Pengaturan
+- [ ] Smoke test manual: cetak kwitansi pembayaran hutang → muncul logo + alamat + telepon
+- [ ] Smoke test manual: cetak kwitansi upah → muncul logo + alamat + telepon
+
+Tidak menyentuh DB / API / format backup. Halaman `laporan.tsx` (4 template print A4 landscape) sengaja **defer** ke rilis berikut karena scope-nya 4 template internal yang risiko regresinya beda dengan kwitansi user-facing.
+
+### Backlog v1.0.87+ (defer dari 1.2.0)
+
+- Migrasi 4 template print di `laporan.tsx` ke helper `buildPrintHeaderHtml` (A4 landscape — laporan keuangan, kasir, hutang, stok)
 - Logo embed di backup (butuh API server/IPC bridge untuk akses userData)
 
 ### Rilis 1.3.0 — Master Supplier (🟢)

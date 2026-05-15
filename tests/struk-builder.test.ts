@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   buildStrukHtml,
+  buildPrintHeaderHtml,
   getBodyWidth,
+  getDefaultPrintHeaderCss,
   getPageCss,
   type StrukData,
 } from "../artifacts/hutang-app/src/lib/struk";
@@ -182,5 +184,81 @@ describe("buildStrukHtml — diskon", () => {
     const html = buildStrukHtml(baseHasil, { pengaturan: pengaturan58mm });
     // 'Diskon' tidak boleh muncul sebagai label baris
     expect(html).not.toMatch(/<span>Diskon<\/span>/);
+  });
+});
+
+describe("buildPrintHeaderHtml (kwitansi/laporan)", () => {
+  it("render minimum: cuma nama usaha", () => {
+    const html = buildPrintHeaderHtml({ namaUsaha: "Toko Sari" });
+    expect(html).toContain('class="print-header"');
+    expect(html).toContain('class="print-nama-usaha">Toko Sari');
+    // baris opsional tidak muncul
+    expect(html).not.toContain('class="print-alamat"');
+    expect(html).not.toContain('class="print-telepon"');
+    expect(html).not.toContain('class="print-judul"');
+    expect(html).not.toContain('class="print-meta"');
+    expect(html).not.toContain('class="print-logo"');
+  });
+
+  it("render lengkap: alamat, telepon, header tambahan, judul, meta, logo", () => {
+    const html = buildPrintHeaderHtml({
+      namaUsaha: "Toko Sari",
+      alamat: "Jl. Merdeka 12",
+      telepon: "0812-xxxx",
+      headerExtra: "Buka 08:00–21:00",
+      logoBase64: "AAAA",
+      logoFilename: "logo.png",
+      judul: "KWITANSI PEMBAYARAN HUTANG",
+      meta: "No: KWT-001 • Tanggal: 15 Mei 2026",
+    });
+    expect(html).toContain("Toko Sari");
+    expect(html).toContain("Jl. Merdeka 12");
+    expect(html).toContain("Telp: 0812-xxxx");
+    expect(html).toContain("Buka 08:00–21:00");
+    expect(html).toContain("KWITANSI PEMBAYARAN HUTANG");
+    expect(html).toContain("No: KWT-001");
+    expect(html).toContain('src="data:image/png;base64,AAAA"');
+  });
+
+  it("logo .jpg → mime image/jpeg", () => {
+    const html = buildPrintHeaderHtml({
+      namaUsaha: "X",
+      logoBase64: "AAA",
+      logoFilename: "logo.jpg",
+    });
+    expect(html).toContain('src="data:image/jpeg;base64,AAA"');
+  });
+
+  it("escape karakter spesial di nama usaha (no XSS)", () => {
+    const html = buildPrintHeaderHtml({
+      namaUsaha: '<script>alert(1)</script>',
+    });
+    expect(html).not.toContain("<script>alert(1)</script>");
+    expect(html).toContain("&lt;script&gt;");
+  });
+
+  it("escape karakter spesial di header tambahan", () => {
+    const html = buildPrintHeaderHtml({
+      namaUsaha: "X",
+      headerExtra: 'Toko "X" & Co',
+    });
+    expect(html).toContain("Toko &quot;X&quot; &amp; Co");
+  });
+
+  it("headerExtra string kosong / whitespace tidak dirender", () => {
+    const html = buildPrintHeaderHtml({ namaUsaha: "X", headerExtra: "   " });
+    expect(html).not.toContain('class="print-header-extra"');
+  });
+});
+
+describe("getDefaultPrintHeaderCss", () => {
+  it("mendefinisikan class yang dipakai oleh buildPrintHeaderHtml", () => {
+    const css = getDefaultPrintHeaderCss();
+    expect(css).toContain(".print-header");
+    expect(css).toContain(".print-logo");
+    expect(css).toContain(".print-nama-usaha");
+    expect(css).toContain(".print-alamat");
+    expect(css).toContain(".print-judul");
+    expect(css).toContain(".print-meta");
   });
 });

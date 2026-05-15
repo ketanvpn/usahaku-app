@@ -68,9 +68,17 @@ interface RiwayatTransaksi {
   tanggal: string;
   total: number;
   diskon: number;
+  uang_bayar: number;
+  kembalian: number;
   catatan: string | null;
   created_at: string;
-  items: Array<{ nama_barang: string; jumlah: number; satuan: string; subtotal: number }>;
+  items: Array<{
+    nama_barang: string;
+    jumlah: number;
+    satuan: string;
+    harga_satuan: number;
+    subtotal: number;
+  }>;
 }
 
 function todayStr() {
@@ -113,6 +121,26 @@ export default function KasirPage() {
       alamatUsaha: usahaData?.alamat ?? null,
       teleponUsaha: usahaData?.telepon ?? null,
     });
+  };
+
+  // Cetak ulang dari Riwayat: convert RiwayatTransaksi → HasilTransaksi.
+  // Subtotal direkonstruksi (total + diskon) supaya struk hasil cetak ulang
+  // menampilkan angka yang sama persis dengan struk pertama.
+  const handlePrintRiwayat = async (t: RiwayatTransaksi) => {
+    const subtotal = t.total + t.diskon;
+    const namaUsaha = usahaData?.nama_usaha ?? "Usahaku";
+    const hasil: HasilTransaksi = {
+      id: t.id,
+      tanggal: t.tanggal,
+      nama_usaha: namaUsaha,
+      subtotal,
+      diskon: t.diskon,
+      total: t.total,
+      uang_bayar: t.uang_bayar,
+      kembalian: t.kembalian,
+      items: t.items,
+    };
+    await handlePrintStruk(hasil);
   };
 
   const [search, setSearch] = useState("");
@@ -682,7 +710,7 @@ export default function KasirPage() {
                     <TableHead>Tanggal</TableHead>
                     <TableHead>Item</TableHead>
                     <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="w-12"></TableHead>
+                    <TableHead className="w-20 text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -705,15 +733,27 @@ export default function KasirPage() {
                         {formatRupiah(t.total)}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          disabled={!lisensiAktif || hapusMutation.isPending}
-                          onClick={() => setHapusId(t.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-0.5">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                            onClick={() => handlePrintRiwayat(t)}
+                            title="Cetak ulang struk"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            disabled={!lisensiAktif || hapusMutation.isPending}
+                            onClick={() => setHapusId(t.id)}
+                            title="Batalkan transaksi"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

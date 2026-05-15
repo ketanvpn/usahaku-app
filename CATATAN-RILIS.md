@@ -8,13 +8,14 @@ Aturan pakai:
 - Tanggal pakai format `YYYY-MM-DD`.
 - Update bagian `Versi terbaru` setelah rilis sukses.
 
-Versi terbaru: `v1.0.83`
+Versi terbaru: `v1.0.85`
 
-Rilis berikutnya (siap dipublish): `v1.0.85`
+Rilis berikutnya (siap dipublish): `v1.0.86`
 
 | Versi | Tanggal | Status | Catatan Singkat |
 | --- | --- | --- | --- |
-| v1.0.85 | 2026-05-15 | Siap dipublish | Bersih-bersih halaman Profil: form edit data usaha (nama, telepon, alamat, catatan) dihapus dari Profil dan dipindah seluruhnya ke halaman Pengaturan tab Data Usaha agar tidak ada dua sumber kebenaran yang bisa nulis ke endpoint yang sama. Halaman Profil sekarang fokus ke profil pengguna + ganti password, dengan tombol cepat "Atur Data Usaha" yang link ke Pengaturan |
+| v1.0.86 | 2026-05-15 | Siap dipublish | Cetak ulang struk dari Riwayat Penjualan Kasir (tombol Printer per baris memakai `buildStrukHtml` yang sama dengan transaksi baru) + kwitansi Pembayaran Hutang dan Pembayaran Upah otomatis menampilkan logo, alamat, telepon, dan teks header tambahan dari Pengaturan. Helper bersama `buildPrintHeaderHtml` + `getDefaultPrintHeaderCss` di `lib/struk.ts` plus hook `usePrintContext` untuk dipakai ulang halaman lain |
+| v1.0.85 | 2026-05-15 | Published | Bersih-bersih halaman Profil: form edit data usaha (nama, telepon, alamat, catatan) dihapus dari Profil dan dipindah seluruhnya ke halaman Pengaturan tab Data Usaha agar tidak ada dua sumber kebenaran yang bisa nulis ke endpoint yang sama. Halaman Profil sekarang fokus ke profil pengguna + ganti password, dengan tombol cepat "Atur Data Usaha" yang link ke Pengaturan |
 | v1.0.84 | 2026-05-15 | Published | Perbaikan struk Kasir 58mm: layout dirombak jadi 2-baris per item (nama di atas, qty/harga/subtotal di bawah) supaya tidak overflow di printer thermal 58mm. Lebar body dipersempit ke 50mm + font 8pt + format angka tanpa prefix Rp untuk hemat ruang. Layout 80mm dan A4 tidak berubah (tetap tabel 4 kolom yang sudah aman). Builder HTML struk dipindah ke `lib/struk.ts` (`buildStrukHtml`) supaya bisa dipakai ulang |
 | v1.0.83 | 2026-05-15 | Published | Halaman Pengaturan baru (tab Data Usaha + Struk & Cetak): upload logo (PNG/JPG, maks 1 MB), atur teks header/footer struk, ukuran kertas default (58/80mm/A4), toggle tampilkan logo. Struk Kasir otomatis mengikuti pengaturan (logo + alamat + telepon + footer kustom). Backup format naik ke v1.8 dengan include data pengaturan; backup lama tetap kompatibel saat di-restore |
 | v1.0.82 | 2026-05-14 | Published | Penataan ulang menu sidebar (grup baru: PIUTANG/PENJUALAN/KEUANGAN/SISTEM), label "Pekerja & Upah" + "Barang & Stok", Profil & Bantuan pindah ke footer sidebar, badge angka peringatan di sidebar (stok rendah, upah belum lunas, hutang lewat jatuh tempo), dan dialog Bantuan terintegrasi |

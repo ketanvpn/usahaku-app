@@ -82,6 +82,103 @@ export function getLogoMime(filename: string | null | undefined): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Header HTML bersama untuk dokumen print (kwitansi pembayaran, kwitansi upah,
+// laporan). Bukan untuk struk thermal — struk pakai `buildStrukHtml` yang
+// sudah handle layout per ukuran kertas.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PrintHeaderInput {
+  namaUsaha: string;
+  alamat?: string | null;
+  telepon?: string | null;
+  /** Teks header tambahan dari pengaturan (string kosong = tidak render). */
+  headerExtra?: string;
+  /** Logo base64 (tanpa prefix "data:..."). Null = tidak render. */
+  logoBase64?: string | null;
+  /** Filename logo (untuk deteksi mime type). */
+  logoFilename?: string | null;
+  /** Judul dokumen, contoh "KWITANSI PEMBAYARAN HUTANG". Optional. */
+  judul?: string;
+  /** Nomor dokumen + tanggal, contoh "No: KWT-001 • Tanggal: 15 Mei 2026". Optional. */
+  meta?: string;
+}
+
+/**
+ * Build header HTML untuk dokumen print (A4/A5). Return blok `<div class="print-header">...</div>`
+ * yang langsung bisa di-paste ke template kwitansi/laporan.
+ *
+ * CSS class yang dipakai (caller harus sediakan styling-nya sendiri):
+ *   - `.print-header` — wrapper
+ *   - `.print-logo` — img logo (max-height diatur caller)
+ *   - `.print-nama-usaha` — nama besar
+ *   - `.print-alamat`, `.print-telepon`, `.print-header-extra` — baris kecil
+ *   - `.print-judul` — judul dokumen (opsional)
+ *   - `.print-meta` — nomor + tanggal (opsional)
+ *
+ * Caller bisa pakai `getDefaultPrintHeaderCss()` untuk default style yang konsisten.
+ */
+export function buildPrintHeaderHtml(input: PrintHeaderInput): string {
+  const {
+    namaUsaha,
+    alamat,
+    telepon,
+    headerExtra,
+    logoBase64,
+    logoFilename,
+    judul,
+    meta,
+  } = input;
+
+  const logoTag = logoBase64
+    ? `<img class="print-logo" src="data:${getLogoMime(logoFilename)};base64,${logoBase64}" alt="Logo"/>`
+    : "";
+  const alamatLine = alamat
+    ? `<div class="print-alamat">${escapeHtml(alamat)}</div>`
+    : "";
+  const teleponLine = telepon
+    ? `<div class="print-telepon">Telp: ${escapeHtml(telepon)}</div>`
+    : "";
+  const headerExtraLine = headerExtra && headerExtra.trim()
+    ? `<div class="print-header-extra">${escapeHtml(headerExtra.trim())}</div>`
+    : "";
+  const judulLine = judul
+    ? `<div class="print-judul">${escapeHtml(judul)}</div>`
+    : "";
+  const metaLine = meta
+    ? `<div class="print-meta">${escapeHtml(meta)}</div>`
+    : "";
+
+  return `<div class="print-header">
+${logoTag}
+<div class="print-nama-usaha">${escapeHtml(namaUsaha)}</div>
+${alamatLine}
+${teleponLine}
+${headerExtraLine}
+${judulLine}
+${metaLine}
+</div>`;
+}
+
+/**
+ * CSS default untuk class yang dipakai `buildPrintHeaderHtml`. Caller bisa
+ * override dengan menulis ulang class yang sama setelah ini.
+ *
+ * Default cocok untuk dokumen A5 (kwitansi). A4 / laporan boleh override
+ * font-size kalau perlu.
+ */
+export function getDefaultPrintHeaderCss(): string {
+  return `
+.print-header { text-align: center; border-bottom: 1px dashed #888; padding-bottom: 8px; margin-bottom: 10px; }
+.print-logo { max-height: 50px; max-width: 100%; display: block; margin: 0 auto 4px; }
+.print-nama-usaha { font-size: 14pt; font-weight: bold; }
+.print-alamat, .print-telepon, .print-header-extra { font-size: 9pt; color: #444; margin-top: 1px; }
+.print-judul { font-size: 11pt; font-weight: bold; letter-spacing: 1px; margin-top: 4px; }
+.print-meta { font-size: 8.5pt; color: #555; margin-top: 2px; }
+`;
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Builder HTML struk (kasir)
 // ─────────────────────────────────────────────────────────────────────────────
 

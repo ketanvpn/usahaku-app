@@ -31,6 +31,8 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Loader2, Plus, Edit, Trash2, Search, HardHat, Banknote, Users, TrendingDown, Clock, Download, Printer, Link2, Link2Off } from "lucide-react";
 import { useLicense } from "@/context/license-context";
 import { useAuth } from "@/hooks/use-auth";
+import { usePrintContext, loadLogoForPrint, type PrintContext } from "@/hooks/use-print-context";
+import { buildPrintHeaderHtml, getDefaultPrintHeaderCss } from "@/lib/struk";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -71,11 +73,30 @@ function openPrintWindow(html: string) {
   }
 }
 
-function buildKwitansiUpahHtml(d: KwitansiUpahData): string {
+function buildKwitansiUpahHtml(
+  d: KwitansiUpahData,
+  extras: { ctx: PrintContext; logoBase64: string | null },
+): string {
+  const { ctx, logoBase64 } = extras;
   const noKwitansi = `KWT-UPAH-${Date.now().toString().slice(-8)}`;
   const fmtRp = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
   const fmtTgl = (s: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(s));
   const judulKet = d.type === "batch" ? "Pembayaran seluruh upah tertunggak" : d.keterangan;
+
+  // Prefer nama dari context (data terbaru di app), fallback ke nama dari payload
+  // (snapshot saat tombol Bayar ditekan, sudah tertanam di KwitansiUpahData).
+  const namaUsaha = ctx.namaUsaha || d.namaUsaha || "Usaha";
+
+  const headerHtml = buildPrintHeaderHtml({
+    namaUsaha,
+    alamat: ctx.alamat,
+    telepon: ctx.telepon,
+    headerExtra: ctx.headerExtra,
+    logoBase64,
+    logoFilename: ctx.pengaturan?.logo_filename ?? null,
+    judul: "KWITANSI PEMBAYARAN UPAH",
+    meta: `No: ${noKwitansi} • Tgl: ${fmtTgl(d.tanggal_bayar)}`,
+  });
 
   return `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
 <title>Kwitansi ${escapeHtml(noKwitansi)}</title>
@@ -84,10 +105,14 @@ function buildKwitansiUpahHtml(d: KwitansiUpahData): string {
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #111; background: white; width: 182mm; }
 .wrap { border: 1.5px solid #333; border-radius: 3px; padding: 10px 14px; }
-.header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #333; padding-bottom: 7px; margin-bottom: 7px; }
-.usaha-nama { font-size: 12pt; font-weight: bold; }
-.judul-kwt { font-size: 10pt; font-weight: bold; text-align: right; }
-.nomor-kwt { font-size: 7.5pt; color: #555; text-align: right; margin-top: 2px; }
+${getDefaultPrintHeaderCss()}
+/* Override print header: kompak untuk A5 landscape */
+.print-header { padding-bottom: 6px; margin-bottom: 8px; border-bottom: 1px solid #333; }
+.print-logo { max-height: 40px; margin-bottom: 2px; }
+.print-nama-usaha { font-size: 13pt; }
+.print-alamat, .print-telepon, .print-header-extra { font-size: 8.5pt; }
+.print-judul { font-size: 11pt; margin-top: 3px; }
+.print-meta { font-size: 8pt; }
 table.detail { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 9pt; }
 table.detail td { padding: 2px 4px; vertical-align: top; }
 table.detail td:first-child { font-weight: 600; width: 110px; white-space: nowrap; }
@@ -104,11 +129,7 @@ table.detail td.colon { width: 10px; }
 <script>window.addEventListener('load',function(){setTimeout(function(){window.print();},600);});<\/script>
 </head><body>
 <div class="wrap">
-  <div class="header">
-    <div><div class="usaha-nama">${escapeHtml(d.namaUsaha)}</div></div>
-    <div><div class="judul-kwt">KWITANSI PEMBAYARAN UPAH</div>
-    <div class="nomor-kwt">No: ${escapeHtml(noKwitansi)} &bull; Tgl: ${escapeHtml(fmtTgl(d.tanggal_bayar))}</div></div>
-  </div>
+  ${headerHtml}
   <table class="detail">
     <tr><td>Nama Pekerja</td><td class="colon">:</td><td><strong>${escapeHtml(d.pekerja_nama)}</strong></td></tr>
     ${d.pekerja_jabatan ? `<tr><td>Jabatan</td><td class="colon">:</td><td>${escapeHtml(d.pekerja_jabatan)}</td></tr>` : ""}
@@ -253,6 +274,13 @@ export default function GajiTenagaPage() {
     query: { enabled: !!user?.usaha_id, queryKey: getGetUsahaQueryKey(user?.usaha_id ?? 0) },
   });
   const namaUsaha = usahaData?.nama_usaha ?? "Usahaku";
+  const printCtx = usePrintContext();
+
+  const handleCetakKwitansiUpah = async (data: KwitansiUpahData) => {
+    const logoBase64 = await loadLogoForPrint(printCtx, user?.usaha_id ?? null);
+    const html = buildKwitansiUpahHtml(data, { ctx: printCtx, logoBase64 });
+    openPrintWindow(html);
+  };
 
   // ── Mutations ────────────────────────────────────────────────────────────────
   const invalidateUpah = () => {
@@ -1646,7 +1674,7 @@ export default function GajiTenagaPage() {
               <p className="text-sm text-muted-foreground">Cetak kwitansi pembayaran upah untuk diberikan kepada pekerja?</p>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsKwitansiOpen(false)}>Lewati</Button>
-                <Button onClick={() => { openPrintWindow(buildKwitansiUpahHtml(kwitansiData)); setIsKwitansiOpen(false); }}>
+                <Button onClick={() => { void handleCetakKwitansiUpah(kwitansiData); setIsKwitansiOpen(false); }}>
                   <Printer className="h-4 w-4 mr-2" />
                   Cetak Kwitansi
                 </Button>

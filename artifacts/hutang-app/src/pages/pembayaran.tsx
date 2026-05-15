@@ -22,6 +22,9 @@ import { formatRupiah, formatDate, escapeHtml, getErrorMessage } from "@/lib/for
 import { Loader2, Plus, Trash2, Filter, Printer, ArrowRight, CheckCircle2, Clock } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useLicense } from "@/context/license-context";
+import { useAuth } from "@/hooks/use-auth";
+import { usePrintContext, loadLogoForPrint, type PrintContext } from "@/hooks/use-print-context";
+import { buildPrintHeaderHtml, getDefaultPrintHeaderCss } from "@/lib/struk";
 
 type PembayaranFull = Pembayaran & {
   nomor_kwitansi?: string;
@@ -30,6 +33,11 @@ type PembayaranFull = Pembayaran & {
   hutang_nominal?: number;
   sisa_hutang_setelah?: number;
 };
+
+interface PrintExtras {
+  ctx: PrintContext;
+  logoBase64: string | null;
+}
 
 type BatchResult = {
   pembayaran_list: Array<{
@@ -86,8 +94,11 @@ function fmtDate(iso: string) {
   return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
 }
 
-function buildKwitansiGabunganHtml(batch: BatchResult): string {
-  const namaUsaha = batch.nama_usaha || "Usaha";
+function buildKwitansiGabunganHtml(batch: BatchResult, extras: PrintExtras): string {
+  const { ctx, logoBase64 } = extras;
+  // Prefer nama dari context (data terbaru di app), fallback ke nama dari payload
+  // batch (snapshot saat batch dibuat di server).
+  const namaUsaha = ctx.namaUsaha || batch.nama_usaha || "Usaha";
   const pelangganNama = batch.pelanggan_nama;
   const tanggal = fmtDate(batch.tanggal_bayar);
   const totalDibayar = batch.total_dibayar;
@@ -112,6 +123,17 @@ function buildKwitansiGabunganHtml(batch: BatchResult): string {
       </tr>`;
   }).join("");
 
+  const headerHtml = buildPrintHeaderHtml({
+    namaUsaha,
+    alamat: ctx.alamat,
+    telepon: ctx.telepon,
+    headerExtra: ctx.headerExtra,
+    logoBase64,
+    logoFilename: ctx.pengaturan?.logo_filename ?? null,
+    judul: "KWITANSI PEMBAYARAN HUTANG",
+    meta: `No: ${nomorLabel} • Tanggal: ${tanggal}`,
+  });
+
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -122,10 +144,7 @@ function buildKwitansiGabunganHtml(batch: BatchResult): string {
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; }
 .kwt { border: 2px solid #333; padding: 12px; }
-.header { text-align: center; border-bottom: 1px dashed #888; padding-bottom: 8px; margin-bottom: 10px; }
-.nama-usaha { font-size: 14pt; font-weight: bold; }
-.judul-kwt { font-size: 11pt; font-weight: bold; letter-spacing: 1px; margin-top: 3px; }
-.nomor-kwt { font-size: 8.5pt; color: #555; margin-top: 2px; }
+${getDefaultPrintHeaderCss()}
 .info-tbl { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9.5pt; }
 .info-tbl td { padding: 2px 4px; vertical-align: top; }
 .info-tbl .lbl { width: 40%; font-weight: 600; }
@@ -151,11 +170,7 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; 
 </head>
 <body>
 <div class="kwt">
-  <div class="header">
-    <div class="nama-usaha">${escapeHtml(namaUsaha)}</div>
-    <div class="judul-kwt">KWITANSI PEMBAYARAN HUTANG</div>
-    <div class="nomor-kwt">No: ${escapeHtml(nomorLabel)} &nbsp;&bull;&nbsp; Tanggal: ${escapeHtml(tanggal)}</div>
-  </div>
+  ${headerHtml}
 
   <table class="info-tbl">
     <tr><td class="lbl">Diterima dari</td><td class="sep">:</td><td><strong>${escapeHtml(pelangganNama)}</strong></td></tr>
@@ -202,8 +217,7 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; 
 </html>`;
 }
 
-function openKwitansiGabungan(batch: BatchResult) {
-  const html = buildKwitansiGabunganHtml(batch);
+function openHtmlForPrint(html: string) {
   if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
     window.electronApp.openInBrowser(html);
   } else {
@@ -214,9 +228,10 @@ function openKwitansiGabungan(batch: BatchResult) {
   }
 }
 
-function openKwitansiLama(p: PembayaranFull) {
+function buildKwitansiLamaHtml(p: PembayaranFull, extras: PrintExtras): string {
+  const { ctx, logoBase64 } = extras;
   const nomorKwitansi = p.nomor_kwitansi || `KWT-${p.id}`;
-  const namaUsaha = p.nama_usaha || "Usaha";
+  const namaUsaha = ctx.namaUsaha || p.nama_usaha || "Usaha";
   const tanggal = fmtDate(p.tanggal_bayar);
   const nominalBayar = p.nominal_bayar;
   const hutangNominal = p.hutang_nominal ?? 0;
@@ -224,14 +239,25 @@ function openKwitansiLama(p: PembayaranFull) {
   const catatan = p.catatan || "";
   const keterangan = p.hutang_keterangan || "—";
 
-  const html = `<!DOCTYPE html>
+  const headerHtml = buildPrintHeaderHtml({
+    namaUsaha,
+    alamat: ctx.alamat,
+    telepon: ctx.telepon,
+    headerExtra: ctx.headerExtra,
+    logoBase64,
+    logoFilename: ctx.pengaturan?.logo_filename ?? null,
+    judul: "KWITANSI PEMBAYARAN HUTANG",
+    meta: `No: ${nomorKwitansi} • Tanggal: ${tanggal}`,
+  });
+
+  return `<!DOCTYPE html>
 <html lang="id"><head><meta charset="UTF-8"/>
 <title>Kwitansi ${escapeHtml(nomorKwitansi)}</title>
 <style>
 @page{size:A5 portrait;margin:12mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:10pt;color:#111}
-.kwt{border:2px solid #333;padding:12px}.header{text-align:center;border-bottom:1px dashed #888;padding-bottom:8px;margin-bottom:10px}
-.nama-usaha{font-size:14pt;font-weight:bold}.judul-kwt{font-size:11pt;font-weight:bold;letter-spacing:1px;margin-top:3px}
-.nomor-kwt{font-size:8.5pt;color:#555;margin-top:2px}.info-tbl{width:100%;border-collapse:collapse;margin:8px 0;font-size:9.5pt}
+.kwt{border:2px solid #333;padding:12px}
+${getDefaultPrintHeaderCss()}
+.info-tbl{width:100%;border-collapse:collapse;margin:8px 0;font-size:9.5pt}
 .info-tbl td{padding:2px 4px;vertical-align:top}.info-tbl .lbl{width:40%;font-weight:600}.info-tbl .sep{width:6px}
 .nominal-box{background:#f5f5f5;border:1px solid #999;border-radius:3px;padding:8px 10px;margin:10px 0;text-align:center}
 .nominal-label{font-size:8pt;font-weight:600;color:#555;letter-spacing:1.5px;text-transform:uppercase}
@@ -246,9 +272,7 @@ function openKwitansiLama(p: PembayaranFull) {
 </style>
 <script>window.addEventListener('load',function(){setTimeout(function(){window.print();},600);});<\/script>
 </head><body><div class="kwt">
-<div class="header"><div class="nama-usaha">${escapeHtml(namaUsaha)}</div>
-<div class="judul-kwt">KWITANSI PEMBAYARAN HUTANG</div>
-<div class="nomor-kwt">No: ${escapeHtml(nomorKwitansi)} &bull; Tanggal: ${escapeHtml(tanggal)}</div></div>
+${headerHtml}
 <table class="info-tbl">
 <tr><td class="lbl">Diterima dari</td><td class="sep">:</td><td><strong>${escapeHtml(p.pelanggan_nama)}</strong></td></tr>
 <tr><td class="lbl">Keterangan Hutang</td><td class="sep">:</td><td>${escapeHtml(keterangan)}</td></tr>
@@ -263,15 +287,6 @@ ${catatan?`<div style="font-size:9pt;color:#555;font-style:italic;margin:6px 4px
 <div class="ttd-area"><div class="ttd-box"><div>Penerima,</div><div class="ttd-space"></div><div class="ttd-line">(________________)</div></div></div>
 <div class="footer-kwt">Terima kasih atas pembayarannya &bull; Simpan kwitansi ini sebagai bukti pembayaran</div>
 </div></body></html>`;
-
-  if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
-    window.electronApp.openInBrowser(html);
-  } else {
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const tab = window.open(url, "_blank");
-    if (tab) tab.addEventListener("load", () => setTimeout(() => URL.revokeObjectURL(url), 2000));
-  }
 }
 
 export default function PembayaranPage() {
@@ -298,6 +313,20 @@ export default function PembayaranPage() {
   const queryClient = useQueryClient();
   const deleteMutation = useDeletePembayaran();
   const { lisensiAktif } = useLicense();
+  const { user } = useAuth();
+  const printCtx = usePrintContext();
+
+  const handleCetakBatch = async (batch: BatchResult) => {
+    const logoBase64 = await loadLogoForPrint(printCtx, user?.usaha_id ?? null);
+    const html = buildKwitansiGabunganHtml(batch, { ctx: printCtx, logoBase64 });
+    openHtmlForPrint(html);
+  };
+
+  const handleCetakKwitansi = async (p: PembayaranFull) => {
+    const logoBase64 = await loadLogoForPrint(printCtx, user?.usaha_id ?? null);
+    const html = buildKwitansiLamaHtml(p, { ctx: printCtx, logoBase64 });
+    openHtmlForPrint(html);
+  };
 
   const hutangDipilih = useMemo(() => {
     if (!hutangAktifList) return [];
@@ -716,7 +745,9 @@ export default function PembayaranPage() {
             <Button variant="outline" onClick={() => setBatchResult(null)}>Nanti dulu</Button>
             <Button
               onClick={() => {
-                if (batchResult) openKwitansiGabungan(batchResult);
+                if (batchResult) {
+                  void handleCetakBatch(batchResult);
+                }
                 setBatchResult(null);
               }}
             >
@@ -788,7 +819,7 @@ export default function PembayaranPage() {
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost" size="icon"
-                            onClick={() => openKwitansiLama(p)}
+                            onClick={() => void handleCetakKwitansi(p)}
                             title="Cetak Kwitansi"
                             className="text-primary"
                           >
