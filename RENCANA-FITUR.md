@@ -543,44 +543,44 @@ Verifikasi:
 - [ ] Smoke test manual: klik Eye di /supplier → muncul detail dengan ringkasan benar.
 - [ ] Smoke test manual: di /laporan tab "Pembelian Supplier", ganti bulan → data ikut berubah; klik Cetak A4 → header lengkap muncul.
 
-### Rilis 1.1.2 — Performance: code-split per route + manualChunks (🟢)
+### Rilis 1.1.2 — REVERTED (post-mortem)
+
+Status: **❌ Reverted di v1.1.3** — 2026-05-15 malam.
+
+Eksperimen optimasi bundle: 24 page jadi `React.lazy()` + `manualChunks` di vite.config. Build local + `pnpm build:desktop` jalan, tapi setelah dipublish dan user install dari `.exe`, **app blank putih setelah loading awal**. Auto-update sudah jalan, jadi user yang sebelumnya di v1.1.1 langsung kena.
+
+Akar (kemungkinan):
+- Dynamic chunk loading lewat `import()` ter-resolve relatif terhadap document URL. Di Electron production, document di-load via `loadURL("http://localhost:8080/...")` dari Express server lokal. Path resolution mismatch antara dev server (proxy ke Vite) vs production (Express serve dari `dist/public`) bisa menyebabkan chunk request 404.
+- Belum di-debug di .exe karena lebih cepat revert daripada lanjut diagnosa.
+
+Pelajaran:
+1. **Code-splitting di Electron app harus diuji di hasil installer akhir**, bukan cuma `build:desktop` output yang masih jalan via Express dev. `electron-builder` packaging mengubah path resolution.
+2. Kalau mau coba lagi, opsinya:
+   - Set `base: "./"` di Vite supaya semua chunk path relative.
+   - Atau switch ke `loadFile()` di production mode untuk path resolution yang lebih konsisten.
+   - Atau lazy hanya halaman besar (laporan, dashboard, kasir) — bukan 24 sekaligus.
+3. **Wajib build .exe local + smoke test sebelum tag release** untuk perubahan struktural seperti ini. CI hanya build, tidak validasi runtime.
+
+### Rilis 1.1.3 — Hotfix revert v1.1.2 (🔴)
 
 Status: **🟡 Siap publish** — 2026-05-15 malam.
 
-User feedback setelah pakai v1.1.1: "kerasa berat pindah tab/menu". Build sebelumnya menghasilkan 1 chunk JS monolitik 1770 KB (514 KB gzip), Vite sudah warning sejak lama tapi tidak pernah ditangani. v1.1.1 menambah ~30 KB, kerasa makin lambat — straw yang menggambarkan masalah lama.
+User report: install v1.1.2 → app blank putih. Langsung di-revert. v1.1.3 isinya identik dengan v1.1.1 (Master Supplier + Detail + Laporan Pembelian per Supplier), tanpa optimasi bundle.
 
-Akar masalah:
-- `App.tsx` impor semua page secara eager (`import LoginPage from "@/pages/login"` dst untuk 24 halaman).
-- Semua vendor besar (xlsx 491 KB, recharts 299 KB, react 201 KB, radix, dll) ikut di-bundle ke 1 chunk.
-- Tiap pindah halaman, browser harus parse-render seluruh app — bukan re-fetch JS, tapi parse cost cukup terasa di mesin lambat.
+Versi di-bump dari 1.1.1 langsung ke 1.1.3 (skip 1.1.2 yang gagal) supaya electron-updater mau push update ke user yang sudah ke v1.1.2.
 
-Solusi struktural (bukan tambal):
-- ✅ Code-split per route: 24 page jadi `React.lazy(() => import(...))`. `<Suspense fallback={<Loader2 />}>` membungkus seluruh `<Switch>` supaya transisi punya feedback visual.
-- ✅ `manualChunks` di `vite.config.ts`: vendor dibagi 8 chunk berdasarkan beratnya (`vendor-react`, `vendor-charts` recharts+d3, `vendor-xlsx`, `vendor-radix`, `vendor-icons` lucide, `vendor-forms` react-hook-form+zod, `vendor-query` tanstack, `vendor-misc` sisanya). Masing-masing di-cache permanen oleh browser sehingga pindah halaman tidak re-download.
-- ✅ `chunkSizeWarningLimit: 800` supaya warning Vite hilang untuk vendor-xlsx (491 KB) yang memang tidak bisa dipecah lagi.
-
-Hasil build:
-- `index.js` (entry): **1770 KB → 56 KB** (-96%)
-- `vendor-xlsx`: 491 KB — **hanya di-load saat user klik Export Excel**
-- `vendor-charts`: 299 KB — hanya di /laporan dan /dashboard
-- `vendor-react`: 201 KB — di-cache, dipakai di semua route
-- Pindah halaman lain: chunk halaman 5-30 KB saja
-
-File yang berubah:
-- `artifacts/hutang-app/src/App.tsx` — semua import jadi `lazy()`, wrap Switch dengan `<Suspense>`.
-- `artifacts/hutang-app/vite.config.ts` — tambah `build.rollupOptions.output.manualChunks` + `chunkSizeWarningLimit`.
-- `artifacts/electron-app/package.json` — 1.1.1 → 1.1.2.
+File yang berubah (vs v1.1.2):
+- `artifacts/hutang-app/src/App.tsx` — kembali ke eager imports.
+- `artifacts/hutang-app/vite.config.ts` — hapus `manualChunks` + `chunkSizeWarningLimit`.
+- `artifacts/electron-app/package.json` — 1.1.1 → 1.1.3.
 - `CATATAN-RILIS.md`, `RENCANA-FITUR.md`.
 
 Verifikasi:
-- [x] `pnpm typecheck` — 0 error ✅
-- [x] `pnpm vitest run` — 60/60 pass ✅
-- [x] `pnpm --filter @workspace/electron-app build:desktop` — sukses, ada 8 vendor chunks + 24 route chunks ✅
-- [ ] Smoke test manual user: pindah-pindah menu sidebar → harusnya kerasa lebih ringan dibanding v1.1.1.
-- [ ] Smoke test manual user: pindah tab di /laporan → tab pertama trigger load chunk laporan, transisi tab berikutnya instan.
-- [ ] Smoke test regression: semua halaman tetap load, kasir/struk/cetak masih jalan, login/logout aman.
+- Konten kode = v1.1.1 yang sudah di-smoke-test.
+- [ ] Build installer di GitHub Actions.
+- [ ] User: install v1.1.3 setelah blank-putih → app load normal lagi.
 
-Tidak menyentuh DB / API / format backup / business logic. Pure build optimization.
+Performance optimization akan dikerjakan ulang di v1.2.x **setelah ada metode test installer .exe yang lebih cepat dari sekarang**, supaya tidak ada pengulangan kasus blank-putih.
 
 ### Backlog (tidak masuk roadmap, build kalau ada permintaan user)
 
