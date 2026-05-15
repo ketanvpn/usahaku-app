@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import express from "express";
-import { db, sqliteRaw, usahaTable, pelangganTable, hutangTable, pembayaranTable, keuanganTable, barangTable, transaksiStokTable, transaksiKasirTable, transaksiKasirItemTable, pekerjaTable, upahPekerjaTable, bayarUpahTable, pengaturanTable } from "@workspace/db";
+import { db, sqliteRaw, usahaTable, pelangganTable, hutangTable, pembayaranTable, keuanganTable, barangTable, transaksiStokTable, transaksiKasirTable, transaksiKasirItemTable, pekerjaTable, upahPekerjaTable, bayarUpahTable, pengaturanTable, suppliersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
@@ -34,6 +34,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   const upahList            = await db.select().from(upahPekerjaTable).where(eq(upahPekerjaTable.usahaId, usahaId));
   const bayarUpahList       = await db.select().from(bayarUpahTable).where(eq(bayarUpahTable.usahaId, usahaId));
   const pengaturanList      = await db.select().from(pengaturanTable).where(eq(pengaturanTable.usahaId, usahaId));
+  const suppliersList       = await db.select().from(suppliersTable).where(eq(suppliersTable.usahaId, usahaId));
 
   // Ambil semua item kasir sekaligus
   const allKasirItems = transaksiKasirList.length > 0
@@ -43,13 +44,20 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
     : [];
   const transaksiKasirItemList = allKasirItems.flat();
 
-  // Server menghasilkan payload v1.8 (data + pengaturan key/value, tanpa logo).
-  // Client (Electron) akan baca file logo via IPC `pengaturan.getLogoData`
-  // setelah menerima response, lalu inject `logo_base64` + `logo_ext` dan
-  // bump version ke "1.9" sebelum disimpan ke disk. Lihat
-  // `artifacts/hutang-app/src/pages/backup.tsx` (handleExport).
+  // Server menghasilkan payload v1.10 (data + pengaturan key/value + suppliers,
+  // tanpa logo). Client (Electron) akan baca file logo via IPC
+  // `pengaturan.getLogoData` setelah menerima response, lalu inject
+  // `logo_base64` + `logo_ext` dan bump version ke "1.11" sebelum disimpan ke
+  // disk. Lihat `artifacts/hutang-app/src/pages/backup.tsx` (handleExport).
+  //
+  // Riwayat format:
+  //   v1.7  — sebelum pengaturan
+  //   v1.8  — + pengaturan key/value (tanpa logo)
+  //   v1.9  — + logo_base64 (client-injected, bukan server)
+  //   v1.10 — + suppliers (server)
+  //   v1.11 — + logo_base64 (client-injected, di-atas v1.10)
   const backup = {
-    version: "1.8",
+    version: "1.10",
     exported_at: new Date().toISOString(),
     usaha_id: usahaId,
     usaha: {
@@ -128,6 +136,8 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       harga_satuan: parseFloat(t.hargaSatuan),
       keterangan: t.keterangan ?? null,
       keuangan_id: t.keuanganId ?? null,
+      // v1.10: optional supplier_id
+      supplier_id: t.supplierId ?? null,
       created_at: t.createdAt.toISOString(),
     })),
     transaksi_kasir: transaksiKasirList.map((k) => ({
@@ -190,12 +200,22 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
     // v1.8: backup pengaturan (key-value per usaha). File logo TIDAK di-include
     // di sini karena server tidak punya akses ke userData/logos/. Client yang
     // bertugas menempel logo (lihat handleExport di backup.tsx) dan bump versi
-    // ke v1.9 saat ada logo. Backup tanpa logo (mis. user belum upload logo)
-    // tetap di v1.8.
+    // ke v1.11 saat ada logo. Backup tanpa logo (mis. user belum upload logo)
+    // tetap di v1.10.
     pengaturan: pengaturanList.map((p) => ({
       key: p.key,
       value: p.value,
       updated_at: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : new Date(p.updatedAt).toISOString(),
+    })),
+    // v1.10: master Supplier per usaha
+    suppliers: suppliersList.map((s) => ({
+      id: s.id,
+      usaha_id: s.usahaId,
+      nama: s.nama,
+      telepon: s.telepon ?? null,
+      alamat: s.alamat ?? null,
+      catatan: s.catatan ?? null,
+      created_at: s.createdAt instanceof Date ? s.createdAt.toISOString() : new Date(s.createdAt).toISOString(),
     })),
   };
 
@@ -246,6 +266,8 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       sqliteRaw.prepare("DELETE FROM upah_pekerja      WHERE usaha_id = ?").run(usahaId);
       sqliteRaw.prepare("DELETE FROM pekerja           WHERE usaha_id = ?").run(usahaId);
       sqliteRaw.prepare("DELETE FROM keuangan          WHERE usaha_id = ?").run(usahaId);
+      // v1.10: hapus suppliers juga (dependent: transaksi_stok.supplier_id sudah dihapus di atas)
+      sqliteRaw.prepare("DELETE FROM suppliers         WHERE usaha_id = ?").run(usahaId);
 
       // ── 1. Restore keuangan — bangun peta ID lama → baru ──────────────────
       const keuanganIdMap = new Map<number, number>();
@@ -330,18 +352,39 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
         }
       }
 
+      // ── 5b. Restore suppliers (v1.10+) — bangun peta ID lama → baru ────────
+      // Backup v1.7-v1.9 tidak punya field ini → dilewati, transaksi_stok
+      // baru tidak akan punya supplier (default null).
+      const supplierIdMap = new Map<number, number>();
+      if (Array.isArray(backup.suppliers)) {
+        const stmtSup = sqliteRaw.prepare(
+          "INSERT INTO suppliers (usaha_id, nama, telepon, alamat, catatan) VALUES (?, ?, ?, ?, ?)"
+        );
+        for (const s of backup.suppliers) {
+          if (typeof s?.nama !== "string" || s.nama.length === 0) continue;
+          const r = stmtSup.run(
+            usahaId, s.nama, s.telepon ?? null, s.alamat ?? null, s.catatan ?? null
+          );
+          supplierIdMap.set(s.id, Number(r.lastInsertRowid));
+        }
+      }
+
       // ── 6. Restore transaksi stok ──────────────────────────────────────────
       if (Array.isArray(backup.transaksi_stok)) {
         const stmtStok = sqliteRaw.prepare(
-          "INSERT INTO transaksi_stok (usaha_id, barang_id, tanggal, tipe, jumlah, harga_satuan, keterangan, keuangan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+          "INSERT INTO transaksi_stok (usaha_id, barang_id, tanggal, tipe, jumlah, harga_satuan, keterangan, keuangan_id, supplier_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         for (const t of backup.transaksi_stok) {
           const newBarangId   = barangIdMap.get(t.barang_id) ?? t.barang_id;
           const newKeuanganId = t.keuangan_id != null ? (keuanganIdMap.get(t.keuangan_id) ?? null) : null;
+          // v1.10+: map supplier_id lama → baru. Kalau backup lama (tanpa supplier)
+          // atau ID tidak ada di peta (kasus aneh), pakai null.
+          const newSupplierId = t.supplier_id != null ? (supplierIdMap.get(t.supplier_id) ?? null) : null;
           stmtStok.run(
             usahaId, newBarangId, t.tanggal, t.tipe,
             String(t.jumlah), String(t.harga_satuan),
-            t.keterangan ?? null, newKeuanganId ?? null
+            t.keterangan ?? null, newKeuanganId ?? null,
+            newSupplierId ?? null
           );
         }
       }

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, Plus, Edit, Trash2, Package, AlertTriangle, ArrowDownCircle, ArrowUpCircle, RefreshCw, Upload, FileSpreadsheet, CheckCircle2 } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Package, AlertTriangle, ArrowDownCircle, ArrowUpCircle, RefreshCw, Upload, FileSpreadsheet, CheckCircle2, Truck } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useLicense } from "@/context/license-context";
 import { useForm } from "react-hook-form";
@@ -46,6 +46,15 @@ interface TransaksiStok {
   harga_satuan: number;
   total: number;
   keterangan: string | null;
+  // v1.1.0: optional supplier (hanya untuk transaksi tipe "masuk")
+  supplier_id?: number | null;
+  supplier_nama?: string | null;
+}
+
+interface Supplier {
+  id: number;
+  nama: string;
+  telepon: string | null;
 }
 
 const KATEGORI_OPTIONS = ["Minuman", "Makanan & Snack", "Sembako", "Rokok", "Sabun & Kebersihan", "Obat-obatan", "Lain-lain"];
@@ -66,6 +75,8 @@ const transaksiSchema = z.object({
   jumlah: z.coerce.number().min(0.01, "Jumlah harus lebih dari 0"),
   harga_satuan: z.coerce.number().min(0),
   keterangan: z.string().optional(),
+  // v1.1.0: opsional pilih supplier untuk barang masuk. "" = tanpa supplier.
+  supplier_id: z.string().optional(),
 });
 
 type BarangForm = z.infer<typeof barangSchema>;
@@ -121,6 +132,12 @@ export default function StokPage() {
   const { data: transaksiList = [], isLoading: loadingTransaksi } = useQuery<TransaksiStok[]>({
     queryKey: ["stok-transaksi", filterBulan, filterTahun],
     queryFn: () => apiFetch(`/api/stok/transaksi?bulan=${filterBulan}&tahun=${filterTahun}`),
+  });
+
+  // v1.1.0: list supplier untuk dropdown di form Barang Masuk
+  const { data: supplierList = [] } = useQuery<Supplier[]>({
+    queryKey: ["suppliers"],
+    queryFn: () => apiFetch("/api/suppliers"),
   });
 
   const peringatan = barangList.filter(b => b.peringatan);
@@ -256,14 +273,14 @@ export default function StokPage() {
   // Form transaksi
   const transaksiForm = useForm<TransaksiForm>({
     resolver: zodResolver(transaksiSchema),
-    defaultValues: { barang_id: 0, tanggal: new Date().toISOString().split("T")[0], jumlah: 0, harga_satuan: 0, keterangan: "" },
+    defaultValues: { barang_id: 0, tanggal: new Date().toISOString().split("T")[0], jumlah: 0, harga_satuan: 0, keterangan: "", supplier_id: "" },
   });
 
   const watchBarangId = transaksiForm.watch("barang_id");
   const selectedBarang = barangList.find(b => b.id === Number(watchBarangId));
 
   const openTransaksi = (tipe: "masuk" | "keluar") => {
-    transaksiForm.reset({ barang_id: 0, tanggal: new Date().toISOString().split("T")[0], jumlah: 0, harga_satuan: 0, keterangan: "" });
+    transaksiForm.reset({ barang_id: 0, tanggal: new Date().toISOString().split("T")[0], jumlah: 0, harga_satuan: 0, keterangan: "", supplier_id: "" });
     setTransaksiDialog(tipe);
   };
 
@@ -278,10 +295,21 @@ export default function StokPage() {
   };
 
   const transaksiMutation = useMutation({
-    mutationFn: (values: TransaksiForm) => apiFetch(
-      `/api/stok/${transaksiDialog}`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values) }
-    ),
+    mutationFn: (values: TransaksiForm) => {
+      // v1.1.0: stok keluar tidak butuh supplier_id (server schema-nya pun
+      // tidak menerima). Stok masuk: "" → null, ada nilai → number.
+      const { supplier_id, ...rest } = values;
+      const payload: Record<string, unknown> = { ...rest };
+      if (transaksiDialog === "masuk") {
+        payload.supplier_id =
+          supplier_id && supplier_id !== "" ? Number(supplier_id) : null;
+      }
+      return apiFetch(`/api/stok/${transaksiDialog}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    },
     onSuccess: (data) => {
       const pesan = transaksiDialog === "masuk"
         ? `Stok bertambah. ${data.keuangan_otomatis ? "Keuangan keluar otomatis dicatat." : ""}`
@@ -726,6 +754,41 @@ export default function StokPage() {
                     Total {transaksiDialog === "masuk" ? "pengeluaran" : "pemasukan"}: <strong>{formatRupiah(transaksiForm.watch("jumlah") * transaksiForm.watch("harga_satuan"))}</strong>
                     <span className="text-xs block mt-0.5">Otomatis dicatat di Keuangan</span>
                   </div>
+                )}
+                {/* v1.1.0: Dropdown supplier hanya muncul untuk Barang Masuk */}
+                {transaksiDialog === "masuk" && (
+                  <FormField control={transaksiForm.control} name="supplier_id" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1.5">
+                        <Truck className="h-3.5 w-3.5" />
+                        Supplier <span className="text-muted-foreground text-xs">(opsional)</span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}
+                        value={field.value && field.value !== "" ? field.value : "__none__"}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="— Tanpa Supplier —" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__none__">— Tanpa Supplier —</SelectItem>
+                          {supplierList.map((s) => (
+                            <SelectItem key={s.id} value={String(s.id)}>
+                              {s.nama}{s.telepon ? ` (${s.telepon})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {supplierList.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Belum ada supplier. Tambahkan dari menu <strong>Supplier</strong> di sidebar.
+                        </p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                 )}
                 <FormField control={transaksiForm.control} name="keterangan" render={({ field }) => (
                   <FormItem><FormLabel>Keterangan <span className="text-muted-foreground text-xs">(opsional)</span></FormLabel>

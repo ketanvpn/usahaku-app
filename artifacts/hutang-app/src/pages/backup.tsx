@@ -246,9 +246,10 @@ export default function BackupPage() {
 
       const data = await response.json();
 
-      // v1.0.88: enrichment client-side untuk file logo. Server tidak bisa baca
+      // v1.0.88+: enrichment client-side untuk file logo. Server tidak bisa baca
       // userData/logos/, jadi client yang baca via IPC dan tempel ke payload.
-      // Bump version ke "1.9" supaya jelas mana backup yang sudah include logo.
+      // Server sekarang return v1.10 (sudah include suppliers). Kalau ada logo,
+      // client bump ke "1.11" supaya jelas mana backup yang sudah full.
       const logoFilename: string | null =
         Array.isArray(data?.pengaturan)
           ? (data.pengaturan.find((p: { key?: string }) => p?.key === "logo_filename")?.value ?? null)
@@ -266,7 +267,16 @@ export default function BackupPage() {
               lower.endsWith(".jpg") || lower.endsWith(".jpeg") ? "jpg" : "png";
             data.logo_base64 = base64;
             data.logo_ext = ext;
-            data.version = "1.9";
+            // Bump versi dari v1.10 (server) ke v1.11 (server + logo).
+            // Defensif: jaga kalau server di masa depan keluar v1.12+, jangan
+            // turunkan — cuma upgrade kalau current versi adalah v1.10.
+            if (data.version === "1.10") {
+              data.version = "1.11";
+            } else if (data.version === "1.8") {
+              // Defensive fallback: kalau server lama (mis. user beda versi
+              // antara client & server saat dev), tetap pakai jalur v1.9 lama.
+              data.version = "1.9";
+            }
           }
         } catch {
           // Logo gagal di-baca → backup tetap dihasilkan tanpa logo, log saja.

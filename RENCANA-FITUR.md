@@ -436,7 +436,13 @@ Tidak menyentuh DB / API / format backup. Iframe pakai `sandbox=""` (no scripts,
 
 ### Rilis v1.0.88 — Logo embed di backup (🟡)
 
-Status: **✅ Published** — 2026-05-15 sore (smoke test lapangan masih pending)
+Status: **✅ Published + smoke test lapangan lulus** — 2026-05-15 sore
+
+Smoke test 2026-05-15 sore (`PANDUAN-SMOKE-TEST-V1.0.88.md`):
+- Tes 1 (round-trip logo 1 mesin) — ✅ aman
+- Tes 2 (backup lintas mesin / fresh state) — ✅ aman
+- Tes 3 (regression restore backup v1.7/v1.8 lama) — ✅ aman
+- Tes 4 (cetak printer thermal asli) — ⏭ skip, driver printer tidak tersedia (boleh divalidasi later kalau user lain punya printer)
 
 Closing loop dari v1.0.83. Saat itu sudah dirancang format backup naik ke v1.8 dengan include data tabel `pengaturan` (key/value), tapi **file logo** sengaja di-skip dengan catatan "user upload ulang setelah restore antar mesin" — karena server tidak punya akses `userData/logos/`.
 
@@ -474,16 +480,39 @@ Kekecualian yang sudah disadari: kalau user pakai **Google Drive backup** (kartu
 - Migrasi 4 template print di `laporan.tsx` ke helper `buildPrintHeaderHtml` (A4 landscape — laporan keuangan, kasir, hutang, stok)
 - Logo embed di backup Google Drive (`.db` mode) — butuh perubahan format / paket logo terpisah
 
-### Rilis 1.3.0 — Master Supplier (🟢)
+### Rilis 1.1.0 — Master Supplier (🟢)
 
-Status: ⏸ Menunggu 1.2.0
+Status: **🟡 Siap publish** — 2026-05-15 sore. Smoke test v1.0.88 lapangan lulus, langsung jalan ke C1.
 
-- Tabel baru `suppliers (id, usaha_id, nama, telepon, alamat, catatan, created_at)`
-- ALTER `transaksi_stok` ADD COLUMN `supplier_id INTEGER` nullable
-- Halaman `/supplier` (CRUD mirror dari Pelanggan)
-- Form "stok masuk" tambah dropdown supplier opsional
-- Laporan baru: total beli per supplier
-- Verifikasi: uji restore backup 1.2.x di app 1.3.0
+Eksekusi sesuai blueprint section C1 di atas:
+- ✅ Tabel baru `suppliers (id, usaha_id, nama, telepon, alamat, catatan, created_at)` di `lib/db/src/schema/suppliers.ts` + migration `CREATE TABLE IF NOT EXISTS` di `lib/db/src/index.ts`.
+- ✅ `ALTER TABLE transaksi_stok ADD COLUMN supplier_id INTEGER` (nullable) — try/catch sesuai konvensi, transaksi lama tetap aman.
+- ✅ Halaman `/supplier` di sidebar grup PENJUALAN (CRUD mirror dari Pelanggan): nama wajib + title-case, telepon/alamat/catatan opsional. Hapus ditolak kalau supplier masih dipakai di `transaksi_stok`.
+- ✅ API `GET/POST/PUT/DELETE /api/suppliers` (`artifacts/api-server/src/routes/suppliers.ts`) + dropdown supplier opsional di form Barang Masuk halaman Stok. `supplier_id` disertakan di payload `POST /api/stok/masuk`. Stok keluar tidak butuh supplier (dipisah ke schema sendiri).
+- ✅ Saat supplier dipilih, keterangan keuangan otomatis "Beli {nama} {jumlah} {satuan} dari {supplier_nama}" — jadi kelihatan jelas di tabel Riwayat Transaksi tanpa perlu kolom tambahan.
+- ✅ Backup format naik: server return v1.10 dengan array `suppliers` + field `supplier_id` di `transaksi_stok`. Client (Electron) bump ke v1.11 saat ada logo (di-atas v1.10). Backup v1.7-v1.9 lama tetap restorable: array `suppliers` di-skip kalau tidak ada, `supplier_id` di-skip jadi `null`. ID lama→baru di-mapping seperti `pelangganIdMap`/`barangIdMap`.
+- ⏭ Laporan total beli per supplier — defer ke v1.1.x kalau user request, tidak masuk scope rilis ini supaya tetap fokus pada master + integrasi minimal.
+
+Verifikasi:
+- [x] `pnpm vitest run` — 60/60 pass ✅
+- [x] `pnpm typecheck` — 0 error di semua workspace (libs + 4 artifact) ✅
+- [x] `pnpm --filter @workspace/electron-app build:desktop` — backend + frontend + main build sukses ✅
+- [ ] Smoke test manual: tambah 2 supplier, buat transaksi Barang Masuk dengan + tanpa supplier, cek keterangan keuangan otomatis menyertakan "dari {supplier_nama}".
+- [ ] Smoke test manual: hapus supplier yang masih dipakai → muncul error 400 dari server, supplier tidak terhapus.
+- [ ] Smoke test regression: restore backup v1.9 lama (sebelum suppliers ada) → app tidak crash, tabel suppliers kosong, transaksi_stok lama dengan `supplier_id NULL`.
+- [ ] Smoke test round-trip: di mesin A buat supplier + transaksi → export → di mesin B restore → supplier muncul, supplier_id di transaksi tetap konsisten (nama tampil di keterangan).
+
+Files yang berubah:
+- `lib/db/src/schema/suppliers.ts` (baru)
+- `lib/db/src/schema/index.ts`, `lib/db/src/schema/stok.ts`, `lib/db/src/index.ts` (migration + relasi)
+- `artifacts/api-server/src/routes/suppliers.ts` (baru), `artifacts/api-server/src/routes/index.ts` (registrasi)
+- `artifacts/api-server/src/routes/stok.ts` (POST /stok/masuk + format response)
+- `artifacts/api-server/src/routes/backup.ts` (export v1.10 + restore include suppliers + map ID)
+- `artifacts/hutang-app/src/pages/supplier.tsx` (baru), `App.tsx` (route), `components/layout/Layout.tsx` (sidebar entry)
+- `artifacts/hutang-app/src/pages/stok.tsx` (dropdown di dialog Barang Masuk)
+- `artifacts/hutang-app/src/pages/backup.tsx` (bump versi v1.10 → v1.11 saat ada logo)
+- `artifacts/electron-app/package.json` (1.0.53 → 1.1.0)
+- `CATATAN-RILIS.md`, `RENCANA-FITUR.md` (entri rilis ini)
 
 ### Backlog (tidak masuk roadmap, build kalau ada permintaan user)
 

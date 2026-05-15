@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, barangTable, transaksiStokTable, keuanganTable } from "@workspace/db";
+import { db, barangTable, transaksiStokTable, keuanganTable, suppliersTable } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { requireAuth, requireLicense } from "../middlewares/auth";
 import { z } from "zod";
@@ -27,9 +27,21 @@ const StokMasukSchema = z.object({
   jumlah: z.coerce.number({ invalid_type_error: "Jumlah harus berupa angka" }).positive("Jumlah harus lebih dari 0"),
   harga_satuan: z.coerce.number({ invalid_type_error: "Harga satuan harus berupa angka" }).min(0).optional(),
   keterangan: z.string().trim().optional(),
+  // v1.1.0: opsional pilih supplier untuk barang masuk. null/undefined = tanpa supplier (mis. retur, opname).
+  supplier_id: z.union([
+    z.coerce.number().int().positive(),
+    z.literal(null),
+    z.literal(""),
+  ]).optional().transform((v) => (v === null || v === "" || v === undefined ? null : v)),
 });
 
-const StokKeluarSchema = StokMasukSchema;
+const StokKeluarSchema = z.object({
+  barang_id: z.coerce.number({ invalid_type_error: "barang_id harus berupa angka" }).int().positive("barang_id tidak valid"),
+  tanggal: z.string().min(1, "Tanggal wajib diisi").regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal tidak valid (YYYY-MM-DD)"),
+  jumlah: z.coerce.number({ invalid_type_error: "Jumlah harus berupa angka" }).positive("Jumlah harus lebih dari 0"),
+  harga_satuan: z.coerce.number({ invalid_type_error: "Harga satuan harus berupa angka" }).min(0).optional(),
+  keterangan: z.string().trim().optional(),
+});
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -51,7 +63,12 @@ function fmtBarang(b: typeof barangTable.$inferSelect) {
   };
 }
 
-function fmtTransaksi(t: typeof transaksiStokTable.$inferSelect, namaBahan: string, satuan: string) {
+function fmtTransaksi(
+  t: typeof transaksiStokTable.$inferSelect,
+  namaBahan: string,
+  satuan: string,
+  supplierNama: string | null = null,
+) {
   return {
     id: t.id,
     barang_id: t.barangId,
@@ -64,6 +81,8 @@ function fmtTransaksi(t: typeof transaksiStokTable.$inferSelect, namaBahan: stri
     total: parseFloat(t.jumlah) * parseFloat(t.hargaSatuan),
     keterangan: t.keterangan ?? null,
     keuangan_id: t.keuanganId ?? null,
+    supplier_id: t.supplierId ?? null,
+    supplier_nama: supplierNama,
     created_at: t.createdAt instanceof Date ? t.createdAt.toISOString() : new Date(t.createdAt).toISOString(),
   };
 }
@@ -196,7 +215,15 @@ router.get("/stok/transaksi", requireAuth, async (req, res): Promise<void> => {
   const barangList = await db.select().from(barangTable).where(eq(barangTable.usahaId, usahaId));
   const barangMap = Object.fromEntries(barangList.map(b => [b.id, b]));
 
-  res.json(rows.map(t => fmtTransaksi(t, barangMap[t.barangId]?.nama ?? "-", barangMap[t.barangId]?.satuan ?? "")));
+  const supplierList = await db.select().from(suppliersTable).where(eq(suppliersTable.usahaId, usahaId));
+  const supplierMap = Object.fromEntries(supplierList.map(s => [s.id, s.nama]));
+
+  res.json(rows.map(t => fmtTransaksi(
+    t,
+    barangMap[t.barangId]?.nama ?? "-",
+    barangMap[t.barangId]?.satuan ?? "",
+    t.supplierId != null ? (supplierMap[t.supplierId] ?? null) : null,
+  )));
 });
 
 // POST /api/stok/masuk — barang masuk (beli), otomatis keuangan keluar
@@ -210,11 +237,20 @@ router.post("/stok/masuk", requireAuth, requireLicense, async (req, res): Promis
     return;
   }
 
-  const { barang_id, tanggal, jumlah, harga_satuan, keterangan } = parsed.data;
+  const { barang_id, tanggal, jumlah, harga_satuan, keterangan, supplier_id } = parsed.data;
 
   const [barang] = await db.select().from(barangTable)
     .where(and(eq(barangTable.id, barang_id), eq(barangTable.usahaId, usahaId)));
   if (!barang) { res.status(404).json({ error: "Barang tidak ditemukan" }); return; }
+
+  // v1.1.0: validasi supplier_id (kalau ada) — pastikan punya usaha yang sama
+  let supplier: typeof suppliersTable.$inferSelect | null = null;
+  if (supplier_id != null) {
+    const [s] = await db.select().from(suppliersTable)
+      .where(and(eq(suppliersTable.id, supplier_id), eq(suppliersTable.usahaId, usahaId)));
+    if (!s) { res.status(400).json({ error: "Supplier tidak ditemukan." }); return; }
+    supplier = s;
+  }
 
   const harga = harga_satuan ?? parseFloat(barang.hargaBeli);
   const total = jumlah * harga;
@@ -223,12 +259,15 @@ router.post("/stok/masuk", requireAuth, requireLicense, async (req, res): Promis
   const { transaksi } = db.transaction((tx) => {
     let keuanganId: number | null = null;
     if (total > 0) {
+      const ketDefault = supplier
+        ? `Beli ${barang.nama} ${jumlah} ${barang.satuan} dari ${supplier.nama}`
+        : `Beli ${barang.nama} ${jumlah} ${barang.satuan}`;
       const [k] = tx.insert(keuanganTable).values({
         usahaId,
         tanggal,
         tipe: "keluar",
         kategori: "Pembelian Bahan",
-        keterangan: keterangan || `Beli ${barang.nama} ${jumlah} ${barang.satuan}`,
+        keterangan: keterangan || ketDefault,
         jumlah: String(total),
       }).returning().all();
       keuanganId = k.id;
@@ -243,6 +282,7 @@ router.post("/stok/masuk", requireAuth, requireLicense, async (req, res): Promis
       hargaSatuan: String(harga),
       keterangan: keterangan || null,
       keuanganId,
+      supplierId: supplier ? supplier.id : null,
     }).returning().all();
 
     tx.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id)).run();
@@ -251,7 +291,7 @@ router.post("/stok/masuk", requireAuth, requireLicense, async (req, res): Promis
   });
 
   res.status(201).json({
-    transaksi: fmtTransaksi(transaksi, barang.nama, barang.satuan),
+    transaksi: fmtTransaksi(transaksi, barang.nama, barang.satuan, supplier?.nama ?? null),
     stok_baru: stokBaru,
     keuangan_otomatis: transaksi.keuanganId !== null,
   });

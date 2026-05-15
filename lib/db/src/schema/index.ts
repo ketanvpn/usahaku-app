@@ -11,3 +11,4 @@ export * from "./pekerja";
 export * from "./upah";
 export * from "./password-reset";
 export * from "./pengaturan";
+export * from "./suppliers";

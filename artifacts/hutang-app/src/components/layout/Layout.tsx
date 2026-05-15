@@ -19,6 +19,7 @@ import {
   BookOpen,
   Package,
   ShoppingBag,
+  Truck,
   RefreshCw,
   X,
   ShieldAlert,
@@ -255,6 +256,7 @@ export function Layout({ children }: { children: ReactNode }) {
       links: [
         { href: "/kasir", label: "Kasir", icon: ShoppingBag },
         { href: "/stok", label: "Barang & Stok", icon: Package, badgeKey: "stok" },
+        { href: "/supplier", label: "Supplier", icon: Truck },
       ],
     },
     {

@@ -24,6 +24,9 @@ export const transaksiStokTable = sqliteTable("transaksi_stok", {
   hargaSatuan: text("harga_satuan").notNull(),
   keterangan: text("keterangan"),
   keuanganId: integer("keuangan_id"),
+  // v1.1.0: optional reference ke suppliers untuk transaksi tipe "masuk".
+  // Nullable supaya transaksi lama tetap aman + stok keluar tidak butuh supplier.
+  supplierId: integer("supplier_id"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 

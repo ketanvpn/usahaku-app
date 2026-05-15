@@ -101,6 +101,8 @@ try { sqlite.exec(`ALTER TABLE transaksi_kasir ADD COLUMN keuangan_id INTEGER`);
 try { sqlite.exec(`ALTER TABLE pekerja ADD COLUMN pelanggan_id INTEGER REFERENCES pelanggan(id) ON DELETE SET NULL`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE bayar_upah ADD COLUMN pembayaran_id INTEGER REFERENCES pembayaran(id) ON DELETE SET NULL`); } catch { /* column already exists */ }
 try { sqlite.exec(`ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0`); } catch { /* column already exists */ }
+// v1.1.0: kolom optional supplier_id di transaksi_stok untuk relasi ke tabel suppliers
+try { sqlite.exec(`ALTER TABLE transaksi_stok ADD COLUMN supplier_id INTEGER`); } catch { /* column already exists */ }
 
 sqlite.exec(`
   CREATE TABLE IF NOT EXISTS password_reset_uses (
@@ -123,6 +125,19 @@ sqlite.exec(`
   );
   CREATE UNIQUE INDEX IF NOT EXISTS pengaturan_usaha_key
     ON pengaturan (usaha_id, key);
+`);
+
+// v1.1.0: master Supplier
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS suppliers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usaha_id INTEGER NOT NULL REFERENCES usaha(id),
+    nama TEXT NOT NULL,
+    telepon TEXT,
+    alamat TEXT,
+    catatan TEXT,
+    created_at INTEGER NOT NULL DEFAULT (CAST((julianday('now') - 2440587.5)*86400000 AS INTEGER))
+  );
 `);
 
 sqlite.exec(`
