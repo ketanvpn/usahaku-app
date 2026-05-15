@@ -543,6 +543,45 @@ Verifikasi:
 - [ ] Smoke test manual: klik Eye di /supplier → muncul detail dengan ringkasan benar.
 - [ ] Smoke test manual: di /laporan tab "Pembelian Supplier", ganti bulan → data ikut berubah; klik Cetak A4 → header lengkap muncul.
 
+### Rilis 1.1.2 — Performance: code-split per route + manualChunks (🟢)
+
+Status: **🟡 Siap publish** — 2026-05-15 malam.
+
+User feedback setelah pakai v1.1.1: "kerasa berat pindah tab/menu". Build sebelumnya menghasilkan 1 chunk JS monolitik 1770 KB (514 KB gzip), Vite sudah warning sejak lama tapi tidak pernah ditangani. v1.1.1 menambah ~30 KB, kerasa makin lambat — straw yang menggambarkan masalah lama.
+
+Akar masalah:
+- `App.tsx` impor semua page secara eager (`import LoginPage from "@/pages/login"` dst untuk 24 halaman).
+- Semua vendor besar (xlsx 491 KB, recharts 299 KB, react 201 KB, radix, dll) ikut di-bundle ke 1 chunk.
+- Tiap pindah halaman, browser harus parse-render seluruh app — bukan re-fetch JS, tapi parse cost cukup terasa di mesin lambat.
+
+Solusi struktural (bukan tambal):
+- ✅ Code-split per route: 24 page jadi `React.lazy(() => import(...))`. `<Suspense fallback={<Loader2 />}>` membungkus seluruh `<Switch>` supaya transisi punya feedback visual.
+- ✅ `manualChunks` di `vite.config.ts`: vendor dibagi 8 chunk berdasarkan beratnya (`vendor-react`, `vendor-charts` recharts+d3, `vendor-xlsx`, `vendor-radix`, `vendor-icons` lucide, `vendor-forms` react-hook-form+zod, `vendor-query` tanstack, `vendor-misc` sisanya). Masing-masing di-cache permanen oleh browser sehingga pindah halaman tidak re-download.
+- ✅ `chunkSizeWarningLimit: 800` supaya warning Vite hilang untuk vendor-xlsx (491 KB) yang memang tidak bisa dipecah lagi.
+
+Hasil build:
+- `index.js` (entry): **1770 KB → 56 KB** (-96%)
+- `vendor-xlsx`: 491 KB — **hanya di-load saat user klik Export Excel**
+- `vendor-charts`: 299 KB — hanya di /laporan dan /dashboard
+- `vendor-react`: 201 KB — di-cache, dipakai di semua route
+- Pindah halaman lain: chunk halaman 5-30 KB saja
+
+File yang berubah:
+- `artifacts/hutang-app/src/App.tsx` — semua import jadi `lazy()`, wrap Switch dengan `<Suspense>`.
+- `artifacts/hutang-app/vite.config.ts` — tambah `build.rollupOptions.output.manualChunks` + `chunkSizeWarningLimit`.
+- `artifacts/electron-app/package.json` — 1.1.1 → 1.1.2.
+- `CATATAN-RILIS.md`, `RENCANA-FITUR.md`.
+
+Verifikasi:
+- [x] `pnpm typecheck` — 0 error ✅
+- [x] `pnpm vitest run` — 60/60 pass ✅
+- [x] `pnpm --filter @workspace/electron-app build:desktop` — sukses, ada 8 vendor chunks + 24 route chunks ✅
+- [ ] Smoke test manual user: pindah-pindah menu sidebar → harusnya kerasa lebih ringan dibanding v1.1.1.
+- [ ] Smoke test manual user: pindah tab di /laporan → tab pertama trigger load chunk laporan, transisi tab berikutnya instan.
+- [ ] Smoke test regression: semua halaman tetap load, kasir/struk/cetak masih jalan, login/logout aman.
+
+Tidak menyentuh DB / API / format backup / business logic. Pure build optimization.
+
 ### Backlog (tidak masuk roadmap, build kalau ada permintaan user)
 
 - B1 tab tambahan (Numbering, Pajak, Notifikasi threshold) — observasi dulu apakah dibutuhkan
