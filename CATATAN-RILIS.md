@@ -8,13 +8,14 @@ Aturan pakai:
 - Tanggal pakai format `YYYY-MM-DD`.
 - Update bagian `Versi terbaru` setelah rilis sukses.
 
-Versi terbaru: `v1.0.86`
+Versi terbaru: `v1.0.87`
 
-Rilis berikutnya (siap dipublish): `v1.0.87`
+Rilis berikutnya (siap dipublish): `v1.0.88`
 
 | Versi | Tanggal | Status | Catatan Singkat |
 | --- | --- | --- | --- |
-| v1.0.87 | 2026-05-15 | Siap dipublish | Pratinjau struk live di halaman Pengaturan tab "Struk & Cetak" — saat user ubah header, footer, ukuran kertas, atau toggle logo, pratinjau di sebelahnya langsung menampilkan hasilnya tanpa harus simpan dan cetak transaksi dummy. Iframe sandbox + debounce 200ms supaya tetap responsif. Memakai `buildStrukHtml` dengan opsi baru `forPreview: true` yang skip auto-print script |
+| v1.0.88 | 2026-05-15 | Siap dipublish | Logo usaha sekarang ikut di-include di file backup `.usahaku-bak` (format naik dari v1.8 ke v1.9). Dulu kalau user pindah laptop / restore di mesin lain, logo hilang dan harus di-upload ulang dari halaman Pengaturan. Sekarang: saat export, client baca file logo dari userData/logos/ via IPC dan tempel sebagai `logo_base64` di payload. Saat restore, file logo otomatis ditulis ulang ke userData lokasi baru, lalu `logo_filename` di DB di-update. Backward-compat penuh: backup v1.7 dan v1.8 lama tetap bisa di-restore (logo yang ada saat ini tidak diutak-atik). Server tidak berubah |
+| v1.0.87 | 2026-05-15 | Published | Pratinjau struk live di halaman Pengaturan tab "Struk & Cetak" — saat user ubah header, footer, ukuran kertas, atau toggle logo, pratinjau di sebelahnya langsung menampilkan hasilnya tanpa harus simpan dan cetak transaksi dummy. Iframe sandbox + debounce 200ms supaya tetap responsif. Memakai `buildStrukHtml` dengan opsi baru `forPreview: true` yang skip auto-print script |
 | v1.0.86 | 2026-05-15 | Published | Cetak ulang struk dari Riwayat Penjualan Kasir (tombol Printer per baris memakai `buildStrukHtml` yang sama dengan transaksi baru) + kwitansi Pembayaran Hutang dan Pembayaran Upah otomatis menampilkan logo, alamat, telepon, dan teks header tambahan dari Pengaturan. Helper bersama `buildPrintHeaderHtml` + `getDefaultPrintHeaderCss` di `lib/struk.ts` plus hook `usePrintContext` untuk dipakai ulang halaman lain |
 | v1.0.85 | 2026-05-15 | Published | Bersih-bersih halaman Profil: form edit data usaha (nama, telepon, alamat, catatan) dihapus dari Profil dan dipindah seluruhnya ke halaman Pengaturan tab Data Usaha agar tidak ada dua sumber kebenaran yang bisa nulis ke endpoint yang sama. Halaman Profil sekarang fokus ke profil pengguna + ganti password, dengan tombol cepat "Atur Data Usaha" yang link ke Pengaturan |
 | v1.0.84 | 2026-05-15 | Published | Perbaikan struk Kasir 58mm: layout dirombak jadi 2-baris per item (nama di atas, qty/harga/subtotal di bawah) supaya tidak overflow di printer thermal 58mm. Lebar body dipersempit ke 50mm + font 8pt + format angka tanpa prefix Rp untuk hemat ruang. Layout 80mm dan A4 tidak berubah (tetap tabel 4 kolom yang sudah aman). Builder HTML struk dipindah ke `lib/struk.ts` (`buildStrukHtml`) supaya bisa dipakai ulang |

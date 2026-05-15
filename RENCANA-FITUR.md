@@ -415,7 +415,7 @@ Tidak menyentuh DB / API / format backup. Halaman `laporan.tsx` (4 template prin
 
 ### Rilis v1.0.87 — Pratinjau struk live di Pengaturan (🟢)
 
-Status: **✅ Selesai (siap dipublish)** — 2026-05-15 sore
+Status: **✅ Published** — 2026-05-15 sore
 
 Friction yang di-solve: dulu user harus simpan setting → buka Kasir → buat transaksi dummy → cetak → kembali → revisi → ulang. Sekarang panel Pratinjau di tab "Struk & Cetak" langsung update tiap kali field berubah, jadi user tidak perlu siklus simpan-cetak-revisi sama sekali.
 
@@ -434,10 +434,45 @@ Verifikasi:
 
 Tidak menyentuh DB / API / format backup. Iframe pakai `sandbox=""` (no scripts, no same-origin) sehingga isolasi penuh dari halaman induk — `forPreview` skip auto-print sebagai defense in depth tapi sandbox sudah block script execution juga.
 
-### Backlog v1.0.88+ (defer dari 1.2.0)
+### Rilis v1.0.88 — Logo embed di backup (🟡)
+
+Status: **✅ Selesai (siap dipublish)** — 2026-05-15 sore
+
+Closing loop dari v1.0.83. Saat itu sudah dirancang format backup naik ke v1.8 dengan include data tabel `pengaturan` (key/value), tapi **file logo** sengaja di-skip dengan catatan "user upload ulang setelah restore antar mesin" — karena server tidak punya akses `userData/logos/`.
+
+Sekarang logo otomatis ikut di-include lewat client-side enrichment, tanpa harus mengubah API server.
+
+Strategi:
+- **Server tidak berubah** (`/api/backup/export` tetap return v1.8 tanpa logo). Komentar di server diperbarui supaya jelas pembagian tanggung jawab.
+- **Client export (`backup.tsx` handleExport)**: setelah dapat payload v1.8 dari server, kalau ada `logo_filename` di pengaturan dan ada IPC `pengaturan.getLogoData`, ambil base64 logo, tempel ke `data.logo_base64` + `data.logo_ext`, bump `data.version = "1.9"`. File yang disimpan ke disk: v1.9 dengan logo.
+- **Client restore (`backup.tsx` restoreLogoIfPresent)**: setelah `useImportBackup` mutation sukses, kalau payload punya `logo_base64`, panggil `pengaturan.saveLogo` IPC untuk tulis file ke `userData/logos/<usaha_id>/`, lalu `PUT /api/pengaturan/batch` dengan `logo_filename` baru (timestamp baru dari saveLogo). Logo otomatis tampil di pengaturan + struk berikutnya.
+
+Backward-compat:
+- **v1.7** (sebelum pengaturan): server skip array `pengaturan` yang tidak ada → tidak crash. Logo tidak ada → tidak diutak-atik.
+- **v1.8** (pengaturan tanpa logo): server restore array pengaturan biasa. `logo_filename` di backup tetap dihormati, tapi file fisik logo di mesin tujuan harus sudah ada (atau user upload ulang). Sama persis dengan perilaku v1.0.83-v1.0.87.
+- **v1.9** (full): semua di-restore + logo ditulis ulang. `logo_filename` di-overwrite ke filename baru hasil saveLogo (timestamp baru) supaya konsisten dengan file fisik di disk.
+
+File yang berubah:
+- `artifacts/api-server/src/routes/backup.ts` — komentar saja: jelaskan pembagian tanggung jawab server vs client.
+- `artifacts/hutang-app/src/pages/backup.tsx` — tambah enrichment logo di `handleExport`, plus helper `restoreLogoIfPresent` yang dipanggil di `onSuccess` import.
+- `CATATAN-RILIS.md` — entri v1.0.88 + v1.0.87 ke Published.
+- `RENCANA-FITUR.md` — section v1.0.88, backlog jadi v1.0.89+.
+
+Verifikasi:
+- [x] `pnpm vitest run` — 60/60 pass ✅ (tidak ada test yang impact)
+- [x] `pnpm --filter @workspace/hutang-app typecheck` — 0 error ✅
+- [x] `pnpm --filter @workspace/api-server typecheck` — 0 error ✅
+- [x] `pnpm --filter @workspace/hutang-app build:electron` — sukses ✅
+- [ ] Smoke test manual: di mesin A, upload logo → export backup → buka file `.json` → cek ada `logo_base64` dan `version: "1.9"`
+- [ ] Smoke test manual: di mesin B fresh install (atau hapus folder logos), restore backup v1.9 → tab Pengaturan langsung tampil logo di preview, struk Kasir cetak dengan logo
+- [ ] Smoke test regression: restore backup v1.7 atau v1.8 lama di app v1.0.88 → tetap sukses, tidak crash, logo lama (kalau ada) tidak hilang
+
+Kekecualian yang sudah disadari: kalau user pakai **Google Drive backup** (kartu kedua di halaman Backup), file yang di-upload adalah `.db` SQLite langsung (bukan JSON). Logo di `.db` itu cuma referensi `logo_filename`, file fisiknya tidak ikut. v1.0.88 tidak menyentuh jalur Google Drive — defer kalau ada user complain.
+
+### Backlog v1.0.89+ (defer)
 
 - Migrasi 4 template print di `laporan.tsx` ke helper `buildPrintHeaderHtml` (A4 landscape — laporan keuangan, kasir, hutang, stok)
-- Logo embed di backup (butuh API server/IPC bridge untuk akses userData)
+- Logo embed di backup Google Drive (`.db` mode) — butuh perubahan format / paket logo terpisah
 
 ### Rilis 1.3.0 — Master Supplier (🟢)
 

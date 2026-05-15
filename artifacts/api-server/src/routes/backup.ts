@@ -43,6 +43,11 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
     : [];
   const transaksiKasirItemList = allKasirItems.flat();
 
+  // Server menghasilkan payload v1.8 (data + pengaturan key/value, tanpa logo).
+  // Client (Electron) akan baca file logo via IPC `pengaturan.getLogoData`
+  // setelah menerima response, lalu inject `logo_base64` + `logo_ext` dan
+  // bump version ke "1.9" sebelum disimpan ke disk. Lihat
+  // `artifacts/hutang-app/src/pages/backup.tsx` (handleExport).
   const backup = {
     version: "1.8",
     exported_at: new Date().toISOString(),
@@ -183,8 +188,10 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       created_at: b.createdAt.toISOString(),
     })),
     // v1.8: backup pengaturan (key-value per usaha). File logo TIDAK di-include
-    // karena server tidak punya akses ke userData/logos/. Setelah restore, user
-    // perlu upload ulang logo dari halaman Pengaturan.
+    // di sini karena server tidak punya akses ke userData/logos/. Client yang
+    // bertugas menempel logo (lihat handleExport di backup.tsx) dan bump versi
+    // ke v1.9 saat ada logo. Backup tanpa logo (mis. user belum upload logo)
+    // tetap di v1.8.
     pengaturan: pengaturanList.map((p) => ({
       key: p.key,
       value: p.value,

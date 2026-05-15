@@ -3,6 +3,8 @@ import { getExportBackupUrl, useImportBackup } from "@workspace/api-client-react
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { getErrorMessage } from "@/lib/format";
+import { useAuth } from "@/hooks/use-auth";
+import { savePengaturanBatch, PENGATURAN_QUERY_KEY } from "@/hooks/use-pengaturan";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -72,6 +74,8 @@ export default function BackupPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const usahaId = user?.usaha_id ?? null;
 
   const markManualBackupNow = () => {
     const nowIso = new Date().toISOString();
@@ -241,6 +245,35 @@ export default function BackupPage() {
       if (!response.ok) throw new Error("Gagal mengambil data backup");
 
       const data = await response.json();
+
+      // v1.0.88: enrichment client-side untuk file logo. Server tidak bisa baca
+      // userData/logos/, jadi client yang baca via IPC dan tempel ke payload.
+      // Bump version ke "1.9" supaya jelas mana backup yang sudah include logo.
+      const logoFilename: string | null =
+        Array.isArray(data?.pengaturan)
+          ? (data.pengaturan.find((p: { key?: string }) => p?.key === "logo_filename")?.value ?? null)
+          : null;
+
+      if (logoFilename && usahaId && window.electronApp?.pengaturan) {
+        try {
+          const base64 = await window.electronApp.pengaturan.getLogoData(
+            usahaId,
+            logoFilename,
+          );
+          if (base64) {
+            const lower = logoFilename.toLowerCase();
+            const ext: "png" | "jpg" =
+              lower.endsWith(".jpg") || lower.endsWith(".jpeg") ? "jpg" : "png";
+            data.logo_base64 = base64;
+            data.logo_ext = ext;
+            data.version = "1.9";
+          }
+        } catch {
+          // Logo gagal di-baca → backup tetap dihasilkan tanpa logo, log saja.
+          // Jangan blocking export hanya karena logo bermasalah.
+        }
+      }
+
       const jsonStr = JSON.stringify(data, null, 2);
 
       if (window.electronApp?.backup?.saveManual) {
@@ -313,6 +346,35 @@ export default function BackupPage() {
     reader.readAsText(selectedFile);
   };
 
+  // Restore logo dari payload backup v1.9. Server hanya tahu key/value
+  // pengaturan biasa; file logo harus ditulis ke userData via IPC, lalu
+  // logo_filename di DB diupdate ke filename hasil saveLogo (yang punya
+  // timestamp baru).
+  const restoreLogoIfPresent = async (data: {
+    logo_base64?: string;
+    logo_ext?: string;
+  }) => {
+    if (!data.logo_base64 || !data.logo_ext) return;
+    if (!usahaId || !window.electronApp?.pengaturan) return;
+    const ext = data.logo_ext === "jpg" || data.logo_ext === "jpeg" ? "jpg" : "png";
+    try {
+      const result = await window.electronApp.pengaturan.saveLogo({
+        usahaId,
+        data: data.logo_base64,
+        ext,
+      });
+      if (result.success && result.filename) {
+        await savePengaturanBatch([
+          { key: "logo_filename", value: result.filename },
+        ]);
+        queryClient.invalidateQueries({ queryKey: PENGATURAN_QUERY_KEY });
+      }
+    } catch {
+      // Logo gagal di-restore tidak boleh menggagalkan keseluruhan restore.
+      // User bisa upload ulang dari halaman Pengaturan.
+    }
+  };
+
   const handleImportConfirmed = () => {
     if (!file) return;
 
@@ -329,7 +391,12 @@ export default function BackupPage() {
         importMutation.mutate(
           { data },
           {
-            onSuccess: () => {
+            onSuccess: async () => {
+              // Backup v1.9: tulis ulang file logo ke userData/logos/.
+              // Aman dipanggil untuk v1.7/v1.8 — fungsi internal cek
+              // `logo_base64` dulu sebelum apa-apa.
+              await restoreLogoIfPresent(data);
+
               toast({ title: "Restore data berhasil!", description: `${preview?.pelanggan ?? 0} pelanggan, ${preview?.hutang ?? 0} hutang, ${preview?.pembayaran ?? 0} pembayaran telah dipulihkan.` });
               setFile(null);
               setPreview(null);
