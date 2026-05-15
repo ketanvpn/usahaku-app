@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Plus, Edit, Trash2, Search, Truck } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Search, Truck, Eye } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useLicense } from "@/context/license-context";
 import { getErrorMessage } from "@/lib/format";
@@ -346,6 +347,11 @@ export default function SupplierPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          <Link href={`/supplier/${s.id}`}>
+                            <Button variant="ghost" size="icon" title="Detail">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
                           <Button
                             variant="ghost"
                             size="icon"

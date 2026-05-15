@@ -514,6 +514,35 @@ Files yang berubah:
 - `artifacts/electron-app/package.json` (1.0.53 → 1.1.0)
 - `CATATAN-RILIS.md`, `RENCANA-FITUR.md` (entri rilis ini)
 
+### Rilis 1.1.1 — Detail Supplier + Laporan Pembelian per Supplier (🟢)
+
+Status: **🟡 Siap publish** — 2026-05-15 sore. v1.1.0 sudah dipasang user, jalan tanpa error.
+
+User report setelah pakai v1.1.0: "supplier ini nyambungnya kemana?" — closing-loop yang dijawab di rilis ini. Supplier yang dulu cuma jadi label di transaksi sekarang punya halaman dengan agregasi + laporan periodik.
+
+Eksekusi:
+- ✅ `GET /api/suppliers/:id` di-extend: selain data identitas, sekarang return `total_transaksi`, `total_pembelian`, `barang_terbeli` (group by barang dengan total qty + nilai), `transaksi_terakhir` (10 terbaru, ter-resolve nama barang).
+- ✅ `GET /api/laporan/pembelian-supplier?bulan=&tahun=&supplier_id=` baru: ringkasan per supplier untuk periode tertentu, plus baris "Tanpa Supplier" untuk transaksi `supplier_id NULL`. Optional breakdown per barang kalau filter `supplier_id` ada.
+- ✅ Halaman `/supplier/:id` (`supplier-detail.tsx`): identitas supplier + 2 KPI (jumlah transaksi & total nilai pembelian) + tabel barang yang pernah dibeli (sort by total nilai) + 10 transaksi terakhir. Tombol Eye di tabel `/supplier`.
+- ✅ Tab baru "Pembelian Supplier" di `/laporan`: filter bulan/tahun (default bulan ini), 3 KPI summary (periode, jumlah transaksi, total nilai), tabel ringkasan per supplier urut nilai tertinggi, tombol Cetak A4 landscape pakai `buildPrintHeaderHtml` dari `lib/struk.ts` jadi header logo+alamat+telepon ikut konsisten dengan kwitansi/struk.
+
+Pure additive read-only — tidak menyentuh DB / format backup / schema.
+
+File yang berubah:
+- `artifacts/api-server/src/routes/suppliers.ts` — extend GET /:id dengan agregasi.
+- `artifacts/api-server/src/routes/laporan.ts` — endpoint baru `/laporan/pembelian-supplier`.
+- `artifacts/hutang-app/src/pages/supplier-detail.tsx` (baru), `supplier.tsx` (Eye button), `App.tsx` (route /supplier/:id).
+- `artifacts/hutang-app/src/components/laporan/laporan-supplier-tab.tsx` (baru), `pages/laporan.tsx` (TabsTrigger + TabsContent).
+- `artifacts/electron-app/package.json` (1.1.0 → 1.1.1).
+- `CATATAN-RILIS.md`, `RENCANA-FITUR.md`.
+
+Verifikasi:
+- [x] `pnpm vitest run` — 60/60 pass ✅
+- [x] `pnpm typecheck` — 0 error ✅
+- [x] `pnpm --filter @workspace/electron-app build:desktop` — sukses ✅
+- [ ] Smoke test manual: klik Eye di /supplier → muncul detail dengan ringkasan benar.
+- [ ] Smoke test manual: di /laporan tab "Pembelian Supplier", ganti bulan → data ikut berubah; klik Cetak A4 → header lengkap muncul.
+
 ### Backlog (tidak masuk roadmap, build kalau ada permintaan user)
 
 - B1 tab tambahan (Numbering, Pajak, Notifikasi threshold) — observasi dulu apakah dibutuhkan

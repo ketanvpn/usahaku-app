@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, hutangTable, pelangganTable, transaksiKasirTable, transaksiKasirItemTable } from "@workspace/db";
+import { db, hutangTable, pelangganTable, transaksiKasirTable, transaksiKasirItemTable, transaksiStokTable, suppliersTable, barangTable } from "@workspace/db";
 import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
 import { GetLaporanQueryParams } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
@@ -172,6 +172,168 @@ router.get("/laporan/kasir/top-produk", requireAuth, async (req, res): Promise<v
     total_qty: parseFloat(r.total_qty ?? "0"),
     total_omset: parseFloat(r.total_omset ?? "0"),
   })));
+});
+
+// ── Laporan Pembelian per Supplier (v1.1.1) ─────────────────────────────────
+// Query params:
+//   - bulan: 1-12 (opsional)
+//   - tahun: YYYY (opsional, default tahun ini)
+//   - supplier_id: int (opsional — kalau diisi, breakdown per barang dari 1 supplier)
+// Response:
+//   {
+//     periode: "Mei 2026" | "Tahun 2026",
+//     ringkasan_per_supplier: [{ supplier_id, supplier_nama, total_transaksi, total_jumlah, total_nilai }],
+//     tanpa_supplier: { total_transaksi, total_nilai }, // transaksi masuk yang supplier_id = NULL
+//     total_keseluruhan: { total_transaksi, total_nilai },
+//     // kalau supplier_id ada di query:
+//     breakdown_barang?: [{ barang_id, nama_barang, satuan, total_jumlah, total_nilai }],
+//   }
+router.get("/laporan/pembelian-supplier", requireAuth, async (req, res): Promise<void> => {
+  const usahaId = req.session.usahaId;
+  if (!usahaId) { res.status(403).json({ error: "Akses ditolak." }); return; }
+
+  const now = new Date();
+  const tahun = parseInt((req.query.tahun as string) || String(now.getFullYear()));
+  const bulanRaw = req.query.bulan as string | undefined;
+  const bulan = bulanRaw ? parseInt(bulanRaw) : null;
+  const supplierIdRaw = req.query.supplier_id as string | undefined;
+  const filterSupplierId = supplierIdRaw ? parseInt(supplierIdRaw) : null;
+
+  if (isNaN(tahun) || tahun < 2000 || tahun > 2100) {
+    res.status(400).json({ error: "Tahun tidak valid." });
+    return;
+  }
+  if (bulan !== null && (isNaN(bulan) || bulan < 1 || bulan > 12)) {
+    res.status(400).json({ error: "Bulan tidak valid (1-12)." });
+    return;
+  }
+  if (filterSupplierId !== null && (isNaN(filterSupplierId) || filterSupplierId <= 0)) {
+    res.status(400).json({ error: "supplier_id tidak valid." });
+    return;
+  }
+
+  // Filter periode pakai LIKE pada string tanggal "YYYY-MM-DD".
+  // Bulan kosong → "YYYY-%", bulan ada → "YYYY-MM-%".
+  const prefix = bulan !== null
+    ? `${tahun}-${String(bulan).padStart(2, "0")}-%`
+    : `${tahun}-%`;
+
+  const conditions = [
+    eq(transaksiStokTable.usahaId, usahaId),
+    eq(transaksiStokTable.tipe, "masuk"),
+    sql`${transaksiStokTable.tanggal} LIKE ${prefix}`,
+  ];
+
+  const transaksiList = await db
+    .select()
+    .from(transaksiStokTable)
+    .where(and(...conditions));
+
+  const supplierList = await db
+    .select()
+    .from(suppliersTable)
+    .where(eq(suppliersTable.usahaId, usahaId));
+  const supplierMap = new Map(supplierList.map((s) => [s.id, s.nama]));
+
+  type SupplierAgg = {
+    supplier_id: number;
+    supplier_nama: string;
+    total_transaksi: number;
+    total_jumlah: number;
+    total_nilai: number;
+  };
+  const perSupplier = new Map<number, SupplierAgg>();
+  let tanpaSupplierTransaksi = 0;
+  let tanpaSupplierNilai = 0;
+  let totalTransaksi = 0;
+  let totalNilai = 0;
+
+  for (const t of transaksiList) {
+    const jumlah = parseFloat(t.jumlah);
+    const harga = parseFloat(t.hargaSatuan);
+    const sub = jumlah * harga;
+    totalTransaksi += 1;
+    totalNilai += sub;
+
+    if (t.supplierId == null) {
+      tanpaSupplierTransaksi += 1;
+      tanpaSupplierNilai += sub;
+      continue;
+    }
+
+    const exist = perSupplier.get(t.supplierId);
+    if (exist) {
+      exist.total_transaksi += 1;
+      exist.total_jumlah += jumlah;
+      exist.total_nilai += sub;
+    } else {
+      perSupplier.set(t.supplierId, {
+        supplier_id: t.supplierId,
+        supplier_nama: supplierMap.get(t.supplierId) ?? `(supplier #${t.supplierId} terhapus)`,
+        total_transaksi: 1,
+        total_jumlah: jumlah,
+        total_nilai: sub,
+      });
+    }
+  }
+
+  const ringkasanPerSupplier = Array.from(perSupplier.values()).sort(
+    (a, b) => b.total_nilai - a.total_nilai,
+  );
+
+  const periodeLabel = bulan !== null
+    ? `${["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"][bulan - 1]} ${tahun}`
+    : `Tahun ${tahun}`;
+
+  // Optional: breakdown per barang kalau filter supplier_id ada
+  let breakdownBarang: Array<{ barang_id: number; nama_barang: string; satuan: string; total_jumlah: number; total_nilai: number }> | undefined;
+  if (filterSupplierId !== null) {
+    const barangList = await db
+      .select()
+      .from(barangTable)
+      .where(eq(barangTable.usahaId, usahaId));
+    const barangMap = new Map(barangList.map((b) => [b.id, b]));
+
+    type BarangAgg = { barang_id: number; nama_barang: string; satuan: string; total_jumlah: number; total_nilai: number };
+    const perBarang = new Map<number, BarangAgg>();
+    for (const t of transaksiList) {
+      if (t.supplierId !== filterSupplierId) continue;
+      const jumlah = parseFloat(t.jumlah);
+      const harga = parseFloat(t.hargaSatuan);
+      const sub = jumlah * harga;
+      const b = barangMap.get(t.barangId);
+      const exist = perBarang.get(t.barangId);
+      if (exist) {
+        exist.total_jumlah += jumlah;
+        exist.total_nilai += sub;
+      } else {
+        perBarang.set(t.barangId, {
+          barang_id: t.barangId,
+          nama_barang: b?.nama ?? `(barang #${t.barangId})`,
+          satuan: b?.satuan ?? "",
+          total_jumlah: jumlah,
+          total_nilai: sub,
+        });
+      }
+    }
+    breakdownBarang = Array.from(perBarang.values()).sort(
+      (a, b) => b.total_nilai - a.total_nilai,
+    );
+  }
+
+  res.json({
+    periode: periodeLabel,
+    ringkasan_per_supplier: ringkasanPerSupplier,
+    tanpa_supplier: {
+      total_transaksi: tanpaSupplierTransaksi,
+      total_nilai: tanpaSupplierNilai,
+    },
+    total_keseluruhan: {
+      total_transaksi: totalTransaksi,
+      total_nilai: totalNilai,
+    },
+    ...(breakdownBarang ? { breakdown_barang: breakdownBarang } : {}),
+  });
 });
 
 export default router;

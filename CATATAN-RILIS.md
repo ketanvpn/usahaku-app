@@ -8,12 +8,13 @@ Aturan pakai:
 - Tanggal pakai format `YYYY-MM-DD`.
 - Update bagian `Versi terbaru` setelah rilis sukses.
 
-Versi terbaru: `v1.0.88`
+Versi terbaru: `v1.1.0`
 
-Rilis berikutnya (siap dipublish): `v1.1.0` — Master Supplier (lihat baris paling atas tabel di bawah).
+Rilis berikutnya (siap dipublish): `v1.1.1` — Detail Supplier + Laporan Pembelian per Supplier (lihat baris paling atas tabel di bawah).
 
 | Versi | Tanggal | Status | Catatan Singkat |
 | --- | --- | --- | --- |
+| v1.1.1 | 2026-05-15 | Siap publish | Master Supplier closing-loop: halaman Detail Supplier (klik nama supplier → tampil ringkasan total transaksi + total nilai pembelian + daftar barang yang pernah dibeli + 10 transaksi terakhir) dan tab baru "Pembelian Supplier" di halaman Laporan dengan filter bulan/tahun + tombol Cetak A4 landscape (pakai `buildPrintHeaderHtml` jadi header logo+alamat+telepon+teks header otomatis ikut). Endpoint baru `GET /api/suppliers/:id` (extend dari sebelumnya) + `GET /api/laporan/pembelian-supplier`. Tidak menyentuh DB / format backup — pure additive read-only query. Manfaat: supplier sekarang punya halaman yang berisi sesuatu, user bisa lihat siapa supplier paling diandalkan dan untuk barang apa |
 | v1.1.0 | 2026-05-15 | Siap publish | Master Supplier: tabel baru `suppliers` (per usaha), halaman `/supplier` di sidebar grup PENJUALAN dengan CRUD lengkap (nama wajib, telepon/alamat/catatan opsional). Form Barang Masuk di halaman Stok dapat dropdown supplier opsional ("— Tanpa Supplier —" sebagai default). Saat dipilih, kolom `supplier_id` ditulis ke `transaksi_stok` dan keterangan keuangan otomatis jadi "Beli X dari Supplier Y". Hapus supplier ditolak kalau masih dipakai di transaksi stok masuk (cegah dangling reference). Format backup naik ke v1.10 (server) / v1.11 (client + logo) — backup v1.7-v1.9 tetap bisa di-restore (suppliers kosong & supplier_id null), dan ID lama→baru di-mapping seperti tabel lain. Tidak ada `DROP/RENAME COLUMN`, hanya `CREATE TABLE IF NOT EXISTS suppliers` + `ALTER TABLE transaksi_stok ADD COLUMN supplier_id INTEGER` |
 | v1.0.88 | 2026-05-15 | Published | Logo usaha sekarang ikut di-include di file backup `.usahaku-bak` (format naik dari v1.8 ke v1.9). Dulu kalau user pindah laptop / restore di mesin lain, logo hilang dan harus di-upload ulang dari halaman Pengaturan. Sekarang: saat export, client baca file logo dari userData/logos/ via IPC dan tempel sebagai `logo_base64` di payload. Saat restore, file logo otomatis ditulis ulang ke userData lokasi baru, lalu `logo_filename` di DB di-update. Backward-compat penuh: backup v1.7 dan v1.8 lama tetap bisa di-restore (logo yang ada saat ini tidak diutak-atik). Server tidak berubah |
 | v1.0.87 | 2026-05-15 | Published | Pratinjau struk live di halaman Pengaturan tab "Struk & Cetak" — saat user ubah header, footer, ukuran kertas, atau toggle logo, pratinjau di sebelahnya langsung menampilkan hasilnya tanpa harus simpan dan cetak transaksi dummy. Iframe sandbox + debounce 200ms supaya tetap responsif. Memakai `buildStrukHtml` dengan opsi baru `forPreview: true` yang skip auto-print script |

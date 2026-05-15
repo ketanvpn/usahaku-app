@@ -21,6 +21,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import LaporanSupplierTab from "@/components/laporan/laporan-supplier-tab";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -743,6 +744,7 @@ export default function LaporanPage() {
           <TabsTrigger value="hutang">Hutang & Pembayaran</TabsTrigger>
           <TabsTrigger value="keuangan">Keuangan</TabsTrigger>
           <TabsTrigger value="stok">Stok Barang</TabsTrigger>
+          <TabsTrigger value="supplier">Pembelian Supplier</TabsTrigger>
           <TabsTrigger value="gaji">Gaji & Tenaga</TabsTrigger>
         </TabsList>
 
@@ -1412,6 +1414,11 @@ export default function LaporanPage() {
                 )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ── Tab Pembelian per Supplier (v1.1.1) ──────────────────────────── */}
+        <TabsContent value="supplier" className="space-y-4 mt-4">
+          <LaporanSupplierTab />
         </TabsContent>
       </Tabs>
     </div>

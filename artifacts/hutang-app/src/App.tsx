@@ -30,6 +30,7 @@ import KasirPage from "@/pages/kasir";
 import GajiTenagaPage from "@/pages/gaji-tenaga";
 import PengaturanPage from "@/pages/pengaturan";
 import SupplierPage from "@/pages/supplier";
+import SupplierDetail from "@/pages/supplier-detail";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,11 @@ function Router() {
       <Route path="/supplier">
         <ProtectedRoute allowedRoles={["owner"]}>
           <Layout><SupplierPage /></Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/supplier/:id">
+        <ProtectedRoute allowedRoles={["owner"]}>
+          <Layout><SupplierDetail /></Layout>
         </ProtectedRoute>
       </Route>
       <Route path="/kasir">
