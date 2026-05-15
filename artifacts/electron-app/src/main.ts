@@ -29,7 +29,210 @@ if (process.platform === "win32") {
   app.setAppUserModelId(APP_ID);
 }
 
-Menu.setApplicationMenu(null);
+// v1.1.4: Application Menu permanen sebagai safety net.
+// Menu selalu visible di atas window. Berisi tombol fisik untuk cek/pasang
+// update + buka folder data, jadi kalau renderer crash blank putih, user
+// masih bisa recovery sendiri tanpa harus download installer manual dari
+// GitHub. Sebelumnya Menu.setApplicationMenu(null) bikin tidak ada jalan
+// keluar dari blank-putih kecuali install ulang manual.
+function buildAppMenu(): Menu {
+  return Menu.buildFromTemplate([
+    {
+      label: "Aplikasi",
+      submenu: [
+        {
+          label: "Cek Update",
+          click: () => {
+            autoUpdater.checkForUpdates().catch((e: unknown) =>
+              writeLog(`[menu] check update error: ${e}`),
+            );
+          },
+        },
+        {
+          label: "Download Update Sekarang",
+          click: () => {
+            autoUpdater.downloadUpdate().catch((e: unknown) =>
+              writeLog(`[menu] download update error: ${e}`),
+            );
+          },
+        },
+        {
+          label: "Pasang Update && Restart",
+          click: () => {
+            try {
+              autoUpdater.quitAndInstall(false, true);
+            } catch (e: unknown) {
+              writeLog(`[menu] install update error: ${e}`);
+            }
+          },
+        },
+        { type: "separator" },
+        {
+          label: "Buka Folder Data Aplikasi",
+          click: () => {
+            shell.openPath(app.getPath("userData")).catch((e: unknown) =>
+              writeLog(`[menu] openPath error: ${e}`),
+            );
+          },
+        },
+        {
+          label: "Buka Halaman Rilis di Browser",
+          click: () => {
+            shell
+              .openExternal(
+                "https://github.com/ketanvpn/usahaku-app/releases/latest",
+              )
+              .catch((e: unknown) =>
+                writeLog(`[menu] openExternal error: ${e}`),
+              );
+          },
+        },
+        { type: "separator" },
+        {
+          label: "Tutup Aplikasi",
+          accelerator: process.platform === "darwin" ? "Cmd+Q" : "Alt+F4",
+          click: () => app.quit(),
+        },
+      ],
+    },
+    {
+      label: "Bantuan",
+      submenu: [
+        {
+          label: `Versi: ${app.getVersion()}`,
+          enabled: false,
+        },
+        { type: "separator" },
+        {
+          label: "Reload Halaman",
+          accelerator: "F5",
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.reload();
+            }
+          },
+        },
+        {
+          label: "Reload Paksa",
+          accelerator: "Ctrl+Shift+R",
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.reloadIgnoringCache();
+            }
+          },
+        },
+      ],
+    },
+  ]);
+}
+
+// Halaman fallback yang di-load kalau renderer gagal load (mis. backend
+// belum siap, port lain dipakai, dst). Tombol di sini panggil IPC yang
+// sama dengan menu di atas. User awam tidak perlu tahu cara download
+// installer manual.
+const RECOVERY_HTML = `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplikasi Bermasalah</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 2rem;
+      background: #0d3526; color: white;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      user-select: none;
+    }
+    .card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 12px;
+      padding: 2rem; max-width: 540px; width: 100%;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.4rem; }
+    .subtitle { font-size: 0.9rem; opacity: 0.8; margin-bottom: 1.25rem; }
+    .desc { font-size: 0.95rem; line-height: 1.6; opacity: 0.95; margin-bottom: 1.5rem; }
+    .btn-group { display: flex; flex-direction: column; gap: 0.5rem; }
+    button {
+      width: 100%; padding: 0.75rem 1rem;
+      background: white; color: #0d3526;
+      border: none; border-radius: 8px;
+      font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; text-align: left;
+      transition: opacity 0.15s;
+    }
+    button:hover { opacity: 0.9; }
+    button.secondary {
+      background: transparent; color: white;
+      border: 1px solid rgba(255,255,255,0.4);
+    }
+    button.secondary:hover { background: rgba(255,255,255,0.08); }
+    .hint { font-size: 0.8rem; opacity: 0.7; margin-top: 1.25rem; line-height: 1.5; }
+    .status {
+      margin-top: 0.75rem; padding: 0.6rem 0.75rem;
+      background: rgba(0,0,0,0.25); border-radius: 6px;
+      font-size: 0.85rem; min-height: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>⚠️ Aplikasi Bermasalah</h1>
+    <div class="subtitle">Versi: <span id="ver">memuat...</span></div>
+    <div class="desc">
+      Halaman utama tidak bisa dimuat. Coba salah satu opsi di bawah untuk
+      memperbaiki. <strong>Data Anda tidak akan hilang</strong> — semua
+      tersimpan terpisah dari aplikasi.
+    </div>
+    <div class="btn-group">
+      <button onclick="reload()">🔄 Coba Muat Ulang</button>
+      <button onclick="checkUpdate()">⬇️ Cek &amp; Pasang Update</button>
+      <button class="secondary" onclick="openData()">📂 Buka Folder Data</button>
+      <button class="secondary" onclick="openReleases()">🌐 Buka Halaman Rilis</button>
+      <button class="secondary" onclick="quitApp()">✕ Tutup Aplikasi</button>
+    </div>
+    <div class="status" id="status">Menu &quot;Aplikasi&quot; di atas juga punya tombol-tombol ini.</div>
+    <div class="hint">
+      Kalau ini terus terjadi, hubungi support dan kirim folder
+      <code>logs/</code> dari folder data di atas.
+    </div>
+  </div>
+  <script>
+    const api = window.electronApp || {};
+    const $status = document.getElementById('status');
+    const $ver = document.getElementById('ver');
+    function setStatus(msg) { $status.textContent = msg; }
+    if (api.getAppVersion) {
+      api.getAppVersion().then(v => { $ver.textContent = v || '-'; }).catch(() => {});
+    } else {
+      $ver.textContent = '(API tidak tersedia)';
+    }
+    function reload() { setStatus('Memuat ulang...'); location.reload(); }
+    function checkUpdate() {
+      if (!api.checkUpdate) { setStatus('API update tidak tersedia.'); return; }
+      setStatus('Mengecek update...');
+      api.checkUpdate().then((info) => {
+        if (info && info.available) {
+          setStatus('Update tersedia: v' + info.version + '. Mendownload...');
+          api.downloadUpdate().then(() => {
+            setStatus('Download selesai. Klik tombol ini lagi untuk pasang.');
+            const btn = document.querySelectorAll('button')[1];
+            btn.textContent = '⬆️ Pasang & Restart';
+            btn.onclick = () => api.installUpdate();
+          }).catch(e => setStatus('Gagal download: ' + (e && e.message || e)));
+        } else if (info) {
+          setStatus('Tidak ada update tersedia (sudah versi terbaru).');
+        }
+      }).catch(e => setStatus('Gagal cek: ' + (e && e.message || e)));
+    }
+    function openData() { api.openUserData && api.openUserData(); }
+    function openReleases() { api.openReleases && api.openReleases(); }
+    function quitApp() { api.quitApp && api.quitApp(); }
+  </script>
+</body>
+</html>`;
 
 const LOADING_HTML = `<!DOCTYPE html>
 <html lang="id">
@@ -437,6 +640,59 @@ ipcMain.handle("update:install", () => {
   autoUpdater.quitAndInstall(false, true);
 });
 
+// v1.1.4: shortcut handler yang dipakai RECOVERY_HTML.
+// Berbeda dengan update:checkNow (return void), ini await sampai ada
+// jawaban dari electron-updater jadi UI bisa update statusnya secara sync.
+ipcMain.handle(
+  "app:checkUpdateNow",
+  async (): Promise<{ available: boolean; version?: string }> => {
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      const info = result?.updateInfo;
+      const currentVersion = app.getVersion();
+      // electron-updater anggap "available" kalau remote version != current.
+      // Bisa jadi sebenarnya remote LEBIH RENDAH dari local (kasus dev / rollback),
+      // tapi flag `available` tetap true. Kita filter di sini supaya benar-benar
+      // hanya kasih pop "tersedia" kalau remote > current.
+      if (info && info.version && info.version !== currentVersion) {
+        return { available: true, version: info.version };
+      }
+      return { available: false };
+    } catch (e: unknown) {
+      writeLog(`[updater] app:checkUpdateNow error: ${e}`);
+      return { available: false };
+    }
+  },
+);
+
+ipcMain.handle(
+  "app:downloadUpdateNow",
+  async (): Promise<{ success: boolean; message?: string }> => {
+    try {
+      await autoUpdater.downloadUpdate();
+      return { success: true };
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      writeLog(`[updater] app:downloadUpdateNow error: ${msg}`);
+      return { success: false, message: msg };
+    }
+  },
+);
+
+ipcMain.handle("app:openUserData", async () => {
+  await shell.openPath(app.getPath("userData"));
+});
+
+ipcMain.handle("app:openReleases", async () => {
+  await shell.openExternal(
+    "https://github.com/ketanvpn/usahaku-app/releases/latest",
+  );
+});
+
+ipcMain.handle("app:quit", () => {
+  app.quit();
+});
+
 // ── IPC: write HTML to temp file and open in default browser for print/PDF ──
 const MAX_PRINT_HTML_BYTES = 5 * 1024 * 1024; // 5 MB cap
 const printTempDir = path.join(os.tmpdir(), "usahaku-print");
@@ -524,6 +780,19 @@ function createLoadingWindow(): void {
 
   mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL) => {
     writeLog(`[renderer] did-fail-load code=${errorCode} desc=${errorDescription} url=${validatedURL}`);
+    // v1.1.4: kalau renderer gagal load (mis. chunk JS hilang seperti v1.1.2,
+    // backend belum siap, port konflik, dll), tampilkan halaman recovery
+    // dengan tombol fisik. Skip kalau errorCode -3 (request aborted, biasanya
+    // saat navigasi normal) dan kalau yang gagal adalah RECOVERY_HTML itu
+    // sendiri (mencegah loop infinite).
+    if (errorCode === -3) return;
+    if (validatedURL.startsWith("data:text/html")) return;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      writeLog("[renderer] Loading RECOVERY_HTML fallback");
+      mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(RECOVERY_HTML)}`).catch(
+        (e: Error) => writeLog(`[renderer] Failed to load RECOVERY_HTML: ${e.message}`),
+      );
+    }
   });
 
   mainWindow.on("close", (e) => {
@@ -580,6 +849,9 @@ app.whenReady().then(async () => {
   ensureUserDataDir();
   initLogFile();
   writeLog(`App starting, isDev=${isDev}, platform=${process.platform}`);
+  // v1.1.4: pasang menu permanen sebelum bikin window apa pun, supaya
+  // recovery menu langsung available walaupun renderer belum sempat load.
+  Menu.setApplicationMenu(buildAppMenu());
   writeLog(`userData: ${app.getPath("userData")}`);
   if (!isDev) {
     writeLog(`resourcesPath: ${process.resourcesPath}`);

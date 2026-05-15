@@ -582,6 +582,40 @@ Verifikasi:
 
 Performance optimization akan dikerjakan ulang di v1.2.x **setelah ada metode test installer .exe yang lebih cepat dari sekarang**, supaya tidak ada pengulangan kasus blank-putih.
 
+### Rilis 1.1.4 — Safety net: App Menu permanen + halaman Recovery (🟢)
+
+Status: **🟡 Siap publish** — 2026-05-15 malam (sesudah v1.1.3).
+
+Konteks: setelah v1.1.2 bikin user stuck di blank-putih, ketahuan kelemahan UX yang serius. `autoDownload = false` (filosofi opt-in yang dipertahankan, supaya user tidak kena update di waktu salah) berarti kalau renderer mati, user **tidak punya jalan keluar selain install ulang manual** dari GitHub. Untuk user awam, ini blocker.
+
+v1.1.4 bikin safety net tanpa mengubah filosofi opt-in:
+
+1. **Application Menu permanen.** Sebelumnya `Menu.setApplicationMenu(null)` bikin window tidak punya menubar sama sekali. Sekarang ada 2 menu di top bar yang **selalu visible** (bahkan saat renderer crash blank putih):
+   - Menu **Aplikasi**: Cek Update, Download Update Sekarang, Pasang Update & Restart, Buka Folder Data Aplikasi, Buka Halaman Rilis di Browser, Tutup Aplikasi.
+   - Menu **Bantuan**: Versi (info), Reload Halaman (F5), Reload Paksa (Ctrl+Shift+R).
+
+2. **Halaman Recovery otomatis di `did-fail-load`.** Kalau renderer gagal load (chunk hilang, backend belum siap, port konflik, dll), main process langsung load `RECOVERY_HTML` — halaman dengan tombol fisik berukuran besar: 🔄 Coba Muat Ulang, ⬇️ Cek & Pasang Update, 📂 Buka Folder Data, 🌐 Buka Halaman Rilis, ✕ Tutup. Skip handler kalau errorCode -3 (request aborted, biasa saat navigasi normal) atau target URL adalah RECOVERY_HTML itu sendiri (cegah loop infinite).
+
+3. **Preload shortcut API.** RECOVERY_HTML tidak punya React state, jadi 7 IPC singkat ditambah ke `electronApp` global: `getAppVersion()`, `checkUpdate()` (return `{ available, version? }` dari `autoUpdater.checkForUpdates`), `downloadUpdate()` (return `{ success, message? }`), `installUpdate()`, `openUserData()`, `openReleases()`, `quitApp()`. Renderer normal juga bisa pakai kalau perlu.
+
+4. **`checkUpdate()` filter version mismatch.** electron-updater anggap "available" kalau remote version != current — bisa false positive di kasus rollback (remote LEBIH RENDAH dari local). Filter di IPC: hanya return `available: true` kalau memang ada beda versi (defensif untuk skenario nanti kalau ada rollback semantik).
+
+`autoDownload` tetap `false` — tidak otomatis download di latar belakang, sesuai keputusan asli kamu. Menu cuma kasih akses **tombol fisik** kalau user ingin mengupdate, bukan otomatisasi.
+
+File yang berubah:
+- `artifacts/electron-app/src/main.ts` — `buildAppMenu()` baru, `RECOVERY_HTML` constant, `setApplicationMenu` di `whenReady`, fallback handler di `did-fail-load`, 5 IPC handler baru (`app:checkUpdateNow`, `app:downloadUpdateNow`, `app:openUserData`, `app:openReleases`, `app:quit`).
+- `artifacts/electron-app/src/preload.ts` — 7 shortcut API baru di `electronApp`.
+- `artifacts/hutang-app/src/types/electron.d.ts` — declare 7 API baru di Window interface.
+- `artifacts/electron-app/package.json` — 1.1.3 → 1.1.4.
+- `CATATAN-RILIS.md`, `RENCANA-FITUR.md`.
+
+Verifikasi:
+- [x] `pnpm typecheck` — 0 error ✅
+- [x] `pnpm vitest run` — 60/60 pass ✅
+- [x] `pnpm --filter @workspace/electron-app build:main` — sukses ✅
+- [ ] **Smoke test wajib di .exe installer hasil packaging** (pelajaran v1.1.2): install v1.1.4, buka app, pastikan ada menubar dengan Aplikasi + Bantuan, klik Reload Halaman → renderer reload, klik Buka Folder Data → File Explorer terbuka di userData.
+- [ ] Smoke test recovery: stop backend manual selagi app jalan → `did-fail-load` trigger → halaman recovery muncul dengan tombol → klik Cek Update → flow lengkap.
+
 ### Backlog (tidak masuk roadmap, build kalau ada permintaan user)
 
 - B1 tab tambahan (Numbering, Pajak, Notifikasi threshold) — observasi dulu apakah dibutuhkan

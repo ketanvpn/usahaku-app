@@ -5,6 +5,19 @@ contextBridge.exposeInMainWorld("electronApp", {
   isElectron: true,
   openInBrowser: (html: string): Promise<string> =>
     ipcRenderer.invoke("open-in-browser", html),
+  // ── v1.1.4: shortcut API yang dipakai oleh RECOVERY_HTML ──────────────────
+  // RECOVERY_HTML adalah halaman fallback yang di-load main process kalau
+  // renderer utama gagal. Dia tidak punya akses ke React state, jadi semua
+  // panggilan harus return value langsung (bukan event-based).
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke("app:getVersion"),
+  checkUpdate: (): Promise<{ available: boolean; version?: string }> =>
+    ipcRenderer.invoke("app:checkUpdateNow"),
+  downloadUpdate: (): Promise<{ success: boolean; message?: string }> =>
+    ipcRenderer.invoke("app:downloadUpdateNow"),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke("update:install"),
+  openUserData: (): Promise<void> => ipcRenderer.invoke("app:openUserData"),
+  openReleases: (): Promise<void> => ipcRenderer.invoke("app:openReleases"),
+  quitApp: (): Promise<void> => ipcRenderer.invoke("app:quit"),
   update: {
     onStatus: (cb: (payload: Record<string, unknown>) => void) => {
       const handler = (_: unknown, payload: Record<string, unknown>) => cb(payload);

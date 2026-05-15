@@ -20,6 +20,14 @@ declare global {
       isElectron: boolean;
       openInBrowser: (html: string) => Promise<string>;
       getVersion: () => Promise<string>;
+      // v1.1.4: shortcut API untuk recovery page (juga aman dipakai dari renderer biasa)
+      getAppVersion?: () => Promise<string>;
+      checkUpdate?: () => Promise<{ available: boolean; version?: string }>;
+      downloadUpdate?: () => Promise<{ success: boolean; message?: string }>;
+      installUpdate?: () => Promise<void>;
+      openUserData?: () => Promise<void>;
+      openReleases?: () => Promise<void>;
+      quitApp?: () => Promise<void>;
       update?: {
         onStatus: (cb: (payload: UpdateStatusPayload) => void) => () => void;
         getStatus: () => Promise<UpdateStatusPayload | null>;
