@@ -312,7 +312,7 @@ Tidak menyentuh DB / migrasi / endpoint baru. Restore backup lama tetap jalan.
 
 ### Rilis v1.0.83 — Pengaturan minimal (🟢→🟡)
 
-Status: **✅ Selesai (siap dipublish)** — 2026-05-15 pagi
+Status: **✅ Published** — 2026-05-15 pagi
 
 7 commit bertahap, semua self-contained, typecheck 0 error, test 30/30 pass:
 
@@ -322,16 +322,44 @@ Status: **✅ Selesai (siap dipublish)** — 2026-05-15 pagi
 - [x] Commit 4 (`a1c2430`): Hook `usePengaturan()` + halaman `/pengaturan` 2 tab (Data Usaha + Struk & Cetak) + entry sidebar grup SISTEM
 - [x] Commit 5 (`c25ba16`): Backup format 1.7 → 1.8 dengan field `pengaturan` (file logo tidak di-include karena server tidak akses userData; user upload ulang setelah restore antar mesin)
 - [x] Commit 6 (`f53c9f6`): Helper bersama `lib/struk.ts` + integrasi ke struk Kasir (logo, alamat, telepon, header, footer, ukuran kertas). Halaman lain (laporan/pembayaran/gaji-tenaga/keuangan) defer ke rilis berikut
-- [ ] Commit 7: Catatan rilis (file ini)
+- [x] Commit 7 (`be10711`): Catatan rilis (file ini)
 
-Verifikasi lapangan yang masih perlu user lakukan:
-- [ ] Smoke test login owner → buka /pengaturan → upload logo → simpan struk → cetak transaksi kasir
+Temuan lapangan setelah publish:
+- [x] Smoke test login owner → buka /pengaturan → upload logo → simpan struk → cetak transaksi kasir → **80mm OK, 58mm berantakan** (di-fix di v1.0.84)
 - [ ] Restore backup v1.7 lama di app v1.0.83 (pengaturan tetap kosong, app tidak crash)
 - [ ] Backup v1.0.83 → restore di v1.0.83 lain (pengaturan ikut dipulihkan, logo perlu upload ulang antar mesin)
 
-### Backlog v1.0.84+ (defer dari 1.2.0)
+### Rilis v1.0.84 — Hotfix struk 58mm (🟢)
 
-- Migrasi struk halaman lain ke helper `lib/struk.ts` (laporan, pembayaran, gaji-tenaga, keuangan)
+Status: **✅ Selesai (siap dipublish)** — 2026-05-15 siang
+
+User-reported issue setelah v1.0.83 dipasang: cetak struk dengan ukuran kertas 58mm masih berantakan (kolom harga lompat ke baris berikutnya, total kepotong). Ukuran 80mm dan A4 sudah aman.
+
+Akar masalah:
+- Template struk lama pakai 1 layout tabel 4 kolom (Barang | Qty | Harga | Sub) untuk semua ukuran.
+- Di lebar body 54mm, format Rupiah `Rp 50.000` × 2 kolom + nama barang panjang membuat baris pecah / overflow.
+- 80mm body 72mm punya cukup ruang, jadi terlihat aman. 58mm tidak.
+
+Solusi:
+- Pisahkan template per ukuran. 58mm pakai layout **2-baris per item** (nama di atas, `qty satuan × harga` + subtotal di bawah), font 8pt, body 50mm (safety margin printer thermal yang area cetak efektif ~48mm), format angka tanpa prefix "Rp" untuk hemat ruang.
+- 80mm dan A4 **tidak berubah** (tetap tabel 4 kolom yang sudah aman). A4 dapat font lebih besar saja.
+- Builder HTML dipindah dari `kasir.tsx` ke `lib/struk.ts` sebagai `buildStrukHtml(...)` supaya bisa dipakai ulang nanti (cetak ulang dari riwayat, dsb).
+
+Commit:
+- [x] `feat(struk): layout 58mm dirombak + buildStrukHtml di lib/struk.ts` — refactor `lib/struk.ts`, simplify `kasir.tsx`, +20 unit test (`tests/struk-builder.test.ts`), update `CATATAN-RILIS.md`
+
+Verifikasi:
+- [x] `pnpm vitest run` — 50/50 pass (30 lama + 20 baru) ✅
+- [x] `pnpm --filter @workspace/hutang-app typecheck` — 0 error ✅
+- [x] `pnpm --filter @workspace/hutang-app build:electron` — sukses ✅
+- [ ] Smoke test manual: cetak struk 58mm di printer thermal user (perlu user lakukan)
+- [ ] Smoke test regression: cetak struk 80mm + A4 (verifikasi tidak berubah)
+
+Tidak menyentuh DB / API / format backup. Tidak ada migrasi. Restore backup lama tetap jalan.
+
+### Backlog v1.0.85+ (defer dari 1.2.0)
+
+- Migrasi struk halaman lain ke helper `lib/struk.ts` (laporan, pembayaran, gaji-tenaga, keuangan) — A4/A5, bukan terkait bug 58mm, cuma konsistensi header logo + alamat + footer
 - Logo embed di backup (butuh API server/IPC bridge untuk akses userData)
 - Bersih-bersih form usaha duplikat di profil.tsx (sekarang masih ada di 2 tempat)
 

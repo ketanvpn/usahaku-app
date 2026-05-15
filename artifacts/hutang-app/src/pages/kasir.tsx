@@ -14,16 +14,7 @@ import { formatRupiah } from "@/lib/format";
 import { useLicense } from "@/context/license-context";
 import { usePengaturan, type Pengaturan } from "@/hooks/use-pengaturan";
 import { useAuth } from "@/hooks/use-auth";
-import { getBodyWidth, getLogoMime, getPageCss, loadLogoBase64ForPrint } from "@/lib/struk";
-
-function escHtml(s: string | number): string {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;");
-}
+import { buildStrukHtml, loadLogoBase64ForPrint } from "@/lib/struk";
 
 interface PrintStrukOptions {
   pengaturan?: Pengaturan;
@@ -33,73 +24,7 @@ interface PrintStrukOptions {
 }
 
 async function openPrintStruk(hasil: HasilTransaksi, opts: PrintStrukOptions = {}) {
-  const { pengaturan, logoBase64, alamatUsaha, teleponUsaha } = opts;
-  const ukuran = pengaturan?.struk_ukuran_kertas ?? "80mm";
-  const headerExtra = (pengaturan?.struk_header ?? "").trim();
-  const footerText = (pengaturan?.struk_footer ?? "Terima kasih atas kunjungan Anda").trim();
-
-  const tgl = new Date(hasil.tanggal + "T00:00:00").toLocaleDateString("id-ID", {
-    day: "numeric", month: "long", year: "numeric",
-  });
-  const rows = hasil.items.map(i =>
-    `<tr><td>${escHtml(i.nama_barang)}</td><td class="right">${escHtml(i.jumlah)} ${escHtml(i.satuan)}</td><td class="right">${fmt(i.harga_satuan)}</td><td class="right">${fmt(i.subtotal)}</td></tr>`
-  ).join("");
-
-  const diskonRow = hasil.diskon > 0
-    ? `<tr><td colspan="3">Diskon</td><td class="right">-${fmt(hasil.diskon)}</td></tr>`
-    : "";
-
-  // Header logo (kalau ada). Tag <img> dengan max-height konsisten antar ukuran.
-  const logoTag = logoBase64
-    ? `<img src="data:${getLogoMime(pengaturan?.logo_filename)};base64,${logoBase64}" style="max-height:50px;max-width:100%;display:block;margin:0 auto 4px" alt="Logo"/>`
-    : "";
-  const alamatLine = alamatUsaha
-    ? `<div class="center" style="font-size:9pt">${escHtml(alamatUsaha)}</div>`
-    : "";
-  const teleponLine = teleponUsaha
-    ? `<div class="center" style="font-size:9pt">Telp: ${escHtml(teleponUsaha)}</div>`
-    : "";
-  const headerExtraLine = headerExtra
-    ? `<div class="center" style="font-size:9pt;margin-top:2px">${escHtml(headerExtra)}</div>`
-    : "";
-
-  const html = `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
-<style>
-${getPageCss(ukuran)}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:monospace;font-size:11pt;color:#000;width:${getBodyWidth(ukuran)}}
-.center{text-align:center}.right{text-align:right}
-.bold{font-weight:bold}.sep{border-top:1px dashed #000;margin:4px 0}
-table{width:100%;border-collapse:collapse}
-td{padding:1px 2px;font-size:10pt}
-.total td{font-weight:bold;font-size:11pt;border-top:1px solid #000;padding-top:3px}
-img{display:block}
-</style>
-<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);})<\/script>
-</head><body>
-${logoTag}
-<div class="center bold" style="font-size:13pt">${escHtml(hasil.nama_usaha || "Usahaku")}</div>
-${alamatLine}
-${teleponLine}
-${headerExtraLine}
-<div class="sep"></div>
-<div style="font-size:9pt">Tanggal : ${escHtml(tgl)}</div>
-<div style="font-size:9pt">No      : #${escHtml(String(hasil.id).padStart(4,"0"))}</div>
-<div class="sep"></div>
-<table>
-<thead><tr><td class="bold">Barang</td><td class="bold right">Qty</td><td class="bold right">Harga</td><td class="bold right">Sub</td></tr></thead>
-<tbody>${rows}</tbody>
-</table>
-<div class="sep"></div>
-<table>
-${hasil.diskon > 0 ? `<tr><td>Subtotal</td><td class="right" colspan="3">${fmt(hasil.subtotal)}</td></tr>${diskonRow}` : ""}
-<tr class="total"><td>TOTAL</td><td class="right bold" colspan="3">${fmt(hasil.total)}</td></tr>
-<tr><td>Bayar</td><td class="right" colspan="3">${fmt(hasil.uang_bayar)}</td></tr>
-<tr><td>Kembali</td><td class="right" colspan="3">${fmt(hasil.kembalian)}</td></tr>
-</table>
-<div class="sep"></div>
-<div class="center" style="font-size:9pt;margin-top:4px">${escHtml(footerText)}</div>
-</body></html>`;
+  const html = buildStrukHtml(hasil, opts);
 
   if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
     await window.electronApp.openInBrowser(html);
@@ -108,10 +33,6 @@ ${hasil.diskon > 0 ? `<tr><td>Subtotal</td><td class="right" colspan="3">${fmt(h
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank");
   }
-}
-
-function fmt(n: number) {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 }
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
