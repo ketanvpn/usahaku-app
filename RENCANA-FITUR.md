@@ -331,7 +331,7 @@ Temuan lapangan setelah publish:
 
 ### Rilis v1.0.84 — Hotfix struk 58mm (🟢)
 
-Status: **✅ Selesai (siap dipublish)** — 2026-05-15 siang
+Status: **✅ Published** — 2026-05-15 siang
 
 User-reported issue setelah v1.0.83 dipasang: cetak struk dengan ukuran kertas 58mm masih berantakan (kolom harga lompat ke baris berikutnya, total kepotong). Ukuran 80mm dan A4 sudah aman.
 
@@ -357,11 +357,38 @@ Verifikasi:
 
 Tidak menyentuh DB / API / format backup. Tidak ada migrasi. Restore backup lama tetap jalan.
 
-### Backlog v1.0.85+ (defer dari 1.2.0)
+### Rilis v1.0.85 — Cleanup form usaha duplikat (🟢)
+
+Status: **✅ Selesai (siap dipublish)** — 2026-05-15 sore
+
+Sebelum: form edit data usaha (nama_usaha, telepon, alamat, catatan) ada di **2 tempat**:
+- `/profil` Card "Info Usaha / Toko"
+- `/pengaturan` tab "Data Usaha"
+
+Keduanya pakai schema Zod yang persis sama, query `usaha-mine` yang sama, dan endpoint `PUT /api/usaha/mine` yang sama. Implikasi: dua sumber kebenaran yang sama-sama bisa edit, label/style sedikit beda, bisa bingungkan user.
+
+Keputusan: `/pengaturan` jadi single source of truth. `/profil` fokus ke akun + ganti password.
+
+Yang berubah:
+- `artifacts/hutang-app/src/pages/profil.tsx`:
+  - Hapus `usahaSchema`, `usahaForm`, `updateUsahaMutation`, state `editingUsaha`, dan seluruh Card "Info Usaha / Toko".
+  - Pertahankan: Card profil pengguna, query `usaha-mine` (read-only) untuk menampilkan nama usaha, Card "Ganti Password", tombol Logout.
+  - Tambah tombol kecil "Atur Data Usaha" di area "Usaha Terhubung" yang link ke `/pengaturan` (hanya untuk role owner).
+  - Tambah info-box dengan link ke halaman Pengaturan untuk setting struk + logo.
+- Hapus import yang tidak terpakai (Textarea, beberapa icon, dst).
+
+Verifikasi:
+- [x] `pnpm vitest run` — 50/50 pass ✅ (tidak ada test yang impact)
+- [x] `pnpm --filter @workspace/hutang-app typecheck` — 0 error ✅
+- [x] `pnpm --filter @workspace/hutang-app build:electron` — sukses, bundle JS turun ~4 kB ✅
+- [ ] Smoke test manual: login owner → /profil → klik tombol "Atur Data Usaha" → muncul /pengaturan tab usaha (perlu user lakukan)
+
+Tidak menyentuh DB / API / format backup / endpoint baru. Endpoint `PUT /api/usaha/mine` tetap ada (dipakai oleh `/pengaturan`). Restore backup lama tetap jalan.
+
+### Backlog v1.0.86+ (defer dari 1.2.0)
 
 - Migrasi struk halaman lain ke helper `lib/struk.ts` (laporan, pembayaran, gaji-tenaga, keuangan) — A4/A5, bukan terkait bug 58mm, cuma konsistensi header logo + alamat + footer
 - Logo embed di backup (butuh API server/IPC bridge untuk akses userData)
-- Bersih-bersih form usaha duplikat di profil.tsx (sekarang masih ada di 2 tempat)
 
 ### Rilis 1.3.0 — Master Supplier (🟢)
 

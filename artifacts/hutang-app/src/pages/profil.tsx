@@ -1,10 +1,17 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useLogout } from "@workspace/api-client-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -13,29 +20,40 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Shield, LogOut, Loader2, KeyRound, Check, Store, Phone, MapPin, Pencil, X } from "lucide-react";
+import {
+  Shield,
+  LogOut,
+  Loader2,
+  KeyRound,
+  Check,
+  Settings,
+  Store,
+} from "lucide-react";
 import { formatDate, getErrorMessage } from "@/lib/format";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-const usahaSchema = z.object({
-  nama_usaha: z.string().min(2, "Nama usaha minimal 2 karakter"),
-  telepon: z.string().optional(),
-  alamat: z.string().optional(),
-  catatan: z.string().optional(),
-});
-type UsahaForm = z.infer<typeof usahaSchema>;
+// Catatan v1.0.85: form edit data usaha (nama, telepon, alamat, catatan)
+// dipindah seluruhnya ke halaman /pengaturan tab "Data Usaha". Halaman ini
+// sekarang fokus ke profil pengguna + ganti password saja, untuk menghindari
+// dua sumber kebenaran yang sama-sama bisa nulis ke endpoint PUT /api/usaha/mine.
 
 const changePasswordSchema = z
   .object({
-    current_password: z.string().min(1, { message: "Password lama wajib diisi" }),
-    new_password: z.string().min(6, { message: "Password baru minimal 6 karakter" }),
-    confirm_password: z.string().min(1, { message: "Konfirmasi password wajib diisi" }),
+    current_password: z
+      .string()
+      .min(1, { message: "Password lama wajib diisi" }),
+    new_password: z
+      .string()
+      .min(6, { message: "Password baru minimal 6 karakter" }),
+    confirm_password: z
+      .string()
+      .min(1, { message: "Konfirmasi password wajib diisi" }),
   })
   .refine((data) => data.new_password === data.confirm_password, {
     message: "Konfirmasi password tidak cocok",
@@ -48,49 +66,26 @@ export default function ProfilPage() {
   const { user, logout } = useAuth();
   const logoutMutation = useLogout();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [pwdSuccess, setPwdSuccess] = useState(false);
-  const [editingUsaha, setEditingUsaha] = useState(false);
 
+  // Read-only: ambil nama usaha buat ditampilkan di kartu profil. Edit tetap
+  // di halaman /pengaturan supaya tidak ada duplikasi form.
   const { data: usahaData, isLoading: usahaLoading } = useQuery({
     queryKey: ["usaha-mine", user?.usaha_id],
     enabled: !!user?.usaha_id,
     queryFn: async () => {
-      const r = await fetch(`${BASE}/api/usaha/${user!.usaha_id}`, { credentials: "include" });
-      if (!r.ok) return null;
-      return r.json() as Promise<{ id: number; nama_usaha: string; telepon: string | null; alamat: string | null; catatan: string | null; created_at: string }>;
-    },
-  });
-
-  const usahaForm = useForm<UsahaForm>({
-    resolver: zodResolver(usahaSchema),
-    values: {
-      nama_usaha: usahaData?.nama_usaha ?? "",
-      telepon: usahaData?.telepon ?? "",
-      alamat: usahaData?.alamat ?? "",
-      catatan: usahaData?.catatan ?? "",
-    },
-  });
-
-  const updateUsahaMutation = useMutation({
-    mutationFn: async (values: UsahaForm) => {
-      const res = await fetch(`${BASE}/api/usaha/mine`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+      const r = await fetch(`${BASE}/api/usaha/${user!.usaha_id}`, {
         credentials: "include",
-        body: JSON.stringify(values),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal menyimpan");
-      return data;
-    },
-    onSuccess: () => {
-      toast({ title: "Data usaha berhasil diperbarui" });
-      queryClient.invalidateQueries({ queryKey: ["usaha-mine"] });
-      setEditingUsaha(false);
-    },
-    onError: (err: unknown) => {
-      toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) });
+      if (!r.ok) return null;
+      return r.json() as Promise<{
+        id: number;
+        nama_usaha: string;
+        telepon: string | null;
+        alamat: string | null;
+        catatan: string | null;
+        created_at: string;
+      }>;
     },
   });
 
@@ -104,7 +99,10 @@ export default function ProfilPage() {
   });
 
   const changePasswordMutation = useMutation({
-    mutationFn: async (values: { current_password: string; new_password: string }) => {
+    mutationFn: async (values: {
+      current_password: string;
+      new_password: string;
+    }) => {
       const res = await fetch("/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -130,7 +128,10 @@ export default function ProfilPage() {
   const onChangePwd = (values: ChangePasswordValues) => {
     setPwdSuccess(false);
     changePasswordMutation.mutate(
-      { current_password: values.current_password, new_password: values.new_password },
+      {
+        current_password: values.current_password,
+        new_password: values.new_password,
+      },
       {
         onSuccess: () => {
           toast({ title: "Password berhasil diubah" });
@@ -144,7 +145,7 @@ export default function ProfilPage() {
             description: getErrorMessage(err),
           });
         },
-      }
+      },
     );
   };
 
@@ -153,8 +154,12 @@ export default function ProfilPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight text-primary">Profil Pengguna</h2>
-        <p className="text-muted-foreground">Informasi akun dan pengaturan keamanan.</p>
+        <h2 className="text-3xl font-bold tracking-tight text-primary">
+          Profil Pengguna
+        </h2>
+        <p className="text-muted-foreground">
+          Informasi akun dan pengaturan keamanan.
+        </p>
       </div>
 
       <div className="max-w-2xl space-y-6">
@@ -165,10 +170,14 @@ export default function ProfilPage() {
                 {(user.nama || user.username).charAt(0).toUpperCase()}
               </div>
               <div>
-                <CardTitle className="text-2xl">{user.nama || user.username}</CardTitle>
+                <CardTitle className="text-2xl">
+                  {user.nama || user.username}
+                </CardTitle>
                 <CardDescription className="flex items-center gap-1 mt-1">
                   <Shield className="h-3 w-3" />
-                  {user.role === "super_admin" ? "Super Administrator" : "Owner Usaha"}
+                  {user.role === "super_admin"
+                    ? "Super Administrator"
+                    : "Owner Usaha"}
                 </CardDescription>
               </div>
             </div>
@@ -176,12 +185,16 @@ export default function ProfilPage() {
           <CardContent className="pt-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-muted-foreground">Username</label>
+                <label className="text-sm font-medium text-muted-foreground">
+                  Username
+                </label>
                 <div className="font-medium text-lg">{user.username}</div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium text-muted-foreground">Status Akun</label>
+                <label className="text-sm font-medium text-muted-foreground">
+                  Status Akun
+                </label>
                 <div>
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
                     Aktif
@@ -190,19 +203,60 @@ export default function ProfilPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium text-muted-foreground">Terdaftar Sejak</label>
+                <label className="text-sm font-medium text-muted-foreground">
+                  Terdaftar Sejak
+                </label>
                 <div className="font-medium">{formatDate(user.created_at)}</div>
               </div>
 
               {user.usaha_id && (
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">Usaha Terhubung</label>
-                  <div className="font-medium">
-                    {usahaData ? usahaData.nama_usaha : usahaLoading ? "Memuat..." : `#${user.usaha_id}`}
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Usaha Terhubung
+                  </label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium">
+                      {usahaData
+                        ? usahaData.nama_usaha
+                        : usahaLoading
+                          ? "Memuat..."
+                          : `#${user.usaha_id}`}
+                    </span>
+                    {user.role === "owner" && (
+                      <Link href="/pengaturan">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                        >
+                          <Settings className="h-3 w-3 mr-1" />
+                          Atur Data Usaha
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </div>
               )}
             </div>
+
+            {user.role === "owner" && (
+              <div className="rounded-md border bg-muted/30 px-4 py-3 flex items-start gap-3 text-sm">
+                <Store className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-medium">Data usaha & struk</p>
+                  <p className="text-muted-foreground">
+                    Nama, telepon, alamat, logo, dan tampilan struk diatur di{" "}
+                    <Link
+                      href="/pengaturan"
+                      className="text-primary hover:underline font-medium"
+                    >
+                      halaman Pengaturan
+                    </Link>
+                    .
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="bg-muted/30 border-t border-border mt-6 pt-6">
             <Button
@@ -221,114 +275,6 @@ export default function ProfilPage() {
           </CardFooter>
         </Card>
 
-        {user.role === "owner" && (
-          <Card className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Store className="h-5 w-5 text-primary" />
-                <div>
-                  <CardTitle>Info Usaha / Toko</CardTitle>
-                  <CardDescription>Data toko yang terhubung ke akun Anda.</CardDescription>
-                </div>
-              </div>
-              {!editingUsaha && (
-                <Button variant="outline" size="sm" onClick={() => setEditingUsaha(true)}>
-                  <Pencil className="h-4 w-4 mr-1" /> Edit
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent>
-              {usahaLoading ? (
-                <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-              ) : !usahaData ? (
-                <p className="text-sm text-muted-foreground">Data usaha tidak ditemukan.</p>
-              ) : editingUsaha ? (
-                <Form {...usahaForm}>
-                  <form onSubmit={usahaForm.handleSubmit((v) => updateUsahaMutation.mutate(v))} className="space-y-4">
-                    <FormField control={usahaForm.control} name="nama_usaha" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nama Usaha / Toko</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={usahaForm.control} name="telepon" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nomor Telepon</FormLabel>
-                        <FormControl><Input placeholder="08xxxxxxxxxx" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={usahaForm.control} name="alamat" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Alamat</FormLabel>
-                        <FormControl><Input placeholder="Jl. ..." {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={usahaForm.control} name="catatan" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Catatan</FormLabel>
-                        <FormControl><Textarea placeholder="Keterangan tambahan..." rows={3} {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <div className="flex gap-2">
-                      <Button type="submit" disabled={updateUsahaMutation.isPending}>
-                        {updateUsahaMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
-                        Simpan
-                      </Button>
-                      <Button type="button" variant="outline" onClick={() => { setEditingUsaha(false); usahaForm.reset(); }}>
-                        <X className="h-4 w-4 mr-1" /> Batal
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <Store className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Nama Usaha</p>
-                      <p className="font-semibold text-lg">{usahaData.nama_usaha}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Nomor Telepon</p>
-                      <p className="font-medium">{usahaData.telepon || <span className="text-muted-foreground italic">Belum diisi</span>}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Alamat</p>
-                      <p className="font-medium">{usahaData.alamat || <span className="text-muted-foreground italic">Belum diisi</span>}</p>
-                    </div>
-                  </div>
-                  {usahaData.catatan && (
-                    <div className="flex items-start gap-3">
-                      <div className="h-4 w-4 mt-0.5" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Catatan</p>
-                        <p className="font-medium">{usahaData.catatan}</p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex items-start gap-3 pt-2 border-t">
-                    <div className="h-4 w-4 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Terdaftar Sejak</p>
-                      <p className="font-medium">{formatDate(usahaData.created_at)}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
         <Card className="shadow-md">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -336,7 +282,8 @@ export default function ProfilPage() {
               <CardTitle>Ganti Password</CardTitle>
             </div>
             <CardDescription>
-              Gunakan password yang kuat dan tidak mudah ditebak. Minimal 6 karakter.
+              Gunakan password yang kuat dan tidak mudah ditebak. Minimal 6
+              karakter.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -347,7 +294,10 @@ export default function ProfilPage() {
               </div>
             )}
             <Form {...pwdForm}>
-              <form onSubmit={pwdForm.handleSubmit(onChangePwd)} className="space-y-4">
+              <form
+                onSubmit={pwdForm.handleSubmit(onChangePwd)}
+                className="space-y-4"
+              >
                 <FormField
                   control={pwdForm.control}
                   name="current_password"
@@ -355,7 +305,11 @@ export default function ProfilPage() {
                     <FormItem>
                       <FormLabel>Password Lama</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="Masukkan password lama" {...field} />
+                        <Input
+                          type="password"
+                          placeholder="Masukkan password lama"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -368,7 +322,11 @@ export default function ProfilPage() {
                     <FormItem>
                       <FormLabel>Password Baru</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="Minimal 6 karakter" {...field} />
+                        <Input
+                          type="password"
+                          placeholder="Minimal 6 karakter"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -381,7 +339,11 @@ export default function ProfilPage() {
                     <FormItem>
                       <FormLabel>Konfirmasi Password Baru</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="Ketik ulang password baru" {...field} />
+                        <Input
+                          type="password"
+                          placeholder="Ketik ulang password baru"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
