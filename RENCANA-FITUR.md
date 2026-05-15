@@ -436,7 +436,7 @@ Tidak menyentuh DB / API / format backup. Iframe pakai `sandbox=""` (no scripts,
 
 ### Rilis v1.0.88 — Logo embed di backup (🟡)
 
-Status: **✅ Selesai (siap dipublish)** — 2026-05-15 sore
+Status: **✅ Published** — 2026-05-15 sore (smoke test lapangan masih pending)
 
 Closing loop dari v1.0.83. Saat itu sudah dirancang format backup naik ke v1.8 dengan include data tabel `pengaturan` (key/value), tapi **file logo** sengaja di-skip dengan catatan "user upload ulang setelah restore antar mesin" — karena server tidak punya akses `userData/logos/`.
 
