@@ -74,16 +74,20 @@ jobs:
           # Retry up to 3x karena `prebuild-install` (yang dipakai better-sqlite3)
           # bisa timeout download binary kalau jaringan runner lagi tidak stabil.
           # Kalau sukses di percobaan pertama, retry tidak terjadi (no-op).
+          #
+          # Catatan PowerShell: pakai `${var}` di dalam string yang diikuti
+          # tanda baca seperti `:` supaya tidak diparse sebagai scope variable
+          # (`$env:PATH` style). `$i` aman karena hanya diikuti spasi.
           $maxAttempts = 3
           for ($i = 1; $i -le $maxAttempts; $i++) {
-            Write-Host "Attempt $i of $maxAttempts: pnpm install --frozen-lockfile"
+            Write-Host "Attempt $i of ${maxAttempts}: pnpm install --frozen-lockfile"
             pnpm install --frozen-lockfile
             if ($LASTEXITCODE -eq 0) {
               Write-Host "Install sukses di percobaan ke-$i"
               break
             }
             if ($i -eq $maxAttempts) {
-              Write-Host "Install gagal setelah $maxAttempts percobaan"
+              Write-Host "Install gagal setelah ${maxAttempts} percobaan"
               exit 1
             }
             Write-Host "Install gagal, retry dalam 5 detik..."
@@ -153,16 +157,17 @@ jobs:
       - name: Install semua dependencies (dengan retry kalau prebuild-install timeout)
         shell: pwsh
         run: |
+          # Lihat catatan PowerShell di job verify-windows.
           $maxAttempts = 3
           for ($i = 1; $i -le $maxAttempts; $i++) {
-            Write-Host "Attempt $i of $maxAttempts: pnpm install --frozen-lockfile"
+            Write-Host "Attempt $i of ${maxAttempts}: pnpm install --frozen-lockfile"
             pnpm install --frozen-lockfile
             if ($LASTEXITCODE -eq 0) {
               Write-Host "Install sukses di percobaan ke-$i"
               break
             }
             if ($i -eq $maxAttempts) {
-              Write-Host "Install gagal setelah $maxAttempts percobaan"
+              Write-Host "Install gagal setelah ${maxAttempts} percobaan"
               exit 1
             }
             Write-Host "Install gagal, retry dalam 5 detik..."
