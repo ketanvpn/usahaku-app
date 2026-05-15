@@ -11,7 +11,15 @@ env:
 jobs:
   verify-windows:
     name: Verify Quality Gate
-    runs-on: windows-latest
+    # Pin ke windows-2022 (bukan windows-latest) supaya better-sqlite3 bisa
+    # rebuild native lewat node-gyp. Image windows-latest sudah migrasi ke
+    # Visual Studio 2026 (versi 18) yang belum dikenali node-gyp@11.x —
+    # rebuild gagal dengan "could not find any Visual Studio installation
+    # to use". windows-2022 masih punya VS 2022 Build Tools yang stabil.
+    # Catatan: kalau image ini di-deprecate, opsi berikutnya adalah explicit
+    # `microsoft/setup-msbuild@v2` step + pin nodejs-builder ke versi yang
+    # support VS 2026 (kemungkinan node-gyp@12.x ke atas).
+    runs-on: windows-2022
 
     steps:
       - name: Checkout kode
@@ -59,7 +67,9 @@ jobs:
 
   release-windows:
     name: Build Installer and Upload
-    runs-on: windows-latest
+    # Lihat catatan di verify-windows: pakai windows-2022 untuk
+    # kompatibilitas node-gyp + better-sqlite3 native rebuild.
+    runs-on: windows-2022
     needs: verify-windows
     permissions:
       contents: write
