@@ -386,22 +386,22 @@ export default function KasirPage() {
       {/* ── Panel Kiri: Daftar Barang ─────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 gap-3">
 
-        {/* Header: search + tombol riwayat */}
-        <div className="flex items-center gap-2">
+        {/* Header: search + tombol riwayat (sticky supaya selalu visible saat scroll) */}
+        <div className="flex items-center gap-2 sticky top-0 z-10 bg-background pb-1">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
               ref={searchInputRef}
-              placeholder="Cari barang..."
+              placeholder="Cari barang... (Ctrl+K)"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-9 h-10"
             />
           </div>
           <Button
             variant="outline"
             size="sm"
-            className="shrink-0 gap-1.5"
+            className="shrink-0 gap-1.5 h-10"
             onClick={() => { setShowRiwayat(true); refetchRiwayat(); }}
           >
             <History className="h-4 w-4" />
@@ -440,10 +440,10 @@ export default function KasirPage() {
                 <Card
                   key={b.id}
                   onClick={() => tambahKeCart(b)}
-                  className={`cursor-pointer transition-all select-none relative group ${
+                  className={`cursor-pointer transition-all duration-150 select-none relative group active:scale-[0.98] ${
                     inCart
-                      ? "border-primary shadow-sm bg-primary/5"
-                      : "hover:border-primary/60 hover:shadow-sm"
+                      ? "border-primary shadow-md bg-primary/5 ring-1 ring-primary/20"
+                      : "hover:border-primary/60 hover:shadow-md hover:-translate-y-0.5"
                   }`}
                 >
                   <CardContent className="p-3 flex flex-col gap-1.5 h-full">
@@ -460,12 +460,12 @@ export default function KasirPage() {
                     </p>
 
                     {/* Stok */}
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground tabular-nums">
                       Stok: <span className="font-medium text-foreground">{b.stok}</span> {b.satuan}
                     </p>
 
-                    {/* Harga — menonjol di bawah */}
-                    <p className="text-primary font-bold text-base mt-auto">
+                    {/* Harga — menonjol di bawah, tabular nums supaya digit rata */}
+                    <p className="text-primary font-bold text-base mt-auto tabular-nums">
                       {formatRupiah(b.harga_jual)}
                     </p>
                   </CardContent>
@@ -499,22 +499,23 @@ export default function KasirPage() {
             </div>
           ) : (
             cart.map(item => (
-              <div key={item.barang.id} className="flex items-center gap-2 py-2.5">
+              <div key={item.barang.id} className="flex items-center gap-2 py-2.5 group/item">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium leading-snug truncate">{item.barang.nama}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
                     {formatRupiah(item.barang.harga_jual)} / {item.barang.satuan}
                   </p>
-                  <p className="text-sm font-bold text-primary mt-0.5">
+                  <p className="text-sm font-bold text-primary mt-0.5 tabular-nums">
                     {formatRupiah(item.barang.harga_jual * item.jumlah)}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => ubahJumlah(item.barang.id, -1)}
-                    className="w-6 h-6 rounded-md border flex items-center justify-center hover:bg-muted transition-colors"
+                    className="w-7 h-7 rounded-md border flex items-center justify-center hover:bg-muted active:scale-95 transition-all"
+                    aria-label="Kurangi"
                   >
-                    <Minus className="h-3 w-3" />
+                    <Minus className="h-3.5 w-3.5" />
                   </button>
                   <input
                     type="number"
@@ -524,18 +525,20 @@ export default function KasirPage() {
                     onChange={e => setJumlahLangsung(item.barang.id, e.target.value)}
                     onFocus={e => e.target.select()}
                     onBlur={() => commitQtyInput(item.barang.id)}
-                    className="w-12 text-center text-sm font-semibold border rounded-md px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-12 h-7 text-center text-sm font-semibold tabular-nums border rounded-md px-1 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <button
                     onClick={() => ubahJumlah(item.barang.id, 1)}
                     disabled={item.jumlah >= item.barang.stok}
-                    className="w-6 h-6 rounded-md border flex items-center justify-center hover:bg-muted transition-colors disabled:opacity-40"
+                    className="w-7 h-7 rounded-md border flex items-center justify-center hover:bg-muted active:scale-95 transition-all disabled:opacity-40 disabled:active:scale-100"
+                    aria-label="Tambah"
                   >
-                    <Plus className="h-3 w-3" />
+                    <Plus className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => hapusDariCart(item.barang.id)}
-                    className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors ml-0.5"
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 active:scale-95 transition-all ml-0.5"
+                    aria-label="Hapus item"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -586,23 +589,23 @@ export default function KasirPage() {
                 />
               )}
               {nominalDiskon > 0 && (
-                <p className="text-xs text-emerald-600 text-right font-medium">Hemat {formatRupiah(nominalDiskon)}</p>
+                <p className="text-xs text-emerald-600 text-right font-medium tabular-nums">Hemat {formatRupiah(nominalDiskon)}</p>
               )}
             </div>
           )}
 
           {/* Subtotal (hanya tampil jika ada diskon) */}
           {nominalDiskon > 0 && (
-            <div className="flex justify-between items-center text-sm text-muted-foreground">
+            <div className="flex justify-between items-center text-sm text-muted-foreground tabular-nums">
               <span>Subtotal</span>
               <span>{formatRupiah(subtotal)}</span>
             </div>
           )}
 
           {/* Total */}
-          <div className="flex justify-between items-center py-1 border-t border-dashed">
-            <span className="font-semibold">Total</span>
-            <span className="text-2xl font-bold text-primary">{formatRupiah(total)}</span>
+          <div className="flex justify-between items-baseline py-1.5 border-t border-dashed">
+            <span className="font-semibold text-sm">Total</span>
+            <span className="text-2xl font-bold text-primary tabular-nums tracking-tight">{formatRupiah(total)}</span>
           </div>
 
           {/* Uang Bayar */}
@@ -614,7 +617,7 @@ export default function KasirPage() {
               value={uangBayar}
               onValueChange={setUangBayar}
               minValue={0}
-              className="text-lg font-bold h-10"
+              className="text-lg font-bold h-10 tabular-nums"
             />
             <div className="flex flex-wrap gap-1 pt-1">
               <Button
@@ -644,11 +647,11 @@ export default function KasirPage() {
 
           {/* Kembalian / Kurang */}
           {uangBayarNum > 0 && (
-            <div className={`flex justify-between items-center rounded-lg px-3 py-2.5 text-sm font-semibold ${
-              kembalian >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+            <div className={`flex justify-between items-center rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${
+              kembalian >= 0 ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-600 border border-red-200"
             }`}>
               <span>{kembalian >= 0 ? "Kembalian" : "Kurang"}</span>
-              <span className="text-base font-bold">{formatRupiah(Math.abs(kembalian))}</span>
+              <span className="text-base font-bold tabular-nums">{formatRupiah(Math.abs(kembalian))}</span>
             </div>
           )}
 
