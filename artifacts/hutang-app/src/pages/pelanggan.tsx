@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -117,31 +117,33 @@ export default function PelangganPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="page-hero flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-primary">Daftar Pelanggan</h2>
-          <p className="text-muted-foreground">Kelola daftar pelanggan Anda.</p>
+          <h2 className="page-hero-title">Daftar Pelanggan</h2>
+          <p className="page-hero-description">Kelola identitas, kontak, alamat, dan catatan pelanggan dalam satu tempat.</p>
         </div>
-        <Button onClick={() => handleOpenDialog()} disabled={!lisensiAktif}>
+        <Button onClick={() => handleOpenDialog()} disabled={!lisensiAktif} className="shadow-lg shadow-primary/15">
           <Plus className="mr-2 h-4 w-4" />
           Tambah Pelanggan
         </Button>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Cari nama, telepon, atau alamat..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      <div className="toolbar-card">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cari nama, telepon, atau alamat..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-11 rounded-xl bg-white/80 pl-9"
+          />
+        </div>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent aria-describedby={undefined}>
-          <DialogHeader>
-            <DialogTitle>{editingPelanggan ? "Edit Pelanggan" : "Tambah Pelanggan"}</DialogTitle>
+        <DialogContent aria-describedby={undefined} className="rounded-2xl border bg-card/95 shadow-2xl sm:max-w-lg">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-xl font-extrabold tracking-tight">{editingPelanggan ? "Edit Pelanggan" : "Tambah Pelanggan"}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -173,7 +175,7 @@ export default function PelangganPage() {
                   <FormMessage />
                 </FormItem>
               )} />
-              <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
+              <Button type="submit" className="w-full shadow-lg shadow-primary/15" disabled={createMutation.isPending || updateMutation.isPending}>
                 {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Simpan
               </Button>
@@ -200,9 +202,9 @@ export default function PelangganPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Card>
+      <Card className="data-card">
         <CardContent className="p-0">
-          <Table>
+          <Table className="table-premium">
             <TableHeader>
               <TableRow>
                 <TableHead>Nama</TableHead>
@@ -217,27 +219,37 @@ export default function PelangganPage() {
               <TableBody>
                 {filteredList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      {search ? "Tidak ada pelanggan yang sesuai pencarian." : "Belum ada data pelanggan."}
+                    <TableCell colSpan={4}>
+                      <div className="empty-state">
+                        <Search className="h-10 w-10 opacity-25" />
+                        <p className="text-sm font-semibold">
+                          {search ? "Tidak ada pelanggan yang sesuai pencarian." : "Belum ada data pelanggan."}
+                        </p>
+                        {!search && (
+                          <Button variant="outline" size="sm" className="mt-1 rounded-xl" onClick={() => handleOpenDialog()} disabled={!lisensiAktif}>
+                            <Plus className="mr-1 h-3.5 w-3.5" /> Tambah Pelanggan Pertama
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredList.map((p) => (
                     <TableRow key={p.id}>
-                      <TableCell className="font-medium">{p.nama}</TableCell>
-                      <TableCell>{p.telepon || "-"}</TableCell>
-                      <TableCell className="truncate max-w-[200px]">{p.alamat || "-"}</TableCell>
+                      <TableCell className="font-semibold text-foreground">{p.nama}</TableCell>
+                      <TableCell className="text-muted-foreground">{p.telepon || "-"}</TableCell>
+                      <TableCell className="truncate max-w-[240px] text-muted-foreground">{p.alamat || "-"}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <Link href={`/pelanggan/${p.id}`}>
-                            <Button variant="ghost" size="icon" title="Detail">
+                            <Button variant="ghost" size="icon" className="action-icon-btn" title="Detail">
                               <Eye className="h-4 w-4" />
                             </Button>
                           </Link>
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(p)} title="Edit" disabled={!lisensiAktif}>
+                          <Button variant="ghost" size="icon" className="action-icon-btn" onClick={() => handleOpenDialog(p)} title="Edit" disabled={!lisensiAktif}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedPelanggan(p); setIsDeleteDialogOpen(true); }} title="Hapus" className="text-destructive" disabled={!lisensiAktif}>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedPelanggan(p); setIsDeleteDialogOpen(true); }} title="Hapus" className="action-icon-btn text-destructive hover:bg-destructive/10 hover:text-destructive" disabled={!lisensiAktif}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -250,7 +262,7 @@ export default function PelangganPage() {
           </Table>
         </CardContent>
         {search && filteredList.length > 0 && (
-          <div className="px-4 py-2 text-xs text-muted-foreground border-t">
+          <div className="border-t bg-muted/30 px-4 py-2 text-xs font-medium text-muted-foreground">
             Menampilkan {filteredList.length} dari {pelangganList?.length ?? 0} pelanggan
           </div>
         )}

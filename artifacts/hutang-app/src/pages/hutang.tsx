@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { 
+import {
   useGetHutangList, useCreateHutang, useUpdateHutang, useDeleteHutang, useGetPelangganList,
-  getGetHutangListQueryKey, getGetPembayaranListQueryKey, getGetOwnerDashboardQueryKey, Hutang, GetHutangListStatus 
+  getGetHutangListQueryKey, getGetPembayaranListQueryKey, getGetOwnerDashboardQueryKey, Hutang, GetHutangListStatus
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -47,14 +47,14 @@ function getJatuhTempoBadge(tanggalJatuhTempo: string | null | undefined, status
   const sevenDaysLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   if (today > tanggalJatuhTempo) {
     return (
-      <Badge className="bg-red-100 text-red-800 border-red-200 text-[10px] px-1.5 py-0.5 flex items-center gap-1 w-fit">
+      <Badge className="flex w-fit items-center gap-1 rounded-full border-red-200 bg-red-100 px-1.5 py-0.5 text-[10px] text-red-800">
         <CalendarClock className="h-3 w-3" /> Terlambat
       </Badge>
     );
   }
   if (tanggalJatuhTempo <= sevenDaysLater) {
-      return (
-        <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-[10px] px-1.5 py-0.5 flex items-center gap-1 w-fit">
+    return (
+      <Badge className="flex w-fit items-center gap-1 rounded-full border-yellow-200 bg-yellow-100 px-1.5 py-0.5 text-[10px] text-yellow-800">
         <CalendarClock className="h-3 w-3" /> Segera jatuh tempo
       </Badge>
     );
@@ -71,7 +71,6 @@ export default function HutangPage() {
     status: filterStatus,
     pelanggan_id: filterPelanggan
   });
-  
   const { data: pelangganList } = useGetPelangganList();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -89,7 +88,7 @@ export default function HutangPage() {
 
   const form = useForm<z.infer<typeof hutangSchema>>({
     resolver: zodResolver(hutangSchema),
-    defaultValues: { pelanggan_id: 0, tanggal_hutang: new Date().toISOString().split('T')[0], tanggal_jatuh_tempo: "", keterangan: "", nominal_hutang: 0 },
+    defaultValues: { pelanggan_id: 0, tanggal_hutang: new Date().toISOString().split("T")[0], tanggal_jatuh_tempo: "", keterangan: "", nominal_hutang: 0 },
   });
 
   const updateForm = useForm<z.infer<typeof updateHutangSchema>>({
@@ -101,19 +100,19 @@ export default function HutangPage() {
     if (hutang) {
       setEditingHutang(hutang);
       updateForm.reset({
-        tanggal_hutang: hutang.tanggal_hutang.split('T')[0],
+        tanggal_hutang: hutang.tanggal_hutang.split("T")[0],
         tanggal_jatuh_tempo: hutang.tanggal_jatuh_tempo ?? "",
         keterangan: hutang.keterangan || "",
         nominal_hutang: hutang.nominal_hutang,
       });
     } else {
       setEditingHutang(null);
-      form.reset({ 
-        pelanggan_id: undefined, 
-        tanggal_hutang: new Date().toISOString().split('T')[0],
+      form.reset({
+        pelanggan_id: undefined,
+        tanggal_hutang: new Date().toISOString().split("T")[0],
         tanggal_jatuh_tempo: "",
-        keterangan: "", 
-        nominal_hutang: 0 
+        keterangan: "",
+        nominal_hutang: 0
       });
     }
     setIsDialogOpen(true);
@@ -169,38 +168,37 @@ export default function HutangPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+      <div className="page-hero flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-primary">Data Hutang</h2>
-          <p className="text-muted-foreground">Catat dan pantau hutang pelanggan.</p>
+          <h2 className="page-hero-title">Data Hutang</h2>
+          <p className="page-hero-description">Catat, pantau jatuh tempo, dan kelola sisa hutang pelanggan dengan lebih rapi.</p>
         </div>
-        <Button onClick={() => handleOpenDialog()} disabled={!lisensiAktif}>
+        <Button onClick={() => handleOpenDialog()} disabled={!lisensiAktif} className="shadow-lg shadow-primary/15">
           <Plus className="mr-2 h-4 w-4" />
           Catat Hutang Baru
         </Button>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Cari nama pelanggan atau keterangan..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-        />
-      </div>
-
-      <Card className="bg-muted/30">
-        <CardContent className="p-4 flex flex-wrap gap-4 items-center">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Filter className="h-4 w-4" /> Filter:
+      <div className="toolbar-card flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Cari nama pelanggan atau keterangan..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-11 w-full rounded-xl border border-input bg-white/80 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+            <Filter className="h-4 w-4" /> Filter
           </div>
-          <Select 
-            value={filterStatus || "semua"} 
+          <Select
+            value={filterStatus || "semua"}
             onValueChange={(v) => setFilterStatus(v === "semua" ? undefined : v as GetHutangListStatus)}
           >
-            <SelectTrigger className="w-[180px] bg-background">
+            <SelectTrigger className="h-11 w-[180px] rounded-xl bg-white/80">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -210,11 +208,11 @@ export default function HutangPage() {
             </SelectContent>
           </Select>
 
-          <Select 
-            value={filterPelanggan?.toString() || "semua"} 
+          <Select
+            value={filterPelanggan?.toString() || "semua"}
             onValueChange={(v) => setFilterPelanggan(v === "semua" ? undefined : parseInt(v))}
           >
-            <SelectTrigger className="w-[200px] bg-background">
+            <SelectTrigger className="h-11 w-[210px] rounded-xl bg-white/80">
               <SelectValue placeholder="Semua Pelanggan" />
             </SelectTrigger>
             <SelectContent>
@@ -224,19 +222,19 @@ export default function HutangPage() {
               ))}
             </SelectContent>
           </Select>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent aria-describedby={undefined}>
-          <DialogHeader>
-            <DialogTitle>{editingHutang ? "Edit Hutang" : "Catat Hutang Baru"}</DialogTitle>
+        <DialogContent aria-describedby={undefined} className="rounded-2xl border bg-card/95 shadow-2xl sm:max-w-lg">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-xl font-extrabold tracking-tight">{editingHutang ? "Edit Hutang" : "Catat Hutang Baru"}</DialogTitle>
           </DialogHeader>
-          
+
           {editingHutang ? (
             <Form {...updateForm}>
               <form onSubmit={updateForm.handleSubmit(onUpdateSubmit)} className="space-y-4">
-                <div className="p-3 bg-muted rounded-md text-sm mb-4">
+                <div className="mb-4 rounded-2xl border bg-muted/55 p-3 text-sm">
                   Pelanggan: <span className="font-semibold">{editingHutang.pelanggan_nama}</span>
                 </div>
                 <FormField control={updateForm.control} name="tanggal_hutang" render={({ field }) => (
@@ -290,7 +288,7 @@ export default function HutangPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <Button type="submit" className="w-full" disabled={updateMutation.isPending}>
+                <Button type="submit" className="w-full shadow-lg shadow-primary/15" disabled={updateMutation.isPending}>
                   {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Simpan Perubahan
                 </Button>
@@ -364,7 +362,7 @@ export default function HutangPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+                <Button type="submit" className="w-full shadow-lg shadow-primary/15" disabled={createMutation.isPending}>
                   {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Simpan Hutang
                 </Button>
@@ -392,9 +390,9 @@ export default function HutangPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Card>
+      <Card className="data-card">
         <CardContent className="p-0">
-          <Table>
+          <Table className="table-premium">
             <TableHeader>
               <TableRow>
                 <TableHead>Tanggal</TableHead>
@@ -417,14 +415,14 @@ export default function HutangPage() {
               return filtered.length === 0 ? (
                 <TableBody>
                   <TableRow>
-                    <TableCell colSpan={8} className="py-16">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <TableCell colSpan={8}>
+                      <div className="empty-state">
                         <FileText className="h-10 w-10 opacity-25" />
-                        <p className="text-sm font-medium">
+                        <p className="text-sm font-semibold">
                           {search ? `Tidak ditemukan hasil untuk "${search}"` : "Belum ada data hutang."}
                         </p>
                         {!search && (
-                          <Button variant="outline" size="sm" className="mt-1" onClick={() => handleOpenDialog()} disabled={!lisensiAktif}>
+                          <Button variant="outline" size="sm" className="mt-1 rounded-xl" onClick={() => handleOpenDialog()} disabled={!lisensiAktif}>
                             <Plus className="h-3 w-3 mr-1" /> Catat Hutang Pertama
                           </Button>
                         )}
@@ -438,17 +436,17 @@ export default function HutangPage() {
                     const jatuhTempoBadge = getJatuhTempoBadge(h.tanggal_jatuh_tempo, h.status);
                     return (
                       <TableRow key={h.id}>
-                        <TableCell className="whitespace-nowrap">{formatDate(h.tanggal_hutang)}</TableCell>
-                        <TableCell className="font-medium">
+                        <TableCell className="whitespace-nowrap text-muted-foreground">{formatDate(h.tanggal_hutang)}</TableCell>
+                        <TableCell className="font-semibold">
                           <Link href={`/pelanggan/${h.pelanggan_id}`} className="hover:underline text-primary">
                             {h.pelanggan_nama}
                           </Link>
                         </TableCell>
-                        <TableCell className="truncate max-w-[200px] text-muted-foreground">{h.keterangan || "-"}</TableCell>
+                        <TableCell className="truncate max-w-[220px] text-muted-foreground">{h.keterangan || "-"}</TableCell>
                         <TableCell>
                           {h.tanggal_jatuh_tempo ? (
                             <div className="flex flex-col gap-1">
-                              <span className="text-xs whitespace-nowrap">{formatDate(h.tanggal_jatuh_tempo)}</span>
+                              <span className="text-xs whitespace-nowrap text-muted-foreground">{formatDate(h.tanggal_jatuh_tempo)}</span>
                               {jatuhTempoBadge}
                             </div>
                           ) : (
@@ -456,24 +454,24 @@ export default function HutangPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">{formatRupiah(h.nominal_hutang)}</TableCell>
-                        <TableCell className="text-right font-semibold text-orange-600">{formatRupiah(h.sisa_hutang)}</TableCell>
+                        <TableCell className="text-right font-bold text-orange-600">{formatRupiah(h.sisa_hutang)}</TableCell>
                         <TableCell>
-                          <Badge variant={h.status === "lunas" ? "outline" : "default"} 
-                                className={h.status === "aktif" ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-emerald-100 text-emerald-800 border-emerald-200"}>
+                          <Badge variant={h.status === "lunas" ? "outline" : "default"}
+                                className={h.status === "aktif" ? "rounded-full bg-amber-100 text-amber-800 border-amber-200" : "rounded-full bg-emerald-100 text-emerald-800 border-emerald-200"}>
                             {h.status === "aktif" ? "Belum lunas" : "Lunas"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
                             <Link href={`/hutang/${h.id}`}>
-                              <Button variant="ghost" size="icon" title="Detail">
+                              <Button variant="ghost" size="icon" className="action-icon-btn" title="Detail">
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </Link>
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(h)} title="Edit" disabled={!lisensiAktif}>
+                            <Button variant="ghost" size="icon" className="action-icon-btn" onClick={() => handleOpenDialog(h)} title="Edit" disabled={!lisensiAktif}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => { setSelectedHutang(h); setIsDeleteDialogOpen(true); }} title="Hapus" className="text-destructive" disabled={!lisensiAktif}>
+                            <Button variant="ghost" size="icon" onClick={() => { setSelectedHutang(h); setIsDeleteDialogOpen(true); }} title="Hapus" className="action-icon-btn text-destructive hover:bg-destructive/10 hover:text-destructive" disabled={!lisensiAktif}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>

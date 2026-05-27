@@ -471,45 +471,43 @@ export default function PembayaranPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+      <div className="page-hero flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-primary">Pembayaran</h2>
-          <p className="text-muted-foreground">Catat pembayaran hutang dari pelanggan.</p>
+          <h2 className="page-hero-title">Pembayaran</h2>
+          <p className="page-hero-description">Catat pembayaran hutang, cetak kwitansi, dan pantau riwayat pembayaran pelanggan.</p>
         </div>
-        <Button onClick={handleOpenDialog} disabled={!lisensiAktif}>
+        <Button onClick={handleOpenDialog} disabled={!lisensiAktif} className="shadow-lg shadow-primary/15">
           <Plus className="mr-2 h-4 w-4" />
           Terima Pembayaran
         </Button>
       </div>
 
       {/* Filter */}
-      <Card className="bg-muted/30">
-        <CardContent className="p-4 flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Filter className="h-4 w-4" /> Filter:
-          </div>
-          <Select
-            value={filterPelanggan?.toString() || "semua"}
-            onValueChange={(v) => setFilterPelanggan(v === "semua" ? undefined : parseInt(v))}
-          >
-            <SelectTrigger className="w-[250px] bg-background">
-              <SelectValue placeholder="Semua Pelanggan" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="semua">Semua Pelanggan</SelectItem>
-              {pelangganList?.map(p => (
-                <SelectItem key={p.id} value={p.id.toString()}>{p.nama}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+      <div className="toolbar-card flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+          <Filter className="h-4 w-4" /> Filter
+        </div>
+        <Select
+          value={filterPelanggan?.toString() || "semua"}
+          onValueChange={(v) => setFilterPelanggan(v === "semua" ? undefined : parseInt(v))}
+        >
+          <SelectTrigger className="h-11 w-[250px] rounded-xl bg-white/80">
+            <SelectValue placeholder="Semua Pelanggan" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="semua">Semua Pelanggan</SelectItem>
+            {pelangganList?.map(p => (
+              <SelectItem key={p.id} value={p.id.toString()}>{p.nama}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* Dialog Terima Pembayaran */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent aria-describedby={undefined} className="max-w-lg w-full max-h-[90vh] !overflow-hidden !flex !flex-col">
-          <DialogHeader>
-            <DialogTitle>Terima Pembayaran</DialogTitle>
+        <DialogContent aria-describedby={undefined} className="max-w-lg w-full max-h-[90vh] !overflow-hidden !flex !flex-col rounded-2xl border bg-card/95 shadow-2xl">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-xl font-extrabold tracking-tight">Terima Pembayaran</DialogTitle>
           </DialogHeader>
 
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-5 pt-1">
@@ -527,7 +525,7 @@ export default function PembayaranPage() {
                 placeholder="Cari atau pilih pelanggan..."
               />
               {selectedPelanggan && (
-                <div className="rounded-md border bg-blue-50/60 px-3 py-2 text-xs">
+                <div className="rounded-2xl border bg-emerald-50/70 px-3 py-2 text-xs">
                   <span className="text-muted-foreground">Pelanggan terpilih:</span>{" "}
                   <span className="font-semibold text-foreground">{selectedPelanggan.nama}</span>
                 </div>
@@ -711,7 +709,7 @@ export default function PembayaranPage() {
 
           <DialogFooter className="sticky bottom-0 z-10 -mx-6 px-6 pb-1 pt-3 border-t shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
             <Button
-              className="w-full sm:w-auto"
+              className="w-full shadow-lg shadow-primary/15 sm:w-auto"
               onClick={handleSubmit}
               disabled={!isFormValid || batchMutation.isPending}
             >
@@ -778,9 +776,9 @@ export default function PembayaranPage() {
       </AlertDialog>
 
       {/* Table */}
-      <Card>
+      <Card className="data-card">
         <CardContent className="p-0">
-          <Table>
+          <Table className="table-premium">
             <TableHeader>
               <TableRow>
                 <TableHead>No. Kwitansi</TableHead>
@@ -797,8 +795,14 @@ export default function PembayaranPage() {
               <TableBody>
                 {!pembayaranList || pembayaranList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      Belum ada data pembayaran.
+                    <TableCell colSpan={6}>
+                      <div className="empty-state">
+                        <Printer className="h-10 w-10 opacity-25" />
+                        <p className="text-sm font-semibold">Belum ada data pembayaran.</p>
+                        <Button variant="outline" size="sm" className="mt-1 rounded-xl" onClick={handleOpenDialog} disabled={!lisensiAktif}>
+                          <Plus className="mr-1 h-3.5 w-3.5" /> Terima Pembayaran Pertama
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -807,21 +811,21 @@ export default function PembayaranPage() {
                       <TableCell className="text-xs font-mono text-muted-foreground whitespace-nowrap">
                         {p.nomor_kwitansi || `#${p.id}`}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">{formatDate(p.tanggal_bayar)}</TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell className="whitespace-nowrap text-muted-foreground">{formatDate(p.tanggal_bayar)}</TableCell>
+                      <TableCell className="font-semibold">
                         <Link href={`/pelanggan/${p.pelanggan_id}`} className="hover:underline text-primary">
                           {p.pelanggan_nama}
                         </Link>
                       </TableCell>
-                      <TableCell className="truncate max-w-[160px] text-muted-foreground">{p.catatan || "—"}</TableCell>
-                      <TableCell className="text-right font-semibold text-emerald-600">{formatRupiah(p.nominal_bayar)}</TableCell>
+                      <TableCell className="truncate max-w-[180px] text-muted-foreground">{p.catatan || "—"}</TableCell>
+                      <TableCell className="text-right font-bold text-emerald-600">{formatRupiah(p.nominal_bayar)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost" size="icon"
                             onClick={() => void handleCetakKwitansi(p)}
                             title="Cetak Kwitansi"
-                            className="text-primary"
+                            className="action-icon-btn text-primary hover:text-primary"
                           >
                             <Printer className="h-4 w-4" />
                           </Button>
@@ -829,7 +833,7 @@ export default function PembayaranPage() {
                             variant="ghost" size="icon"
                             onClick={() => { setSelectedPembayaran(p); setIsDeleteDialogOpen(true); }}
                             title="Batalkan Pembayaran"
-                            className="text-destructive"
+                            className="action-icon-btn text-destructive hover:bg-destructive/10 hover:text-destructive"
                             disabled={!lisensiAktif}
                           >
                             <Trash2 className="h-4 w-4" />

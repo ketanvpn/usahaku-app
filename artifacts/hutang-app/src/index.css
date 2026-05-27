@@ -190,6 +190,63 @@
     @apply border bg-white/70 shadow-sm backdrop-blur-xl;
   }
 
+  .page-hero {
+    @apply relative overflow-hidden rounded-3xl border bg-card/85 p-5 shadow-sm md:p-6;
+    box-shadow: 0 16px 45px hsl(158 45% 18% / 0.07);
+  }
+
+  .page-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at top right, hsl(158 55% 82% / 0.38), transparent 24rem),
+      linear-gradient(135deg, hsl(0 0% 100% / 0.72), hsl(42 38% 94% / 0.5));
+  }
+
+  .page-hero > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .page-hero-title {
+    @apply text-2xl font-extrabold tracking-tight text-foreground md:text-3xl;
+  }
+
+  .page-hero-description {
+    @apply mt-1 max-w-2xl text-sm font-medium text-muted-foreground;
+  }
+
+  .toolbar-card {
+    @apply rounded-2xl border bg-card/80 p-3 shadow-sm md:p-4;
+  }
+
+  .data-card {
+    @apply overflow-hidden rounded-2xl border bg-card/90 shadow-sm;
+    box-shadow: 0 12px 36px hsl(158 45% 18% / 0.06);
+  }
+
+  .table-premium thead tr {
+    @apply border-b bg-muted/55;
+  }
+
+  .table-premium th {
+    @apply h-11 text-xs font-extrabold uppercase tracking-wide text-muted-foreground;
+  }
+
+  .table-premium tbody tr {
+    @apply transition-colors hover:bg-emerald-50/45;
+  }
+
+  .empty-state {
+    @apply flex flex-col items-center justify-center gap-2 py-14 text-center text-muted-foreground;
+  }
+
+  .action-icon-btn {
+    @apply h-8 w-8 rounded-xl text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary;
+  }
+
   .animate-soft-in {
     animation: soft-in 420ms ease-out both;
   }

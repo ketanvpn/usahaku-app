@@ -324,22 +324,22 @@ export default function StokPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="page-hero flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
         <div>
-          <h1 className="text-2xl font-bold">Stok Barang</h1>
-          <p className="text-muted-foreground text-sm mt-1">Kelola stok dan catat transaksi barang masuk/keluar</p>
+          <h1 className="page-hero-title">Stok Barang</h1>
+          <p className="page-hero-description">Kelola daftar barang, stok minimum, transaksi masuk/keluar, dan import Excel.</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" className="border-green-500 text-green-700 hover:bg-green-50" onClick={() => openTransaksi("masuk")} disabled={!lisensiAktif}>
+          <Button variant="outline" className="rounded-xl border-green-500 bg-white/70 text-green-700 hover:bg-green-50" onClick={() => openTransaksi("masuk")} disabled={!lisensiAktif}>
             <ArrowDownCircle className="h-4 w-4 mr-2" /> Barang Masuk
           </Button>
-          <Button variant="outline" className="border-red-500 text-red-700 hover:bg-red-50" onClick={() => openTransaksi("keluar")} disabled={!lisensiAktif}>
+          <Button variant="outline" className="rounded-xl border-red-500 bg-white/70 text-red-700 hover:bg-red-50" onClick={() => openTransaksi("keluar")} disabled={!lisensiAktif}>
             <ArrowUpCircle className="h-4 w-4 mr-2" /> Barang Keluar
           </Button>
-          <Button variant="outline" onClick={() => { setImportRows([]); setImportError(""); setImportDialog(true); }}>
+          <Button variant="outline" className="rounded-xl bg-white/70" onClick={() => { setImportRows([]); setImportError(""); setImportDialog(true); }}>
             <Upload className="h-4 w-4 mr-2" /> Import Excel
           </Button>
-          <Button onClick={openTambahBarang} disabled={!lisensiAktif}>
+          <Button onClick={openTambahBarang} disabled={!lisensiAktif} className="shadow-lg shadow-primary/15">
             <Plus className="h-4 w-4 mr-2" /> Tambah Barang
           </Button>
         </div>
@@ -347,10 +347,13 @@ export default function StokPage() {
 
       {/* Peringatan Stok */}
       {peringatan.length > 0 && (
-        <Card className="border-red-300 bg-red-50 dark:bg-red-950/20">
+        <Card className="overflow-hidden rounded-2xl border-red-200 bg-gradient-to-r from-red-50 to-amber-50 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-red-700 dark:text-red-400 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" /> {peringatan.length} Barang Perlu Perhatian
+              <span className="grid h-8 w-8 place-items-center rounded-xl bg-red-100">
+                <AlertTriangle className="h-4 w-4" />
+              </span>
+              {peringatan.length} Barang Perlu Perhatian
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -360,8 +363,8 @@ export default function StokPage() {
                 return (
                   <Badge key={b.id} variant="outline"
                     className={habis
-                      ? "border-red-400 text-red-700 bg-red-100"
-                      : "border-orange-400 text-orange-700 bg-orange-100"}>
+                      ? "rounded-full border-red-300 bg-white/80 px-3 py-1 text-red-700"
+                      : "rounded-full border-orange-300 bg-white/80 px-3 py-1 text-orange-700"}>
                     {b.nama} — {habis ? "Stok Habis" : `sisa ${b.stok} ${b.satuan}`}
                   </Badge>
                 );
@@ -372,10 +375,10 @@ export default function StokPage() {
       )}
 
       {/* Tab Daftar & Riwayat */}
-      <Tabs defaultValue="daftar">
-        <TabsList>
-          <TabsTrigger value="daftar">Daftar Barang</TabsTrigger>
-          <TabsTrigger value="riwayat">Riwayat Transaksi</TabsTrigger>
+      <Tabs defaultValue="daftar" className="space-y-4">
+        <TabsList className="rounded-2xl bg-card/80 p-1 shadow-sm">
+          <TabsTrigger value="daftar" className="rounded-xl">Daftar Barang</TabsTrigger>
+          <TabsTrigger value="riwayat" className="rounded-xl">Riwayat Transaksi</TabsTrigger>
         </TabsList>
 
         {/* Tab Daftar Barang */}
@@ -398,10 +401,10 @@ export default function StokPage() {
               )}
             </div>
           )}
-          <Card>
+          <Card className="data-card">
             <CardContent className="p-0">
               {loadingBarang ? (
-                <Table>
+                <Table className="table-premium">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nama Barang</TableHead>
@@ -418,13 +421,13 @@ export default function StokPage() {
                   <TableSkeleton cols={9} />
                 </Table>
               ) : barangList.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Package className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p>Belum ada barang. Tambahkan barang pertama Anda.</p>
-                  <Button variant="outline" size="sm" className="mt-3" onClick={openTambahBarang}>Tambah Barang</Button>
+                <div className="empty-state">
+                  <Package className="h-10 w-10 opacity-30" />
+                  <p className="text-sm font-semibold">Belum ada barang. Tambahkan barang pertama Anda.</p>
+                  <Button variant="outline" size="sm" className="mt-1 rounded-xl" onClick={openTambahBarang}>Tambah Barang</Button>
                 </div>
               ) : (
-                <Table>
+                <Table className="table-premium">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nama Barang</TableHead>
@@ -463,10 +466,10 @@ export default function StokPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex justify-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditBarang(b)} disabled={!lisensiAktif}>
+                            <Button variant="ghost" size="icon" className="action-icon-btn" onClick={() => openEditBarang(b)} disabled={!lisensiAktif}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteBarangId(b.id)} disabled={!lisensiAktif}>
+                            <Button variant="ghost" size="icon" className="action-icon-btn text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteBarangId(b.id)} disabled={!lisensiAktif}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -482,7 +485,7 @@ export default function StokPage() {
 
         {/* Tab Riwayat Transaksi */}
         <TabsContent value="riwayat">
-          <Card>
+          <Card className="data-card">
             <CardHeader className="pb-3">
               <div className="flex flex-wrap gap-3 items-center">
                 <CardTitle className="text-base flex items-center gap-2"><RefreshCw className="h-4 w-4" /> Riwayat Transaksi</CardTitle>
@@ -510,7 +513,7 @@ export default function StokPage() {
             </CardHeader>
             <CardContent className="p-0">
               {loadingTransaksi ? (
-                <Table>
+                <Table className="table-premium">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Tanggal</TableHead>
@@ -531,7 +534,7 @@ export default function StokPage() {
                   <p>{transaksiList.length === 0 ? "Belum ada transaksi pada periode ini" : "Tidak ada hasil untuk pencarian ini"}</p>
                 </div>
               ) : (
-                <Table>
+                <Table className="table-premium">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Tanggal</TableHead>
@@ -599,7 +602,7 @@ export default function StokPage() {
 
       {/* Dialog Tambah/Edit Barang */}
       <Dialog open={barangDialog} onOpenChange={setBarangDialog}>
-        <DialogContent aria-describedby={undefined} className="max-w-md">
+        <DialogContent aria-describedby={undefined} className="max-w-md rounded-2xl border bg-card/95 shadow-2xl">
           <DialogHeader>
             <DialogTitle>{editBarang ? "Edit Barang" : "Tambah Barang Baru"}</DialogTitle>
           </DialogHeader>
@@ -696,7 +699,7 @@ export default function StokPage() {
 
       {/* Dialog Transaksi Masuk / Keluar */}
       <Dialog open={transaksiDialog !== null} onOpenChange={(open) => { if (!open) setTransaksiDialog(null); }}>
-        <DialogContent aria-describedby={undefined} className="max-w-md">
+        <DialogContent aria-describedby={undefined} className="max-w-md rounded-2xl border bg-card/95 shadow-2xl">
           <DialogHeader>
             <DialogTitle className={transaksiDialog === "masuk" ? "text-green-700" : "text-red-700"}>
               {transaksiDialog === "masuk" ? "📦 Barang Masuk (Beli)" : "📤 Barang Keluar (Jual)"}
