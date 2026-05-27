@@ -398,7 +398,7 @@ export default function KasirPage() {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:min-h-[calc(100vh-15rem)]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:h-[calc(100vh-15rem)] lg:min-h-[560px]">
 
         {/* ── Panel Kiri: Daftar Barang ─────────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0 gap-3">
@@ -485,7 +485,7 @@ export default function KasirPage() {
       </div>
 
       {/* ── Panel Kanan: Keranjang ────────────────────────────────── */}
-        <div className="w-80 lg:w-96 flex flex-col min-h-0 data-card shrink-0">
+        <div className="w-full lg:w-96 flex flex-col min-h-[560px] lg:min-h-0 data-card shrink-0 overflow-hidden">
 
         {/* Header keranjang */}
         <div className="px-4 py-3 border-b flex items-center justify-between">
@@ -499,9 +499,9 @@ export default function KasirPage() {
         </div>
 
         {/* Daftar item keranjang */}
-        <div className="flex-1 min-h-[180px] overflow-y-auto px-4 py-2 space-y-0 divide-y">
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2 space-y-0 divide-y">
           {cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2 py-10">
+            <div className="flex min-h-[180px] flex-col items-center justify-center text-muted-foreground gap-2 py-10">
               <ShoppingCart className="h-8 w-8 opacity-20" />
               <p className="text-sm">Klik barang untuk menambahkan</p>
             </div>
