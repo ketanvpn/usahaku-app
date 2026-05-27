@@ -140,3 +140,9 @@ Terakhir diperbarui: 2026-05-14
   - **L-03 dialog error** — stderr backend tidak lagi ditampilkan ke user di dialog "Layanan Aplikasi Berhenti". Diganti pesan generik + tombol "Buka File Log".
   - **Test coverage**: 6 unit test baru di `tests/enforce-password-change.test.ts`. Total: **19/19 pass** (sebelumnya 13).
 - File ini bisa di-commit supaya checklist tetap terlacak di git.
+- **Update 2026-05-27**: audit ulang dependency dan verifikasi build health selesai:
+  - `qs` transitive dari Express dipaksa ke versi patched `^6.15.2` lewat override `pnpm-workspace.yaml` untuk menutup advisory GHSA-q8mj-m7cp-5q26.
+  - Seeder developer `scripts/src/seed.ts` dikonsolidasikan dari native `bcrypt` ke `bcryptjs`, konsisten dengan API server dan mengurangi native dependency yang tidak diperlukan.
+  - `pnpm install` selesai dan `pnpm-lock.yaml` terbarui.
+  - Hasil verifikasi: `pnpm audit --prod` **No known vulnerabilities found**, `pnpm test` **60/60 pass**, `pnpm run typecheck` **0 error**.
+  - Upgrade-safety: perubahan ini **non-destruktif** untuk user existing karena tidak mengubah schema database, tidak menghapus `userData`, tidak mengubah path database, tidak mereset `install-secrets.json`, dan `electron-builder.yml` tetap `deleteAppDataOnUninstall: false`.
