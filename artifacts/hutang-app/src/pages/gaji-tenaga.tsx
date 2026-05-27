@@ -188,9 +188,9 @@ type BatchForm = z.infer<typeof batchSchema>;
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "lunas") {
-    return <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">Lunas</Badge>;
+    return <Badge className="rounded-full bg-green-100 text-green-800 border-green-200 text-xs">Lunas</Badge>;
   }
-  return <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">Belum Lunas</Badge>;
+  return <Badge className="rounded-full bg-red-100 text-red-800 border-red-200 text-xs">Belum Lunas</Badge>;
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -716,20 +716,23 @@ export default function GajiTenagaPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <HardHat className="h-6 w-6 text-primary" />
+      <div className="page-hero">
         <div>
-          <h1 className="text-2xl font-bold">Gaji & Tenaga</h1>
-          <p className="text-sm text-muted-foreground">Kelola upah dan pembayaran tenaga kerja</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/75">Operasional Tenaga</p>
+          <h1 className="page-hero-title mt-2 flex items-center gap-2">
+            <HardHat className="h-7 w-7" />
+            Gaji & Tenaga
+          </h1>
+          <p className="page-hero-description">Kelola catatan upah, pembayaran pekerja, relasi pelanggan, dan kwitansi pembayaran dalam satu tempat.</p>
         </div>
       </div>
 
       {/* ── Summary Cards ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
+        <Card className="data-card border-red-200/70 bg-gradient-to-br from-red-50 to-rose-50/70 dark:from-red-950/30 dark:to-rose-950/10">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-50 rounded-lg shrink-0">
+              <div className="p-2 bg-red-500/10 rounded-xl shrink-0">
                 <TrendingDown className="h-5 w-5 text-red-600" />
               </div>
               <div className="min-w-0">
@@ -739,10 +742,10 @@ export default function GajiTenagaPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="data-card border-blue-200/70 bg-gradient-to-br from-blue-50 to-sky-50/70 dark:from-blue-950/30 dark:to-sky-950/10">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-50 rounded-lg shrink-0">
+              <div className="p-2 bg-blue-500/10 rounded-xl shrink-0">
                 <Users className="h-5 w-5 text-blue-600" />
               </div>
               <div>
@@ -752,10 +755,10 @@ export default function GajiTenagaPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="data-card border-orange-200/70 bg-gradient-to-br from-orange-50 to-amber-50/70 dark:from-orange-950/30 dark:to-amber-950/10">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-50 rounded-lg shrink-0">
+              <div className="p-2 bg-orange-500/10 rounded-xl shrink-0">
                 <Clock className="h-5 w-5 text-orange-600" />
               </div>
               <div>
@@ -775,10 +778,10 @@ export default function GajiTenagaPage() {
 
         {/* ── TAB CATATAN UPAH ─────────────────────────────────────────────────── */}
         <TabsContent value="upah" className="space-y-4 mt-4">
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="toolbar-card flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Cari nama pekerja atau keterangan..." className="pl-9" value={searchUpah} onChange={(e) => setSearchUpah(e.target.value)} />
+              <Input placeholder="Cari nama pekerja atau keterangan..." className="pl-9 rounded-xl bg-background/80" value={searchUpah} onChange={(e) => setSearchUpah(e.target.value)} />
             </div>
             <Select value={filterStatus ?? "semua"} onValueChange={(v) => setFilterStatus(v === "semua" ? undefined : v as UpahStatus)}>
               <SelectTrigger className="w-full sm:w-40">
@@ -812,10 +815,10 @@ export default function GajiTenagaPage() {
             </Button>
           </div>
 
-          <Card>
+          <Card className="data-card">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="table-premium">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Pekerja</TableHead>
@@ -860,10 +863,10 @@ export default function GajiTenagaPage() {
                                   <Banknote className="h-3 w-3 mr-1" /> Bayar
                                 </Button>
                               )}
-                              <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => openEditUpah(u)} disabled={!lisensiAktif}>
+                              <Button size="sm" variant="outline" className="action-icon-btn" onClick={() => openEditUpah(u)} disabled={!lisensiAktif}>
                                 <Edit className="h-3.5 w-3.5" />
                               </Button>
-                              <Button size="sm" variant="outline" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => { setDeletingUpahId(u.id); setIsDeleteUpahOpen(true); }} disabled={!lisensiAktif}>
+                              <Button size="sm" variant="outline" className="action-icon-btn text-destructive hover:text-destructive" onClick={() => { setDeletingUpahId(u.id); setIsDeleteUpahOpen(true); }} disabled={!lisensiAktif}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
@@ -880,10 +883,10 @@ export default function GajiTenagaPage() {
 
         {/* ── TAB DAFTAR PEKERJA ──────────────────────────────────────────────── */}
         <TabsContent value="pekerja" className="space-y-4 mt-4">
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="toolbar-card flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Cari nama atau jabatan..." className="pl-9" value={searchPekerja} onChange={(e) => setSearchPekerja(e.target.value)} />
+              <Input placeholder="Cari nama atau jabatan..." className="pl-9 rounded-xl bg-background/80" value={searchPekerja} onChange={(e) => setSearchPekerja(e.target.value)} />
             </div>
             <Select value={filterPekerjaLink} onValueChange={(v) => setFilterPekerjaLink(v as typeof filterPekerjaLink)}>
               <SelectTrigger className="w-full sm:w-48">
@@ -900,10 +903,10 @@ export default function GajiTenagaPage() {
             </Button>
           </div>
 
-          <Card>
+          <Card className="data-card">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="table-premium">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nama</TableHead>
@@ -963,10 +966,10 @@ export default function GajiTenagaPage() {
                                 <Button size="sm" variant="default" className="h-7 text-xs" onClick={() => openBatch(p)} disabled={!lisensiAktif || sisaUpah === 0} title={sisaUpah === 0 ? "Semua upah sudah lunas" : "Bayar upah batch"}>
                                   <Banknote className="h-3 w-3 mr-1" /> Bayar
                                 </Button>
-                                <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => openEditPekerja(p)} disabled={!lisensiAktif}>
+                                <Button size="sm" variant="outline" className="action-icon-btn" onClick={() => openEditPekerja(p)} disabled={!lisensiAktif}>
                                   <Edit className="h-3.5 w-3.5" />
                                 </Button>
-                                <Button size="sm" variant="outline" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => { setDeletingPekerjaId(p.id); setIsDeletePekerjaOpen(true); }} disabled={!lisensiAktif}>
+                                <Button size="sm" variant="outline" className="action-icon-btn text-destructive hover:text-destructive" onClick={() => { setDeletingPekerjaId(p.id); setIsDeletePekerjaOpen(true); }} disabled={!lisensiAktif}>
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
                               </div>
@@ -985,7 +988,7 @@ export default function GajiTenagaPage() {
 
       {/* ── Dialog Tambah/Edit Upah ──────────────────────────────────────────── */}
       <Dialog open={isUpahDialogOpen} onOpenChange={(open) => { setIsUpahDialogOpen(open); if (!open) { setEditingUpah(null); upahForm.clearErrors(); } }}>
-        <DialogContent aria-describedby={undefined} className="max-w-md">
+        <DialogContent aria-describedby={undefined} className="max-w-md rounded-3xl border-border/60 shadow-2xl">
           <DialogHeader>
             <DialogTitle>{editingUpah ? "Edit Catatan Upah" : "Tambah Catatan Upah"}</DialogTitle>
           </DialogHeader>
@@ -1072,7 +1075,7 @@ export default function GajiTenagaPage() {
 
       {/* ── Dialog Bayar Upah ────────────────────────────────────────────────── */}
       <Dialog open={isBayarDialogOpen} onOpenChange={(open) => { setIsBayarDialogOpen(open); if (!open) { setSelectedUpahId(null); bayarForm.clearErrors(); setPotongHutangSingleEnabled(false); setPotongHutangSingleAmount(""); } }}>
-        <DialogContent aria-describedby={undefined} className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent aria-describedby={undefined} className="max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border-border/60 shadow-2xl">
           <DialogHeader>
             <DialogTitle>Bayar Upah</DialogTitle>
           </DialogHeader>
@@ -1391,7 +1394,7 @@ export default function GajiTenagaPage() {
 
       {/* ── Alert: Hapus Upah ────────────────────────────────────────────────── */}
       <AlertDialog open={isDeleteUpahOpen} onOpenChange={setIsDeleteUpahOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-3xl border-border/60 shadow-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Catatan Upah?</AlertDialogTitle>
             <AlertDialogDescription>Semua riwayat pembayaran terkait juga akan dihapus. Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
@@ -1453,7 +1456,7 @@ export default function GajiTenagaPage() {
       </AlertDialog>
       {/* ── Dialog Bayar Batch ───────────────────────────────────────────────── */}
       <Dialog open={isBatchDialogOpen} onOpenChange={(open) => { setIsBatchDialogOpen(open); if (!open) { setBatchPekerja(null); batchForm.clearErrors(); setPotongHutangBatchEnabled(false); setPotongHutangBatchAmount(""); setSelectedBatchHutangIds([]); } }}>
-        <DialogContent aria-describedby={undefined} className="max-w-lg w-full max-h-[90vh] !overflow-hidden !flex !flex-col">
+        <DialogContent aria-describedby={undefined} className="max-w-lg w-full max-h-[90vh] !overflow-hidden !flex !flex-col rounded-3xl border-border/60 shadow-2xl">
           <DialogHeader>
             <DialogTitle>Bayar Upah Batch — {batchPekerja?.nama}</DialogTitle>
           </DialogHeader>
@@ -1654,7 +1657,7 @@ export default function GajiTenagaPage() {
 
       {/* ── Dialog Kwitansi Upah ─────────────────────────────────────────────── */}
       <Dialog open={isKwitansiOpen} onOpenChange={setIsKwitansiOpen}>
-        <DialogContent aria-describedby={undefined} className="max-w-sm">
+        <DialogContent aria-describedby={undefined} className="max-w-sm rounded-3xl border-border/60 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Printer className="h-5 w-5 text-primary" />

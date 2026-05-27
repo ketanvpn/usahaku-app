@@ -733,9 +733,12 @@ export default function LaporanPage() {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight text-primary">Laporan</h2>
-        <p className="text-muted-foreground">Laporan lengkap penjualan kasir, hutang, keuangan, stok barang, dan gaji tenaga kerja.</p>
+      <div className="page-hero">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/75">Pusat Laporan</p>
+          <h1 className="page-hero-title mt-2">Laporan</h1>
+          <p className="page-hero-description">Laporan lengkap penjualan kasir, hutang, keuangan, stok barang, pembelian supplier, dan gaji tenaga kerja.</p>
+        </div>
       </div>
 
       <Tabs defaultValue="kasir">
@@ -767,7 +770,7 @@ export default function LaporanPage() {
           </div>
 
           {/* Filter bulan & tahun */}
-          <Card className="bg-muted/30 border-primary/20 shadow-sm">
+          <Card className="toolbar-card">
             <CardContent className="p-5">
               <div className="flex items-center gap-2 text-sm font-semibold text-primary mb-4">
                 <Filter className="h-4 w-4" /> Filter Periode
@@ -801,7 +804,7 @@ export default function LaporanPage() {
 
           {/* Summary cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-l-4 border-l-emerald-500 shadow-sm">
+            <Card className="data-card border-l-4 border-l-emerald-500 shadow-sm">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Penjualan</CardTitle>
                 <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -815,7 +818,7 @@ export default function LaporanPage() {
                 <p className="text-xs text-muted-foreground mt-1">{NAMA_BULAN[kasirBulan]} {kasirTahun}</p>
               </CardContent>
             </Card>
-            <Card className="border-l-4 border-l-blue-500 shadow-sm">
+            <Card className="data-card border-l-4 border-l-blue-500 shadow-sm">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Jumlah Transaksi</CardTitle>
                 <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center">
@@ -829,7 +832,7 @@ export default function LaporanPage() {
                 <p className="text-xs text-muted-foreground mt-1">transaksi tercatat</p>
               </CardContent>
             </Card>
-            <Card className="border-l-4 border-l-primary shadow-sm">
+            <Card className="data-card border-l-4 border-l-primary shadow-sm">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Rata-rata/Transaksi</CardTitle>
                 <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
@@ -846,7 +849,7 @@ export default function LaporanPage() {
           </div>
 
           {/* Chart */}
-          <Card className="shadow-sm">
+          <Card className="data-card shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -918,7 +921,7 @@ export default function LaporanPage() {
               {kasirTopLoading
                 ? <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
                 : <div className="overflow-x-auto">
-                    <Table>
+                    <Table className="table-premium">
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-8">#</TableHead>
@@ -962,7 +965,7 @@ export default function LaporanPage() {
             </div>
           </div>
 
-          <Card className="bg-muted/30 border-primary/20 shadow-sm">
+          <Card className="toolbar-card">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2 text-sm font-semibold text-primary">
@@ -1019,13 +1022,13 @@ export default function LaporanPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="data-card">
             <CardContent className="p-0">
               {laporanLoading
                 ? <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
                 : (
                   <div className="overflow-x-auto">
-                    <Table>
+                    <Table className="table-premium">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanggal</TableHead>
@@ -1096,7 +1099,7 @@ export default function LaporanPage() {
             </div>
           </div>
 
-          <Card className="bg-muted/30 border-primary/20 shadow-sm">
+          <Card className="toolbar-card">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2 text-sm font-semibold text-primary">
@@ -1144,21 +1147,21 @@ export default function LaporanPage() {
           </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-l-4 border-l-emerald-500">
+            <Card className="data-card border-l-4 border-l-emerald-500">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium">Total Masuk</CardTitle>
                 <TrendingUp className="h-4 w-4 text-emerald-500" />
               </CardHeader>
               <CardContent><p className="text-2xl font-bold text-emerald-600">{formatRupiah(totalMasuk)}</p></CardContent>
             </Card>
-            <Card className="border-l-4 border-l-red-500">
+            <Card className="data-card border-l-4 border-l-red-500">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium">Total Keluar</CardTitle>
                 <TrendingDown className="h-4 w-4 text-red-500" />
               </CardHeader>
               <CardContent><p className="text-2xl font-bold text-red-600">{formatRupiah(totalKeluar)}</p></CardContent>
             </Card>
-            <Card className={`border-l-4 ${saldo >= 0 ? "border-l-blue-500" : "border-l-orange-500"}`}>
+            <Card className={`data-card border-l-4 ${saldo >= 0 ? "border-l-blue-500" : "border-l-orange-500"}`}>
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium">Saldo Bersih</CardTitle>
                 <Wallet className="h-4 w-4 text-blue-500" />
@@ -1167,13 +1170,13 @@ export default function LaporanPage() {
             </Card>
           </div>
 
-          <Card>
+          <Card className="data-card">
             <CardContent className="p-0">
               {keuLoading
                 ? <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
                 : (
                   <div className="overflow-x-auto">
-                    <Table>
+                    <Table className="table-premium">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanggal</TableHead>
@@ -1258,13 +1261,13 @@ export default function LaporanPage() {
             </Card>
           </div>
 
-          <Card>
+          <Card className="data-card">
             <CardContent className="p-0">
               {barangLoading
                 ? <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
                 : (
                   <div className="overflow-x-auto">
-                    <Table>
+                    <Table className="table-premium">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Nama Barang</TableHead>
@@ -1338,11 +1341,11 @@ export default function LaporanPage() {
           </div>
 
           {upahPerPekerja.length > 0 && (
-            <Card>
+            <Card className="data-card">
               <CardHeader><CardTitle className="text-sm font-medium">Rekap Per Pekerja</CardTitle></CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table className="table-premium">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Nama</TableHead>
@@ -1371,14 +1374,14 @@ export default function LaporanPage() {
             </Card>
           )}
 
-          <Card>
+          <Card className="data-card">
             <CardHeader><CardTitle className="text-sm font-medium">Semua Catatan Gaji</CardTitle></CardHeader>
             <CardContent className="p-0">
               {upahLoading
                 ? <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
                 : (
                   <div className="overflow-x-auto">
-                    <Table>
+                    <Table className="table-premium">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Pekerja</TableHead>

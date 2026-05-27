@@ -162,34 +162,37 @@ export default function SupplierPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="page-hero">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-primary flex items-center gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/75">Rantai Pasok</p>
+          <h1 className="page-hero-title mt-2 flex items-center gap-2">
             <Truck className="h-7 w-7" />
             Daftar Supplier
-          </h2>
-          <p className="text-muted-foreground">
-            Kelola daftar supplier untuk pencatatan pembelian stok masuk.
+          </h1>
+          <p className="page-hero-description">
+            Kelola kontak, alamat, dan catatan supplier agar pencatatan pembelian stok masuk lebih rapi.
           </p>
         </div>
-        <Button onClick={() => handleOpenDialog()} disabled={!lisensiAktif}>
+        <Button className="rounded-xl shadow-lg shadow-primary/20" onClick={() => handleOpenDialog()} disabled={!lisensiAktif}>
           <Plus className="mr-2 h-4 w-4" />
           Tambah Supplier
         </Button>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Cari nama, telepon, atau alamat..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      <div className="toolbar-card">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cari nama, telepon, atau alamat..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 rounded-xl bg-background/80"
+          />
+        </div>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent aria-describedby={undefined}>
+        <DialogContent aria-describedby={undefined} className="rounded-3xl border-border/60 shadow-2xl">
           <DialogHeader>
             <DialogTitle>
               {editing ? "Edit Supplier" : "Tambah Supplier"}
@@ -266,7 +269,7 @@ export default function SupplierPage() {
               />
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full rounded-xl shadow-lg shadow-primary/20"
                 disabled={saveMutation.isPending}
               >
                 {saveMutation.isPending && (
@@ -280,7 +283,7 @@ export default function SupplierPage() {
       </Dialog>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-3xl border-border/60 shadow-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Supplier?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -307,9 +310,9 @@ export default function SupplierPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Card>
+      <Card className="data-card">
         <CardContent className="p-0">
-          <Table>
+          <Table className="table-premium">
             <TableHeader>
               <TableRow>
                 <TableHead>Nama</TableHead>
@@ -327,11 +330,14 @@ export default function SupplierPage() {
                   <TableRow>
                     <TableCell
                       colSpan={5}
-                      className="text-center py-8 text-muted-foreground"
+                      className="text-center py-10 text-muted-foreground"
                     >
-                      {search
-                        ? "Tidak ada supplier yang sesuai pencarian."
-                        : "Belum ada data supplier. Tambahkan supplier pertama untuk memudahkan pencatatan stok masuk."}
+                      <div className="empty-state border-0 bg-transparent py-4 shadow-none">
+                        <Truck className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                        <p>{search
+                          ? "Tidak ada supplier yang sesuai pencarian."
+                          : "Belum ada data supplier. Tambahkan supplier pertama untuk memudahkan pencatatan stok masuk."}</p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -348,13 +354,14 @@ export default function SupplierPage() {
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <Link href={`/supplier/${s.id}`}>
-                            <Button variant="ghost" size="icon" title="Detail">
+                            <Button variant="ghost" size="icon" className="action-icon-btn" title="Detail">
                               <Eye className="h-4 w-4" />
                             </Button>
                           </Link>
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="action-icon-btn"
                             onClick={() => handleOpenDialog(s)}
                             title="Edit"
                             disabled={!lisensiAktif}
@@ -369,7 +376,7 @@ export default function SupplierPage() {
                               setIsDeleteDialogOpen(true);
                             }}
                             title="Hapus"
-                            className="text-destructive"
+                            className="action-icon-btn text-destructive hover:text-destructive"
                             disabled={!lisensiAktif}
                           >
                             <Trash2 className="h-4 w-4" />

@@ -310,19 +310,20 @@ export default function KeuanganPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="page-hero">
         <div>
-          <h1 className="text-2xl font-bold">Pencatatan Keuangan</h1>
-          <p className="text-muted-foreground text-sm mt-1">Catat uang masuk dan keluar usaha Anda</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/75">Arus Kas Usaha</p>
+          <h1 className="page-hero-title mt-2">Pencatatan Keuangan</h1>
+          <p className="page-hero-description">Pantau uang masuk, uang keluar, saldo, grafik, dan rincian transaksi usaha dalam satu halaman.</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => handleExportCSV(items, filterBulan, filterTahun)} disabled={items.length === 0}>
+          <Button variant="outline" size="sm" className="rounded-xl bg-background/80 shadow-sm" onClick={() => handleExportCSV(items, filterBulan, filterTahun)} disabled={items.length === 0}>
             <Download className="h-4 w-4 mr-2" /> Unduh CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={() => handlePrint(items, rekapPeriode, filterBulan, filterTahun, namaUsaha)} disabled={items.length === 0}>
+          <Button variant="outline" size="sm" className="rounded-xl bg-background/80 shadow-sm" onClick={() => handlePrint(items, rekapPeriode, filterBulan, filterTahun, namaUsaha)} disabled={items.length === 0}>
             <Printer className="h-4 w-4 mr-2" /> Cetak
           </Button>
-          <Button onClick={openCreate} disabled={!lisensiAktif}>
+          <Button className="rounded-xl shadow-lg shadow-primary/20" onClick={openCreate} disabled={!lisensiAktif}>
             <Plus className="h-4 w-4 mr-2" /> Tambah Transaksi
           </Button>
         </div>
@@ -330,10 +331,10 @@ export default function KeuanganPage() {
 
       {/* Kartu Rekap */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border-green-200 bg-green-50 dark:bg-green-950/20">
+        <Card className="data-card border-green-200/70 bg-gradient-to-br from-green-50 to-emerald-50/70 dark:from-green-950/30 dark:to-emerald-950/10">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" /> Total Masuk
+              <span className="rounded-xl bg-green-500/10 p-2"><TrendingUp className="h-4 w-4" /></span> Total Masuk
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -342,10 +343,10 @@ export default function KeuanganPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
+        <Card className="data-card border-red-200/70 bg-gradient-to-br from-red-50 to-rose-50/70 dark:from-red-950/30 dark:to-rose-950/10">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-2">
-              <TrendingDown className="h-4 w-4" /> Total Keluar
+              <span className="rounded-xl bg-red-500/10 p-2"><TrendingDown className="h-4 w-4" /></span> Total Keluar
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -354,10 +355,10 @@ export default function KeuanganPage() {
           </CardContent>
         </Card>
 
-        <Card className={`border-2 ${(rekapTotal?.saldo ?? 0) >= 0 ? "border-blue-200 bg-blue-50 dark:bg-blue-950/20" : "border-orange-200 bg-orange-50 dark:bg-orange-950/20"}`}>
+        <Card className={`data-card border-2 ${(rekapTotal?.saldo ?? 0) >= 0 ? "border-blue-200/70 bg-gradient-to-br from-blue-50 to-sky-50/70 dark:from-blue-950/30 dark:to-sky-950/10" : "border-orange-200/70 bg-gradient-to-br from-orange-50 to-amber-50/70 dark:from-orange-950/30 dark:to-amber-950/10"}`}>
           <CardHeader className="pb-2">
             <CardTitle className={`text-sm font-medium flex items-center gap-2 ${(rekapTotal?.saldo ?? 0) >= 0 ? "text-blue-700 dark:text-blue-400" : "text-orange-700 dark:text-orange-400"}`}>
-              <Wallet className="h-4 w-4" /> Saldo
+              <span className="rounded-xl bg-current/10 p-2"><Wallet className="h-4 w-4" /></span> Saldo
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -370,7 +371,7 @@ export default function KeuanganPage() {
       </div>
 
       {/* Grafik Bulanan */}
-      <Card>
+      <Card className="data-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             <BarChart3 className="h-4 w-4" /> Grafik Keuangan {filterTahun}
@@ -395,7 +396,7 @@ export default function KeuanganPage() {
       {rekapKategori.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {masukKategori.length > 0 && (
-            <Card>
+            <Card className="data-card">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
                   <TrendingUp className="h-4 w-4" /> Rincian Masuk per Kategori
@@ -416,7 +417,7 @@ export default function KeuanganPage() {
           )}
 
           {keluarKategori.length > 0 && (
-            <Card>
+            <Card className="data-card">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-red-700 dark:text-red-400 flex items-center gap-2">
                   <TrendingDown className="h-4 w-4" /> Rincian Keluar per Kategori
@@ -439,7 +440,7 @@ export default function KeuanganPage() {
       )}
 
       {/* Filter */}
-      <Card>
+      <Card className="data-card">
         <CardContent className="pt-4">
           <div className="flex flex-wrap gap-3">
             <Select value={filterBulan} onValueChange={setFilterBulan}>
@@ -471,10 +472,10 @@ export default function KeuanganPage() {
       </Card>
 
       {/* Tabel */}
-      <Card>
+      <Card className="data-card">
         <CardContent className="p-0">
           {isLoading ? (
-            <Table>
+            <Table className="table-premium">
               <TableHeader>
                 <TableRow>
                   <TableHead>Tanggal</TableHead>
@@ -488,13 +489,13 @@ export default function KeuanganPage() {
               <TableSkeleton cols={6} />
             </Table>
           ) : items.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="empty-state">
               <Wallet className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p>Belum ada transaksi untuk periode ini</p>
-              <Button variant="outline" size="sm" className="mt-3" onClick={openCreate} disabled={!lisensiAktif}>Tambah Transaksi</Button>
+              <Button variant="outline" size="sm" className="mt-3 rounded-xl" onClick={openCreate} disabled={!lisensiAktif}>Tambah Transaksi</Button>
             </div>
           ) : (
-            <Table>
+            <Table className="table-premium">
               <TableHeader>
                 <TableRow>
                   <TableHead>Tanggal</TableHead>
@@ -511,8 +512,8 @@ export default function KeuanganPage() {
                     <TableCell className="text-sm">{formatDate(item.tanggal)}</TableCell>
                     <TableCell>
                       <Badge className={item.tipe === "masuk"
-                        ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900 dark:text-green-200"
-                        : "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900 dark:text-red-200"}>
+                        ? "rounded-full bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900 dark:text-green-200"
+                        : "rounded-full bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900 dark:text-red-200"}>
                         {item.tipe === "masuk" ? "Masuk" : "Keluar"}
                       </Badge>
                     </TableCell>
@@ -523,10 +524,10 @@ export default function KeuanganPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(item)} disabled={!lisensiAktif}>
+                        <Button variant="ghost" size="icon" className="action-icon-btn" onClick={() => openEdit(item)} disabled={!lisensiAktif}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(item.id)} disabled={!lisensiAktif}>
+                        <Button variant="ghost" size="icon" className="action-icon-btn text-destructive hover:text-destructive" onClick={() => setDeleteId(item.id)} disabled={!lisensiAktif}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -541,7 +542,7 @@ export default function KeuanganPage() {
 
       {/* Dialog Form */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent aria-describedby={undefined} className="max-w-md">
+        <DialogContent aria-describedby={undefined} className="max-w-md rounded-3xl border-border/60 shadow-2xl">
           <DialogHeader>
             <DialogTitle>{editData ? "Edit Transaksi" : "Tambah Transaksi"}</DialogTitle>
           </DialogHeader>
@@ -630,7 +631,7 @@ export default function KeuanganPage() {
 
       {/* Konfirmasi Hapus */}
       <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-3xl border-border/60 shadow-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Transaksi?</AlertDialogTitle>
             <AlertDialogDescription>Data transaksi ini akan dihapus permanen.</AlertDialogDescription>

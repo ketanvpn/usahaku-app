@@ -381,33 +381,41 @@ export default function KasirPage() {
   }, [filtered, canSubmit, showHasil, showRiwayat, hapusId]);
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-8rem)]">
-
-      {/* ── Panel Kiri: Daftar Barang ─────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0 gap-3">
-
-        {/* Header: search + tombol riwayat (sticky supaya selalu visible saat scroll) */}
-        <div className="flex items-center gap-2 sticky top-0 z-10 bg-background pb-1">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              ref={searchInputRef}
-              placeholder="Cari barang... (Ctrl+K)"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9 h-10"
-            />
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0 gap-1.5 h-10"
-            onClick={() => { setShowRiwayat(true); refetchRiwayat(); }}
-          >
-            <History className="h-4 w-4" />
-            <span className="hidden sm:inline">Riwayat Penjualan</span>
-          </Button>
+    <div className="space-y-4">
+      <div className="page-hero flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+        <div>
+          <h1 className="page-hero-title">Kasir</h1>
+          <p className="page-hero-description">Transaksi cepat, pencarian barang, keranjang, diskon, pembayaran, dan cetak struk.</p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-10 shrink-0 rounded-xl bg-white/70 gap-1.5"
+          onClick={() => { setShowRiwayat(true); refetchRiwayat(); }}
+        >
+          <History className="h-4 w-4" />
+          <span>Riwayat Penjualan</span>
+        </Button>
+      </div>
+
+      <div className="flex gap-4 h-[calc(100vh-15rem)]">
+
+        {/* ── Panel Kiri: Daftar Barang ─────────────────────────────── */}
+        <div className="flex-1 flex flex-col min-w-0 gap-3">
+
+          {/* Header: search */}
+          <div className="toolbar-card sticky top-0 z-10 p-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                ref={searchInputRef}
+                placeholder="Cari barang... (Ctrl+K)"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-9 h-10 rounded-xl bg-white/80"
+              />
+            </div>
+          </div>
 
         {/* Keterangan jumlah barang */}
         {!isLoading && (
@@ -423,9 +431,9 @@ export default function KasirPage() {
             <span className="text-sm">Memuat barang...</span>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
+          <div className="empty-state flex-1">
             <PackageOpen className="h-12 w-12 opacity-20" />
-            <p className="text-sm">
+            <p className="text-sm font-semibold">
               {search ? `Tidak ada barang yang cocok dengan "${search}"` : "Belum ada barang yang bisa dijual"}
             </p>
             {search && (
@@ -440,10 +448,10 @@ export default function KasirPage() {
                 <Card
                   key={b.id}
                   onClick={() => tambahKeCart(b)}
-                  className={`cursor-pointer transition-all duration-150 select-none relative group active:scale-[0.98] ${
+                  className={`cursor-pointer transition-all duration-150 select-none relative group active:scale-[0.98] rounded-2xl ${
                     inCart
-                      ? "border-primary shadow-md bg-primary/5 ring-1 ring-primary/20"
-                      : "hover:border-primary/60 hover:shadow-md hover:-translate-y-0.5"
+                      ? "border-primary bg-primary/5 shadow-md ring-1 ring-primary/20"
+                      : "bg-card/90 hover:border-primary/60 hover:shadow-md hover:-translate-y-0.5"
                   }`}
                 >
                   <CardContent className="p-3 flex flex-col gap-1.5 h-full">
@@ -477,7 +485,7 @@ export default function KasirPage() {
       </div>
 
       {/* ── Panel Kanan: Keranjang ────────────────────────────────── */}
-      <div className="w-80 lg:w-96 flex flex-col min-h-0 border rounded-xl bg-card shadow-sm shrink-0">
+        <div className="w-80 lg:w-96 flex flex-col min-h-0 data-card shrink-0">
 
         {/* Header keranjang */}
         <div className="px-4 py-3 border-b flex items-center justify-between">
@@ -665,7 +673,7 @@ export default function KasirPage() {
 
           {/* Tombol Selesaikan */}
               <Button
-                className="w-full h-11 text-base font-semibold"
+                className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/15"
                 disabled={!canSubmit}
                 onClick={() => selesaikanMutation.mutate()}
               >
@@ -692,10 +700,11 @@ export default function KasirPage() {
           )}
         </div>
       </div>
+      </div>
 
       {/* ── Dialog Riwayat Penjualan ──────────────────────────────── */}
       <Dialog open={showRiwayat} onOpenChange={setShowRiwayat}>
-        <DialogContent aria-describedby={undefined} className="max-w-3xl max-h-[80vh] flex flex-col">
+        <DialogContent aria-describedby={undefined} className="max-w-3xl max-h-[80vh] flex flex-col rounded-2xl border bg-card/95 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="h-5 w-5" />
@@ -706,7 +715,7 @@ export default function KasirPage() {
             {riwayatList.length === 0 ? (
               <p className="text-center text-muted-foreground text-sm py-10">Belum ada transaksi.</p>
             ) : (
-              <Table>
+              <Table className="table-premium">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-14">#</TableHead>
@@ -790,7 +799,7 @@ export default function KasirPage() {
 
       {/* ── Modal Hasil Transaksi ─────────────────────────────────── */}
       <Dialog open={showHasil} onOpenChange={(open) => { if (!open) { setShowHasil(false); resetKasir(); } }}>
-        <DialogContent aria-describedby={undefined} className="max-w-sm">
+        <DialogContent aria-describedby={undefined} className="max-w-sm rounded-2xl border bg-card/95 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-700">
               <CheckCircle className="h-5 w-5" />
