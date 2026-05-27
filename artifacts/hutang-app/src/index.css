@@ -60,59 +60,59 @@
 }
 
 :root {
-  /* Warm cream background — lebih nyaman dari putih murni */
-  --background: 38 30% 97%;
-  --foreground: 215 25% 15%;
+  /* Premium warm ivory — nyaman untuk kerja lama, tidak silau */
+  --background: 42 42% 96%;
+  --foreground: 218 32% 13%;
 
   --card: 0 0% 100%;
-  --card-foreground: 215 25% 15%;
-  --card-border: 38 20% 88%;
+  --card-foreground: 218 32% 13%;
+  --card-border: 38 28% 86%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 215 25% 15%;
-  --popover-border: 38 20% 88%;
+  --popover-foreground: 218 32% 13%;
+  --popover-border: 38 28% 86%;
 
-  /* Emerald hijau sebagai primary — natural, bisnis, kepercayaan */
-  --primary: 158 55% 28%;
+  /* Deep emerald — brand bisnis, aman, dan premium */
+  --primary: 158 64% 25%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 38 20% 91%;
-  --secondary-foreground: 215 25% 15%;
+  --secondary: 42 32% 90%;
+  --secondary-foreground: 218 28% 16%;
 
-  --muted: 38 25% 93%;
-  --muted-foreground: 215 15% 48%;
+  --muted: 42 34% 91%;
+  --muted-foreground: 217 14% 43%;
 
-  --accent: 158 20% 90%;
-  --accent-foreground: 158 55% 20%;
+  --accent: 157 38% 89%;
+  --accent-foreground: 158 64% 19%;
 
-  --destructive: 0 68% 48%;
+  --destructive: 0 70% 48%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 38 18% 87%;
-  --input: 38 18% 87%;
-  --ring: 158 55% 28%;
+  --border: 38 24% 85%;
+  --input: 38 24% 85%;
+  --ring: 158 64% 31%;
 
-  /* Sidebar: deep emerald gelap */
-  --sidebar: 158 60% 13%;
-  --sidebar-foreground: 150 20% 88%;
-  --sidebar-border: 158 55% 10%;
-  --sidebar-primary: 158 50% 22%;
+  /* Sidebar: emerald noir dengan kedalaman visual */
+  --sidebar: 164 68% 10%;
+  --sidebar-foreground: 154 24% 88%;
+  --sidebar-border: 164 58% 14%;
+  --sidebar-primary: 157 57% 30%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 158 50% 18%;
-  --sidebar-accent-foreground: 150 20% 92%;
-  --sidebar-ring: 150 20% 88%;
+  --sidebar-accent: 164 48% 16%;
+  --sidebar-accent-foreground: 150 25% 94%;
+  --sidebar-ring: 150 30% 82%;
 
   /* Chart colors */
-  --chart-1: 158 55% 32%;
-  --chart-2: 25 80% 52%;
-  --chart-3: 210 65% 48%;
-  --chart-4: 43 85% 52%;
-  --chart-5: 0 62% 50%;
+  --chart-1: 158 58% 34%;
+  --chart-2: 28 86% 55%;
+  --chart-3: 210 68% 48%;
+  --chart-4: 43 88% 54%;
+  --chart-5: 0 66% 52%;
 
   --app-font-sans: 'Inter', system-ui, sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'JetBrains Mono', monospace;
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 }
 
 .dark {
@@ -163,6 +163,40 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
     font-variant-numeric: tabular-nums;
+    background-image:
+      radial-gradient(circle at top left, hsl(158 55% 86% / 0.55), transparent 30rem),
+      radial-gradient(circle at top right, hsl(38 92% 86% / 0.55), transparent 28rem),
+      linear-gradient(180deg, hsl(var(--background)), hsl(42 38% 94%));
+    background-attachment: fixed;
+  }
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .premium-card {
+    @apply border bg-card/90 shadow-sm backdrop-blur transition-all duration-200;
+    box-shadow: 0 16px 45px hsl(158 45% 18% / 0.08);
+  }
+
+  .premium-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 55px hsl(158 45% 18% / 0.12);
+  }
+
+  .soft-panel {
+    @apply border bg-white/70 shadow-sm backdrop-blur-xl;
+  }
+
+  .animate-soft-in {
+    animation: soft-in 420ms ease-out both;
+  }
+
+  @keyframes soft-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 }
 

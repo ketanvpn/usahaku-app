@@ -144,36 +144,37 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* Panel kiri — branding (hanya desktop) */}
-      <div className="hidden lg:flex lg:w-[45%] bg-primary flex-col justify-between p-12 text-white relative overflow-hidden">
-        {/* Dekorasi lingkaran */}
-        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-white/5" />
-        <div className="absolute -bottom-32 -left-16 w-96 h-96 rounded-full bg-white/5" />
-        <div className="absolute top-1/2 right-8 w-48 h-48 rounded-full bg-white/5" />
+      <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-emerald-950 via-primary to-emerald-900 flex-col justify-between p-14 text-white relative overflow-hidden shadow-2xl">
+        {/* Dekorasi premium */}
+        <div className="absolute -top-32 -right-32 w-[32rem] h-[32rem] rounded-full bg-white/5 blur-3xl mix-blend-overlay" />
+        <div className="absolute -bottom-40 -left-20 w-[40rem] h-[40rem] rounded-full bg-emerald-400/10 blur-3xl mix-blend-overlay" />
+        <div className="absolute top-1/3 left-1/4 w-64 h-64 rounded-full bg-amber-300/10 blur-3xl mix-blend-overlay" />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-30" />
 
         {/* Logo & nama */}
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-              <BookOpen className="h-5 w-5 text-white" />
+        <div className="relative z-10 animate-soft-in">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md ring-1 ring-white/20 shadow-xl">
+              <BookOpen className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Usahaku</h1>
-              <p className="text-white/60 text-xs">by KetanTech</p>
+              <h1 className="text-3xl font-extrabold tracking-tight">Usahaku</h1>
+              <p className="text-emerald-100/70 text-xs font-medium tracking-wide uppercase mt-0.5">by KetanTech</p>
             </div>
           </div>
-          <p className="text-white/80 text-base mt-4 leading-relaxed max-w-xs">
-            Aplikasi pencatatan bisnis yang sederhana, cepat, dan bisa digunakan tanpa internet.
+          <p className="text-emerald-50/90 text-lg mt-6 leading-relaxed max-w-md font-medium">
+            Aplikasi pencatatan bisnis yang sederhana, cepat, dan aman digunakan tanpa internet.
           </p>
         </div>
 
         {/* Fitur list */}
-        <div className="relative z-10 space-y-4">
-          {fiturList.map(({ icon: Icon, text }) => (
-            <div key={text} className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                <Icon className="h-4 w-4 text-white" />
+        <div className="relative z-10 space-y-5">
+          {fiturList.map(({ icon: Icon, text }, i) => (
+            <div key={text} className="flex items-center gap-4" style={{ animationDelay: `${i * 100}ms` }}>
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 backdrop-blur-sm ring-1 ring-white/10">
+                <Icon className="h-5 w-5 text-emerald-100" />
               </div>
-              <span className="text-white/85 text-sm">{text}</span>
+              <span className="text-emerald-50 text-base font-medium">{text}</span>
             </div>
           ))}
         </div>
@@ -185,24 +186,28 @@ export default function LoginPage() {
       </div>
 
       {/* Panel kanan — form login */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-background">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-background relative overflow-hidden">
+        {/* Dekorasi halus di panel kanan */}
+        <div className="absolute top-0 right-0 w-[40rem] h-[40rem] rounded-full bg-primary/5 blur-3xl -z-10" />
+        <div className="absolute bottom-0 left-0 w-[30rem] h-[30rem] rounded-full bg-amber-500/5 blur-3xl -z-10" />
+
         {/* Mobile: tampilkan nama app */}
-        <div className="lg:hidden text-center mb-8">
-          <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-md">
-            <BookOpen className="h-7 w-7 text-white" />
+        <div className="lg:hidden text-center mb-8 animate-soft-in">
+          <div className="w-16 h-16 bg-gradient-to-br from-primary to-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/30">
+            <BookOpen className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-primary">Usahaku</h1>
-          <p className="text-muted-foreground text-sm">by KetanTech</p>
+          <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Usahaku</h1>
+          <p className="text-muted-foreground font-medium mt-1">by KetanTech</p>
         </div>
 
-        <div className="w-full max-w-sm">
+        <div className="w-full max-w-[420px] premium-card p-8 md:p-10 rounded-[2rem] animate-soft-in z-10">
 
           {/* ── Form Login (selalu ada di DOM, disembunyikan CSS) ── */}
           <div style={{ display: showReset ? "none" : undefined }}>
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-foreground">Masuk ke Akun Anda</h2>
-              <p className="text-muted-foreground text-sm mt-1">
-                Masukkan username dan password untuk melanjutkan.
+            <div className="mb-8 text-center">
+              <h2 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">Selamat Datang</h2>
+              <p className="text-muted-foreground text-sm mt-2 font-medium">
+                Masuk ke akun Anda untuk melanjutkan
               </p>
             </div>
 
@@ -248,7 +253,7 @@ export default function LoginPage() {
                 />
                 <Button
                   type="submit"
-                  className="w-full h-11 text-base font-semibold mt-2 shadow-sm"
+                  className="w-full h-11 text-base font-semibold mt-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
                   disabled={loginMutation.isPending}
                 >
                   {loginMutation.isPending ? (
@@ -326,14 +331,14 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowReset(false)}
-                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 font-medium transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Kembali ke login
+                Kembali
               </button>
-              <h2 className="text-2xl font-bold text-foreground">Reset Password</h2>
-              <p className="text-muted-foreground text-sm mt-1">
-                Masukkan kode reset yang dikirim administrator via WhatsApp.
+              <h2 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">Reset Password</h2>
+              <p className="text-muted-foreground text-sm mt-2">
+                Masukkan kode reset yang dikirim oleh administrator via WhatsApp.
               </p>
             </div>
 
@@ -402,7 +407,7 @@ export default function LoginPage() {
                 />
                 <Button
                   type="submit"
-                  className="w-full h-11 text-base font-semibold shadow-sm"
+                  className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
                   disabled={isResetting}
                 >
                   {isResetting ? (

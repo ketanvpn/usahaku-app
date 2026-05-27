@@ -329,16 +329,18 @@ export function Layout({ children }: { children: ReactNode }) {
 
     return (
       <Link key={link.href} href={link.href}>
-        <div className={`relative flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer ${
+        <div className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
           isActive
-            ? "bg-primary text-primary-foreground font-medium"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            ? "bg-white/14 text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]"
+            : "text-sidebar-foreground/72 hover:bg-white/8 hover:text-white"
         }`}>
-          {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r bg-primary-foreground/90" />}
-          <Icon className="h-5 w-5" />
-          <span className="flex-1">{link.label}</span>
+          {isActive && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.8)]" />}
+          <div className={`grid h-8 w-8 place-items-center rounded-lg transition-colors ${isActive ? "bg-white/14" : "bg-white/5 group-hover:bg-white/10"}`}>
+            <Icon className="h-4.5 w-4.5" />
+          </div>
+          <span className="flex-1 text-sm">{link.label}</span>
           {badge && (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${badge.className}`}>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm ${badge.className}`}>
               {badge.text}
             </span>
           )}
@@ -349,11 +351,11 @@ export function Layout({ children }: { children: ReactNode }) {
 
   // ── A3: Profil di footer sidebar ──────────────────────────────────────────
   const FooterArea = () => (
-    <div className="border-t mx-3 pt-3 mt-2 space-y-1">
+    <div className="mx-2 mt-3 space-y-1 border-t border-white/10 pt-3">
       {/* E: Tombol Bantuan */}
       <button
         onClick={() => setHelpOpen(true)}
-        className="flex w-full items-center gap-3 px-3 py-2 rounded-md transition-colors text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+        className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sidebar-foreground/72 hover:bg-white/8 hover:text-white cursor-pointer"
       >
         <HelpCircle className="h-5 w-5" />
         <span>Bantuan</span>
@@ -361,10 +363,10 @@ export function Layout({ children }: { children: ReactNode }) {
 
       {/* A3: Profil pindah ke footer */}
       <Link href="/profil">
-        <div className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer ${
+        <div className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
           location === "/profil"
-            ? "bg-primary text-primary-foreground font-medium"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            ? "bg-white/14 text-white font-semibold"
+            : "text-sidebar-foreground/72 hover:bg-white/8 hover:text-white"
         }`}>
           <UserCircle className="h-5 w-5" />
           <span className="flex-1 truncate">{user?.nama ?? "Profil"}</span>
@@ -372,22 +374,22 @@ export function Layout({ children }: { children: ReactNode }) {
       </Link>
 
       {window.electronApp && (
-        <div className="px-3 py-2">
+        <div className="rounded-xl bg-white/5 px-3 py-2.5">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-sidebar-foreground/60">
               Versi {appVersion ?? "..."}
             </span>
           </div>
           <button
             onClick={handleCheckUpdate}
             disabled={checking}
-            className="flex w-full items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+            className="flex w-full items-center gap-2 text-xs text-sidebar-foreground/70 hover:text-white transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
             <span>{checking ? "Memeriksa..." : "Cek Pembaruan"}</span>
           </button>
           {checkResult && (
-            <p className="text-xs text-muted-foreground/70 mt-1 pl-5">{checkResult}</p>
+            <p className="text-xs text-sidebar-foreground/50 mt-1 pl-5">{checkResult}</p>
           )}
         </div>
       )}
@@ -395,7 +397,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <button
         onClick={handleLogout}
         disabled={logoutMutation.isPending}
-        className="flex w-full items-center gap-3 px-3 py-2 rounded-md transition-colors text-destructive hover:bg-destructive/10 cursor-pointer"
+        className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-red-200 hover:bg-red-500/12 hover:text-red-100 cursor-pointer"
       >
         <LogOut className="h-5 w-5" />
         <span>Keluar</span>
@@ -412,10 +414,12 @@ export function Layout({ children }: { children: ReactNode }) {
       ) : (
         ownerGroups.map((group) => (
           <div key={group.label} className="mb-2">
-            <p className="px-3 pt-3 pb-1 text-[11px] font-bold tracking-[0.14em] text-muted-foreground/80 uppercase">
+            <p className="px-3 pt-3 pb-1 text-[10px] font-extrabold tracking-[0.18em] text-sidebar-foreground/40 uppercase">
               {group.label}
             </p>
-            {group.links.map(renderLink)}
+            <div className="space-y-1">
+              {group.links.map(renderLink)}
+            </div>
           </div>
         ))
       )}
@@ -426,14 +430,20 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-r bg-card no-print fixed h-full z-10">
-        <div className="p-4 border-b h-16 flex items-center">
-          <div>
-            <h1 className="text-xl font-bold text-primary tracking-tight">Usahaku</h1>
-            <p className="text-[10px] text-muted-foreground leading-tight">by KetanTech</p>
+      <aside className="hidden md:flex flex-col w-64 border-r border-sidebar-border bg-sidebar text-sidebar-foreground no-print fixed h-full z-10 shadow-2xl shadow-emerald-950/20">
+        <div className="relative h-20 overflow-hidden border-b border-white/10 p-4 flex items-center">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(110,231,183,0.22),transparent_55%)]" />
+          <div className="relative flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/12 shadow-inner ring-1 ring-white/15">
+              <BookOpen className="h-5 w-5 text-emerald-200" />
+            </div>
+            <div>
+              <h1 className="text-xl font-extrabold text-white tracking-tight">Usahaku</h1>
+              <p className="text-[10px] text-sidebar-foreground/55 leading-tight">by KetanTech</p>
+            </div>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto px-3 py-2 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+        <div className="flex-1 overflow-y-auto px-3 py-2 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-white/15 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
           <NavLinks />
         </div>
       </aside>
@@ -507,21 +517,34 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         )}
         {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between p-4 border-b bg-card no-print h-16 sticky top-0 z-10">
-          <div>
-            <h1 className="text-xl font-bold text-primary">Usahaku</h1>
-            <p className="text-[10px] text-muted-foreground leading-tight">by KetanTech</p>
+        <header className="md:hidden flex items-center justify-between p-4 border-b bg-white/85 backdrop-blur-xl no-print h-16 sticky top-0 z-10 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md">
+              <BookOpen className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-xl font-extrabold text-primary">Usahaku</h1>
+              <p className="text-[10px] text-muted-foreground leading-tight">by KetanTech</p>
+            </div>
           </div>
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" className="rounded-xl bg-white/70">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] p-0">
-              <div className="p-4 border-b">
-                <h1 className="text-xl font-bold text-primary">Usahaku</h1>
-                <p className="text-[10px] text-muted-foreground">by KetanTech</p>
+            <SheetContent side="left" className="w-[280px] p-0 bg-sidebar text-sidebar-foreground border-sidebar-border">
+              <div className="relative overflow-hidden border-b border-white/10 p-4">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(110,231,183,0.22),transparent_55%)]" />
+                <div className="relative flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white/12 ring-1 ring-white/15">
+                    <BookOpen className="h-5 w-5 text-emerald-200" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-extrabold text-white">Usahaku</h1>
+                    <p className="text-[10px] text-sidebar-foreground/55">by KetanTech</p>
+                  </div>
+                </div>
               </div>
               <div className="px-3 py-2">
                 <NavLinks />
@@ -531,10 +554,12 @@ export function Layout({ children }: { children: ReactNode }) {
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 p-4 md:p-6 overflow-auto">
-          <LicenseContext.Provider value={licenseContextValue}>
-            {children}
-          </LicenseContext.Provider>
+        <div className="flex-1 overflow-auto p-4 md:p-7">
+          <div className="mx-auto w-full max-w-[1500px] animate-soft-in">
+            <LicenseContext.Provider value={licenseContextValue}>
+              {children}
+            </LicenseContext.Provider>
+          </div>
         </div>
       </main>
 

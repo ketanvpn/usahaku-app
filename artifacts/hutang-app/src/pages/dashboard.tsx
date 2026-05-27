@@ -165,38 +165,50 @@ export default function OwnerDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h2>
-          <p className="text-muted-foreground">Ringkasan bisnis Anda hari ini.</p>
-          <p className="text-xs text-muted-foreground mt-1">{backupInfo}</p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/hutang" className="block">
-            <Button variant="outline">Lihat Semua Hutang</Button>
-          </Link>
-          <Link href="/pembayaran" className="block">
-            <Button>Catat Pembayaran</Button>
-          </Link>
-          <Link href="/laporan" className="block">
-            <Button variant="secondary">Laporan</Button>
-          </Link>
-          <Link href="/backup" className="block">
-            <Button variant="secondary">Backup</Button>
-          </Link>
+      <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-emerald-950 via-emerald-800 to-teal-700 p-6 text-white shadow-2xl shadow-emerald-950/20">
+        <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
+        <div className="absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-amber-200/14 blur-3xl" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-emerald-50 ring-1 ring-white/15">
+              <Activity className="h-3.5 w-3.5" />
+              Ringkasan Bisnis
+            </div>
+            <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Dashboard Usahaku</h2>
+            <p className="mt-2 max-w-2xl text-sm text-emerald-50/80">
+              Pantau hutang, pembayaran, stok, penjualan kasir, dan backup dari satu tempat.
+            </p>
+            <p className="mt-3 text-xs text-emerald-50/65">{backupInfo}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/pembayaran" className="block">
+              <Button className="bg-white text-emerald-900 hover:bg-emerald-50 shadow-lg shadow-emerald-950/20">Catat Pembayaran</Button>
+            </Link>
+            <Link href="/hutang" className="block">
+              <Button variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">Hutang</Button>
+            </Link>
+            <Link href="/laporan" className="block">
+              <Button variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">Laporan</Button>
+            </Link>
+            <Link href="/backup" className="block">
+              <Button variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">Backup</Button>
+            </Link>
+          </div>
         </div>
       </div>
 
       {/* Peringatan stok */}
       {peringatanStok.length > 0 && (
-        <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 px-4 py-3">
+        <div className="rounded-2xl border border-red-200/80 bg-gradient-to-r from-red-50 to-amber-50 px-4 py-3 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0" />
-            <p className="font-semibold text-sm text-red-700 dark:text-red-400">
+            <div className="grid h-8 w-8 place-items-center rounded-xl bg-red-100">
+              <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0" />
+            </div>
+            <p className="font-bold text-sm text-red-800">
               Peringatan Stok — {peringatanStok.length} barang perlu perhatian
             </p>
             <Link href="/stok" className="ml-auto">
-              <Button size="sm" variant="ghost" className="h-7 text-xs text-red-700 hover:bg-red-100 px-2">
+              <Button size="sm" variant="ghost" className="h-8 rounded-xl text-xs text-red-700 hover:bg-red-100 px-3">
                 Kelola Stok →
               </Button>
             </Link>
@@ -209,8 +221,8 @@ export default function OwnerDashboard() {
                   <Badge
                     variant="outline"
                     className={habis
-                      ? "border-gray-400 bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer"
-                      : "border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200 cursor-pointer"}
+                      ? "rounded-full border-gray-300 bg-white/80 px-3 py-1 text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      : "rounded-full border-amber-300 bg-white/80 px-3 py-1 text-amber-800 hover:bg-amber-100 cursor-pointer"}
                   >
                     <Package className="h-3 w-3 mr-1" />
                     {b.nama} —{" "}
@@ -228,7 +240,7 @@ export default function OwnerDashboard() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="premium-card overflow-hidden border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Sisa Hutang</CardTitle>
             <div className="h-9 w-9 rounded-full bg-amber-100 flex items-center justify-center">
@@ -236,14 +248,14 @@ export default function OwnerDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{formatRupiah(data.sisa_hutang)}</div>
+            <div className="text-2xl font-extrabold text-amber-600">{formatRupiah(data.sisa_hutang)}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Dari <span className="font-semibold">{data.jumlah_hutang_aktif}</span> hutang yang belum lunas
               </p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="premium-card overflow-hidden border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Sudah Dibayar</CardTitle>
             <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -251,14 +263,14 @@ export default function OwnerDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{formatRupiah(data.total_dibayar)}</div>
+            <div className="text-2xl font-extrabold text-emerald-600">{formatRupiah(data.total_dibayar)}</div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="font-semibold">{data.jumlah_hutang_lunas}</span> hutang telah lunas
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="premium-card overflow-hidden border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Hutang Tercatat</CardTitle>
             <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center">
@@ -266,12 +278,12 @@ export default function OwnerDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{formatRupiah(data.total_hutang)}</div>
+            <div className="text-2xl font-extrabold text-blue-600">{formatRupiah(data.total_hutang)}</div>
             <p className="text-xs text-muted-foreground mt-1">Keseluruhan tercatat</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-primary shadow-sm hover:shadow-md transition-shadow">
+        <Card className="premium-card overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Pelanggan yang Masih Punya Hutang</CardTitle>
             <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
@@ -279,7 +291,7 @@ export default function OwnerDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{data.jumlah_pelanggan_berhutang}</div>
+            <div className="text-2xl font-extrabold text-primary">{data.jumlah_pelanggan_berhutang}</div>
             <p className="text-xs text-muted-foreground mt-1">Masih punya sisa hutang</p>
           </CardContent>
         </Card>
@@ -287,7 +299,7 @@ export default function OwnerDashboard() {
 
       {/* Kasir Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="premium-card overflow-hidden border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Penjualan Kasir Hari Ini</CardTitle>
             <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -295,13 +307,13 @@ export default function OwnerDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{formatRupiah(kasirStats?.penjualan_hari_ini ?? 0)}</div>
+            <div className="text-2xl font-extrabold text-emerald-600">{formatRupiah(kasirStats?.penjualan_hari_ini ?? 0)}</div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="font-semibold">{kasirStats?.transaksi_hari_ini ?? 0}</span> transaksi hari ini
             </p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-teal-500 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="premium-card overflow-hidden border-l-4 border-l-teal-500 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Penjualan Kasir Bulan Ini</CardTitle>
             <div className="h-9 w-9 rounded-full bg-teal-100 flex items-center justify-center">
@@ -309,7 +321,7 @@ export default function OwnerDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-teal-600">{formatRupiah(kasirStats?.penjualan_bulan_ini ?? 0)}</div>
+            <div className="text-2xl font-extrabold text-teal-600">{formatRupiah(kasirStats?.penjualan_bulan_ini ?? 0)}</div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="font-semibold">{kasirStats?.transaksi_bulan_ini ?? 0}</span> transaksi bulan ini
             </p>
@@ -318,7 +330,7 @@ export default function OwnerDashboard() {
       </div>
 
       {/* Chart Tren Keuangan */}
-      <Card className="shadow-sm">
+      <Card className="premium-card overflow-hidden">
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -402,7 +414,7 @@ export default function OwnerDashboard() {
 
       {/* Tabel bawah */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="shadow-sm">
+        <Card className="premium-card overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-emerald-600" />
@@ -454,7 +466,7 @@ export default function OwnerDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card className="premium-card overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-amber-600" />
