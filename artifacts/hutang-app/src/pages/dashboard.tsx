@@ -2,6 +2,16 @@ import { useEffect, useState } from "react";
 import { useGetOwnerDashboard } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
 import { formatRupiah, formatDate, formatRupiahShort, formatDateShort, formatDateRange, getBackupInfoText } from "@/lib/format";
+import {
+  fetchPeringatanStok,
+  fetchTrenKeuangan,
+  fetchKasirRingkasan,
+  type BarangPeringatan,
+  type TrenKeuanganItem,
+  type KasirRingkasan,
+} from "@/lib/api-dashboard";
+import { PageHero } from "@/components/ui/page-hero";
+import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -13,22 +23,6 @@ import {
 } from "recharts";
 
 import type { TooltipProps } from "recharts";
-
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-interface BarangPeringatan {
-  id: number;
-  nama: string;
-  satuan: string;
-  stok: number;
-  stok_minimum: number;
-}
-
-interface TrenItem {
-  tanggal: string;
-  masuk: number;
-  keluar: number;
-}
 
 const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
   if (!active || !payload?.length) return null;
@@ -79,36 +73,21 @@ export default function OwnerDashboard() {
 
   const { data: peringatanStok = [] } = useQuery<BarangPeringatan[]>({
     queryKey: ["barang-peringatan"],
-    queryFn: async () => {
-      const r = await fetch(`${BASE}/api/barang/peringatan`, { credentials: "include" });
-      if (!r.ok) return [];
-      return r.json();
-    },
+    queryFn: () => fetchPeringatanStok(),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
-  const { data: trenData = [], isLoading: trenLoading } = useQuery<TrenItem[]>({
+  const { data: trenData = [], isLoading: trenLoading } = useQuery<TrenKeuanganItem[]>({
     queryKey: ["tren-keuangan", trenHari],
-    queryFn: async () => {
-      const r = await fetch(`${BASE}/api/dashboard/tren-keuangan?hari=${trenHari}`, { credentials: "include" });
-      if (!r.ok) return [];
-      return r.json();
-    },
+    queryFn: () => fetchTrenKeuangan(trenHari),
     staleTime: 45_000,
     refetchOnWindowFocus: false,
   });
 
-  const { data: kasirStats } = useQuery<{
-    penjualan_hari_ini: number; transaksi_hari_ini: number;
-    penjualan_bulan_ini: number; transaksi_bulan_ini: number;
-  }>({
+  const { data: kasirStats } = useQuery<KasirRingkasan>({
     queryKey: ["dashboard-kasir-ringkasan"],
-    queryFn: async () => {
-      const r = await fetch(`${BASE}/api/dashboard/kasir-ringkasan`, { credentials: "include" });
-      if (!r.ok) return { penjualan_hari_ini: 0, transaksi_hari_ini: 0, penjualan_bulan_ini: 0, transaksi_bulan_ini: 0 };
-      return r.json();
-    },
+    queryFn: () => fetchKasirRingkasan(),
     staleTime: 45_000,
     refetchOnWindowFocus: false,
   });
@@ -137,21 +116,17 @@ export default function OwnerDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-emerald-950 via-emerald-800 to-teal-700 p-6 text-white shadow-2xl shadow-emerald-950/20">
-        <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
-        <div className="absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-amber-200/14 blur-3xl" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-emerald-50 ring-1 ring-white/15">
-              <Activity className="h-3.5 w-3.5" />
-              Ringkasan Bisnis
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Dashboard Usahaku</h2>
-            <p className="mt-2 max-w-2xl text-sm text-emerald-50/80">
-              Pantau hutang, pembayaran, stok, penjualan kasir, dan backup dari satu tempat.
-            </p>
-            <p className="mt-3 text-xs text-emerald-50/65">{backupInfo}</p>
+      <PageHero
+        variant="featured"
+        badge={
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-emerald-50 ring-1 ring-white/15">
+            <Activity className="h-3.5 w-3.5" />
+            Ringkasan Bisnis
           </div>
+        }
+        title="Dashboard Usahaku"
+        description="Pantau hutang, pembayaran, stok, penjualan kasir, dan backup dari satu tempat."
+        actions={
           <div className="flex flex-wrap gap-2">
             <Link href="/pembayaran" className="block">
               <Button className="bg-white text-emerald-900 hover:bg-emerald-50 shadow-lg shadow-emerald-950/20">Catat Pembayaran</Button>
@@ -166,8 +141,10 @@ export default function OwnerDashboard() {
               <Button variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">Backup</Button>
             </Link>
           </div>
-        </div>
-      </div>
+        }
+      >
+        <p className="text-xs text-emerald-50/65">{backupInfo}</p>
+      </PageHero>
 
       {/* Peringatan stok */}
       {peringatanStok.length > 0 && (
@@ -212,93 +189,52 @@ export default function OwnerDashboard() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="premium-card overflow-hidden border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Sisa Hutang</CardTitle>
-            <div className="h-9 w-9 rounded-full bg-amber-100 flex items-center justify-center">
-              <TrendingDown className="h-4 w-4 text-amber-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-extrabold text-amber-600">{formatRupiah(data.sisa_hutang)}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Dari <span className="font-semibold">{data.jumlah_hutang_aktif}</span> hutang yang belum lunas
-              </p>
-          </CardContent>
-        </Card>
-
-        <Card className="premium-card overflow-hidden border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Sudah Dibayar</CardTitle>
-            <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-emerald-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-extrabold text-emerald-600">{formatRupiah(data.total_dibayar)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              <span className="font-semibold">{data.jumlah_hutang_lunas}</span> hutang telah lunas
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="premium-card overflow-hidden border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Hutang Tercatat</CardTitle>
-            <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center">
-              <Wallet className="h-4 w-4 text-blue-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-extrabold text-blue-600">{formatRupiah(data.total_hutang)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Keseluruhan tercatat</p>
-          </CardContent>
-        </Card>
-
-        <Card className="premium-card overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pelanggan yang Masih Punya Hutang</CardTitle>
-            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-              <Users className="h-4 w-4 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-extrabold text-primary">{data.jumlah_pelanggan_berhutang}</div>
-            <p className="text-xs text-muted-foreground mt-1">Masih punya sisa hutang</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Sisa Hutang"
+          value={<span className="text-amber-600 dark:text-amber-400">{formatRupiah(data.sisa_hutang)}</span>}
+          subtitle={`Dari ${data.jumlah_hutang_aktif} hutang aktif`}
+          variant="warning"
+          icon={<TrendingDown className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Total Sudah Dibayar"
+          value={<span className="text-emerald-600 dark:text-emerald-400">{formatRupiah(data.total_dibayar)}</span>}
+          subtitle={`${data.jumlah_hutang_lunas} hutang telah lunas`}
+          variant="success"
+          icon={<TrendingUp className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Total Hutang Tercatat"
+          value={<span className="text-blue-600 dark:text-blue-400">{formatRupiah(data.total_hutang)}</span>}
+          subtitle="Keseluruhan tercatat"
+          variant="info"
+          icon={<Wallet className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Pelanggan Berhutang"
+          value={data.jumlah_pelanggan_berhutang}
+          subtitle="Masih punya sisa hutang"
+          variant="default"
+          icon={<Users className="h-5 w-5" />}
+        />
       </div>
 
       {/* Kasir Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="premium-card overflow-hidden border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Penjualan Kasir Hari Ini</CardTitle>
-            <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center">
-              <ShoppingBag className="h-4 w-4 text-emerald-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-extrabold text-emerald-600">{formatRupiah(kasirStats?.penjualan_hari_ini ?? 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              <span className="font-semibold">{kasirStats?.transaksi_hari_ini ?? 0}</span> transaksi hari ini
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="premium-card overflow-hidden border-l-4 border-l-teal-500 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Penjualan Kasir Bulan Ini</CardTitle>
-            <div className="h-9 w-9 rounded-full bg-teal-100 flex items-center justify-center">
-              <Receipt className="h-4 w-4 text-teal-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-extrabold text-teal-600">{formatRupiah(kasirStats?.penjualan_bulan_ini ?? 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              <span className="font-semibold">{kasirStats?.transaksi_bulan_ini ?? 0}</span> transaksi bulan ini
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Penjualan Kasir Hari Ini"
+          value={<span className="text-emerald-600 dark:text-emerald-400">{formatRupiah(kasirStats?.penjualan_hari_ini ?? 0)}</span>}
+          subtitle={`${kasirStats?.transaksi_hari_ini ?? 0} transaksi hari ini`}
+          variant="success"
+          icon={<ShoppingBag className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Penjualan Kasir Bulan Ini"
+          value={<span className="text-teal-600 dark:text-teal-400">{formatRupiah(kasirStats?.penjualan_bulan_ini ?? 0)}</span>}
+          subtitle={`${kasirStats?.transaksi_bulan_ini ?? 0} transaksi bulan ini`}
+          variant="info"
+          icon={<Receipt className="h-5 w-5" />}
+        />
       </div>
 
       {/* Chart Tren Keuangan */}

@@ -1,170 +1,129 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
-
 import { AuthProvider, ProtectedRoute } from "@/hooks/use-auth";
 import { Layout } from "@/components/layout/Layout";
+import { Spinner } from "@/components/ui/spinner";
+import type { UserRole } from "@/hooks/use-auth";
 
-// Pages
+// Eagerly loaded public & fallback pages
 import LoginPage from "@/pages/login";
 import SetupPage from "@/pages/setup";
-import DashboardPage from "@/pages/dashboard";
-import PelangganPage from "@/pages/pelanggan";
-import PelangganDetail from "@/pages/pelanggan-detail";
-import HutangPage from "@/pages/hutang";
-import HutangDetail from "@/pages/hutang-detail";
-import PembayaranPage from "@/pages/pembayaran";
-import LaporanPage from "@/pages/laporan";
-import BackupPage from "@/pages/backup";
-import ProfilPage from "@/pages/profil";
-import AdminDashboardPage from "@/pages/admin/dashboard";
-import AdminUsahaPage from "@/pages/admin/usaha";
-import AdminOwnersPage from "@/pages/admin/owners";
-import AdminLisensiPage from "@/pages/admin/lisensi";
-import LisensiPage from "@/pages/lisensi";
-import KeuanganPage from "@/pages/keuangan";
-import StokPage from "@/pages/stok";
-import KasirPage from "@/pages/kasir";
-import GajiTenagaPage from "@/pages/gaji-tenaga";
-import PengaturanPage from "@/pages/pengaturan";
-import SupplierPage from "@/pages/supplier";
-import SupplierDetail from "@/pages/supplier-detail";
+import NotFound from "@/pages/not-found";
 
-const queryClient = new QueryClient();
+// Lazy-loaded Owner Pages (Code Splitting)
+const DashboardPage = lazy(() => import("@/pages/dashboard"));
+const PelangganPage = lazy(() => import("@/pages/pelanggan"));
+const PelangganDetail = lazy(() => import("@/pages/pelanggan-detail"));
+const HutangPage = lazy(() => import("@/pages/hutang"));
+const HutangDetail = lazy(() => import("@/pages/hutang-detail"));
+const PembayaranPage = lazy(() => import("@/pages/pembayaran"));
+const LaporanPage = lazy(() => import("@/pages/laporan"));
+const BackupPage = lazy(() => import("@/pages/backup"));
+const LisensiPage = lazy(() => import("@/pages/lisensi"));
+const KeuanganPage = lazy(() => import("@/pages/keuangan"));
+const StokPage = lazy(() => import("@/pages/stok"));
+const KasirPage = lazy(() => import("@/pages/kasir"));
+const GajiTenagaPage = lazy(() => import("@/pages/gaji-tenaga"));
+const PengaturanPage = lazy(() => import("@/pages/pengaturan"));
+const SupplierPage = lazy(() => import("@/pages/supplier"));
+const SupplierDetail = lazy(() => import("@/pages/supplier-detail"));
+const ProfilPage = lazy(() => import("@/pages/profil"));
+
+// Lazy-loaded Super Admin Pages
+const AdminDashboardPage = lazy(() => import("@/pages/admin/dashboard"));
+const AdminUsahaPage = lazy(() => import("@/pages/admin/usaha"));
+const AdminOwnersPage = lazy(() => import("@/pages/admin/owners"));
+const AdminLisensiPage = lazy(() => import("@/pages/admin/lisensi"));
+
+interface AppRouteConfig {
+  path: string;
+  component: React.ComponentType;
+  allowedRoles?: UserRole[];
+}
+
+const PROTECTED_ROUTES: AppRouteConfig[] = [
+  // Owner Routes
+  { path: "/dashboard", component: DashboardPage, allowedRoles: ["owner"] },
+  { path: "/pelanggan", component: PelangganPage, allowedRoles: ["owner"] },
+  { path: "/pelanggan/:id", component: PelangganDetail, allowedRoles: ["owner"] },
+  { path: "/hutang", component: HutangPage, allowedRoles: ["owner"] },
+  { path: "/hutang/:id", component: HutangDetail, allowedRoles: ["owner"] },
+  { path: "/pembayaran", component: PembayaranPage, allowedRoles: ["owner"] },
+  { path: "/laporan", component: LaporanPage, allowedRoles: ["owner"] },
+  { path: "/backup", component: BackupPage, allowedRoles: ["owner"] },
+  { path: "/lisensi", component: LisensiPage, allowedRoles: ["owner"] },
+  { path: "/stok", component: StokPage, allowedRoles: ["owner"] },
+  { path: "/supplier", component: SupplierPage, allowedRoles: ["owner"] },
+  { path: "/supplier/:id", component: SupplierDetail, allowedRoles: ["owner"] },
+  { path: "/kasir", component: KasirPage, allowedRoles: ["owner"] },
+  { path: "/keuangan", component: KeuanganPage, allowedRoles: ["owner"] },
+  { path: "/gaji-tenaga", component: GajiTenagaPage, allowedRoles: ["owner"] },
+  { path: "/pengaturan", component: PengaturanPage, allowedRoles: ["owner"] },
+
+  // Super Admin Routes
+  { path: "/admin/dashboard", component: AdminDashboardPage, allowedRoles: ["super_admin"] },
+  { path: "/admin/usaha", component: AdminUsahaPage, allowedRoles: ["super_admin"] },
+  { path: "/admin/owners", component: AdminOwnersPage, allowedRoles: ["super_admin"] },
+  { path: "/admin/lisensi", component: AdminLisensiPage, allowedRoles: ["super_admin"] },
+
+  // Shared Protected Route (Owner & Super Admin)
+  { path: "/profil", component: ProfilPage },
+];
+
+function PageLoadingFallback() {
+  return (
+    <div className="flex h-[50vh] w-full items-center justify-center">
+      <Spinner className="h-8 w-8 text-primary" />
+    </div>
+  );
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function Router() {
   return (
     <Switch>
+      {/* Public Pages */}
       <Route path="/setup" component={SetupPage} />
       <Route path="/login" component={LoginPage} />
-      
-      {/* Protected Owner Routes */}
-      <Route path="/dashboard">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><DashboardPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/pelanggan">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><PelangganPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/pelanggan/:id">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><PelangganDetail /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/hutang">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><HutangPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/hutang/:id">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><HutangDetail /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/pembayaran">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><PembayaranPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/laporan">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><LaporanPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/backup">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><BackupPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/lisensi">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><LisensiPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/stok">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><StokPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/supplier">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><SupplierPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/supplier/:id">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><SupplierDetail /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/kasir">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><KasirPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/keuangan">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><KeuanganPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/gaji-tenaga">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><GajiTenagaPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/pengaturan">
-        <ProtectedRoute allowedRoles={["owner"]}>
-          <Layout><PengaturanPage /></Layout>
-        </ProtectedRoute>
-      </Route>
 
-      {/* Protected Admin Routes */}
-      <Route path="/admin/dashboard">
-        <ProtectedRoute allowedRoles={["super_admin"]}>
-          <Layout><AdminDashboardPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/admin/usaha">
-        <ProtectedRoute allowedRoles={["super_admin"]}>
-          <Layout><AdminUsahaPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/admin/owners">
-        <ProtectedRoute allowedRoles={["super_admin"]}>
-          <Layout><AdminOwnersPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/admin/lisensi">
-        <ProtectedRoute allowedRoles={["super_admin"]}>
-          <Layout><AdminLisensiPage /></Layout>
-        </ProtectedRoute>
-      </Route>
+      {/* Declarative Protected Routes with Shell Layout & Suspense Fallback */}
+      {PROTECTED_ROUTES.map(({ path, component: Component, allowedRoles }) => (
+        <Route key={path} path={path}>
+          <ProtectedRoute allowedRoles={allowedRoles}>
+            <Layout>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <Component />
+              </Suspense>
+            </Layout>
+          </ProtectedRoute>
+        </Route>
+      ))}
 
-      {/* Shared Protected Route */}
-      <Route path="/profil">
-        <ProtectedRoute>
-          <Layout><ProfilPage /></Layout>
-        </ProtectedRoute>
-      </Route>
-      
-      {/* Root redirects via ProtectedRoute */}
+      {/* Root route: Role-based redirect via ProtectedRoute */}
       <Route path="/">
         <ProtectedRoute>
-          {/* Will redirect based on role in ProtectedRoute */}
           <div />
         </ProtectedRoute>
       </Route>
 
+      {/* 404 Fallback */}
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-function App() {
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
@@ -178,5 +137,3 @@ function App() {
     </QueryClientProvider>
   );
 }
-
-export default App;

@@ -1,84 +1,27 @@
-import { ReactNode, useState, useEffect, useMemo } from "react";
+import { ReactNode, useState, useEffect, useMemo, useCallback } from "react";
+import { useLocation } from "wouter";
+import { BookOpen } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLogout } from "@workspace/api-client-react";
+
+import { useAuth } from "@/hooks/use-auth";
 import { LicenseContext } from "@/context/license-context";
 import { UpdateBanner } from "./UpdateBanner";
 import { HelpDialog } from "./HelpDialog";
-import { Link, useLocation } from "wouter";
-import {
-  LayoutDashboard,
-  Users,
-  WalletCards,
-  CreditCard,
-  FileText,
-  DatabaseBackup,
-  UserCircle,
-  Building2,
-  LogOut,
-  Menu,
-  KeyRound,
-  ShieldCheck,
-  BookOpen,
-  Package,
-  ShoppingBag,
-  Truck,
-  RefreshCw,
-  X,
-  ShieldAlert,
-  ShieldOff,
-  HardHat,
-  HelpCircle,
-  Settings,
-} from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import { useLogout } from "@workspace/api-client-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { LicenseBanner } from "./LicenseBanner";
+import { SidebarNavLinks } from "./SidebarNavLinks";
+import { SidebarFooter } from "./SidebarFooter";
+import { MobileHeader } from "./MobileHeader";
+import { useSidebarBadges, type LicenseStatus } from "./useSidebarBadges";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-interface LicenseStatus {
-  aktif: boolean;
-  sisa_hari: number;
-  expires_at: string | null;
-  jam_dimanipulasi?: boolean;
-}
-
-interface BarangPeringatanItem {
-  id: number;
-  stok: number;
-  stok_minimum: number;
-}
-
-interface UpahItem {
-  id: number;
-  status: "lunas" | "belum_lunas";
-}
-
-interface HutangItem {
-  id: number;
-  status: string;
-  tanggal_jatuh_tempo: string | null;
-  sisa_hutang: number;
-}
-
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-
-type NavLink = {
-  href: string;
-  label: string;
-  icon: React.ElementType;
-  badgeKey?: "stok" | "upah" | "hutang_tempo" | "backup" | "lisensi";
-};
-type NavGroup = { label: string; links: NavLink[] };
 
 export function Layout({ children }: { children: ReactNode }) {
   const { isSuperAdmin, logout, user } = useAuth();
   const [location] = useLocation();
   const logoutMutation = useLogout();
   const qc = useQueryClient();
+
   const [appVersion, setAppVersion] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState<string | null>(null);
@@ -87,6 +30,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const [recheckingLisensi, setRecheckingLisensi] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
+  // Status Lisensi
   const { data: licenseStatus } = useQuery<LicenseStatus>({
     queryKey: ["lisensi-status"],
     queryFn: async () => {
@@ -100,60 +44,11 @@ export function Layout({ children }: { children: ReactNode }) {
     refetchInterval: 60 * 1000,
   });
 
-  // ── D1: Badge data sources ────────────────────────────────────────────────
-  // Lisensi mati / jam dimanipulasi → tidak perlu fetch badge data, hemat request
-  const lisensiOK = isSuperAdmin || (
-    (licenseStatus?.aktif ?? true) && !(licenseStatus?.jam_dimanipulasi ?? false)
-  );
-  const enableBadges = !isSuperAdmin && lisensiOK;
-
-  const { data: barangPeringatan } = useQuery<BarangPeringatanItem[]>({
-    queryKey: ["badge-barang-peringatan"],
-    queryFn: async () => {
-      const r = await fetch(`${BASE}/api/barang/peringatan`, { credentials: "include" });
-      if (!r.ok) return [];
-      return r.json();
-    },
-    enabled: enableBadges,
-    staleTime: 60 * 1000,
-    refetchOnWindowFocus: true,
+  // Badge data counts hook
+  const { stokPeringatanCount, upahBelumLunasCount, hutangJatuhTempoCount } = useSidebarBadges({
+    isSuperAdmin,
+    licenseStatus,
   });
-
-  const { data: upahBelumLunas } = useQuery<UpahItem[]>({
-    queryKey: ["badge-upah-belum-lunas"],
-    queryFn: async () => {
-      const r = await fetch(`${BASE}/api/upah?status=belum_lunas`, { credentials: "include" });
-      if (!r.ok) return [];
-      return r.json();
-    },
-    enabled: enableBadges,
-    staleTime: 60 * 1000,
-    refetchOnWindowFocus: true,
-  });
-
-  const { data: hutangAktif } = useQuery<HutangItem[]>({
-    queryKey: ["badge-hutang-aktif"],
-    queryFn: async () => {
-      const r = await fetch(`${BASE}/api/hutang?status=aktif`, { credentials: "include" });
-      if (!r.ok) return [];
-      return r.json();
-    },
-    enabled: enableBadges,
-    staleTime: 60 * 1000,
-    refetchOnWindowFocus: true,
-  });
-
-  // Hitung hutang yang sudah lewat jatuh tempo (hari ini > tanggal_jatuh_tempo)
-  const hutangJatuhTempo = useMemo(() => {
-    if (!hutangAktif) return 0;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return hutangAktif.filter((h) => {
-      if (!h.tanggal_jatuh_tempo) return false;
-      const due = new Date(`${h.tanggal_jatuh_tempo}T00:00:00`);
-      return due.getTime() < today.getTime() && (h.sisa_hutang ?? 0) > 0;
-    }).length;
-  }, [hutangAktif]);
 
   const handleRecheckLisensi = async () => {
     setRecheckingLisensi(true);
@@ -161,21 +56,21 @@ export function Layout({ children }: { children: ReactNode }) {
     setRecheckingLisensi(false);
   };
 
-  const showLisensiBanner = !isSuperAdmin && licenseStatus && location !== "/lisensi";
-  const lisensiNearExpiry = licenseStatus?.aktif && (licenseStatus?.sisa_hari ?? 0) <= 7;
-  const lisensiMati = licenseStatus && !licenseStatus.aktif;
-
-  const licenseContextValue = useMemo(() => ({
-    lisensiAktif: isSuperAdmin
-      ? true
-      : ((licenseStatus?.aktif ?? true) && !(licenseStatus?.jam_dimanipulasi ?? false)),
-    jamDimanipulasi: licenseStatus?.jam_dimanipulasi ?? false,
-  }), [isSuperAdmin, licenseStatus]);
+  const licenseContextValue = useMemo(
+    () => ({
+      lisensiAktif: isSuperAdmin
+        ? true
+        : (licenseStatus?.aktif ?? true) && !(licenseStatus?.jam_dimanipulasi ?? false),
+      jamDimanipulasi: licenseStatus?.jam_dimanipulasi ?? false,
+    }),
+    [isSuperAdmin, licenseStatus]
+  );
 
   useEffect(() => {
     window.electronApp?.getVersion().then(setAppVersion).catch(() => {});
   }, []);
 
+  // Backup reminder tracking
   useEffect(() => {
     const refreshDaysWithoutBackup = () => {
       const lastBackup = localStorage.getItem("lastBackupDate");
@@ -183,7 +78,9 @@ export function Layout({ children }: { children: ReactNode }) {
         setDaysWithoutBackup(999);
         return;
       }
-      const selisih = Math.floor((Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24));
+      const selisih = Math.floor(
+        (Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24)
+      );
       setDaysWithoutBackup(Number.isNaN(selisih) || selisih < 0 ? 0 : selisih);
     };
 
@@ -210,13 +107,12 @@ export function Layout({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const handleCheckUpdate = async () => {
+  const handleCheckUpdate = useCallback(async () => {
     if (!window.electronApp?.update?.checkNow) return;
     setChecking(true);
     setCheckResult(null);
     try {
       await window.electronApp.update.checkNow();
-      // Tunggu sebentar lalu cek status terbaru
       setTimeout(async () => {
         const status = await window.electronApp?.update?.getStatus();
         if (status?.status === "not-available") {
@@ -228,202 +124,35 @@ export function Layout({ children }: { children: ReactNode }) {
       setChecking(false);
       setCheckResult("Gagal cek pembaruan");
     }
-  };
+  }, []);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logoutMutation.mutate(undefined, { onSuccess: () => logout() });
-  };
+  }, [logoutMutation, logout]);
 
-  // ── A1 Opsi 1: Restruktur grup sidebar owner ──────────────────────────────
-  // ── A2: Rename "Gaji & Tenaga" → "Pekerja & Upah", "Stok Barang" → "Barang & Stok"
-  const ownerGroups: NavGroup[] = [
-    {
-      label: "UTAMA",
-      links: [
-        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      ],
-    },
-    {
-      label: "PIUTANG",
-      links: [
-        { href: "/pelanggan", label: "Pelanggan", icon: Users },
-        { href: "/hutang", label: "Hutang", icon: WalletCards, badgeKey: "hutang_tempo" },
-        { href: "/pembayaran", label: "Pembayaran", icon: CreditCard },
-      ],
-    },
-    {
-      label: "PENJUALAN",
-      links: [
-        { href: "/kasir", label: "Kasir", icon: ShoppingBag },
-        { href: "/stok", label: "Barang & Stok", icon: Package, badgeKey: "stok" },
-        { href: "/supplier", label: "Supplier", icon: Truck },
-      ],
-    },
-    {
-      label: "KEUANGAN",
-      links: [
-        { href: "/keuangan", label: "Keuangan", icon: BookOpen },
-        { href: "/gaji-tenaga", label: "Pekerja & Upah", icon: HardHat, badgeKey: "upah" },
-      ],
-    },
-    {
-      label: "LAPORAN",
-      links: [
-        { href: "/laporan", label: "Laporan", icon: FileText },
-      ],
-    },
-    {
-      label: "SISTEM",
-      links: [
-        { href: "/pengaturan", label: "Pengaturan", icon: Settings },
-        { href: "/backup", label: "Backup & Restore", icon: DatabaseBackup, badgeKey: "backup" },
-        { href: "/lisensi", label: "Lisensi", icon: ShieldCheck, badgeKey: "lisensi" },
-      ],
-    },
-  ];
-
-  const adminLinks: NavLink[] = [
-    { href: "/admin/dashboard", label: "Dashboard Global", icon: LayoutDashboard },
-    { href: "/admin/usaha", label: "Daftar Usaha", icon: Building2 },
-    { href: "/admin/owners", label: "Kelola Owner", icon: Users },
-    { href: "/admin/lisensi", label: "Lisensi Key", icon: KeyRound },
-  ];
-
-  const renderLink = (link: NavLink) => {
-    const isActive = location === link.href || location.startsWith(`${link.href}/`);
-    const Icon = link.icon;
-
-    let badge: { text: string; className: string } | null = null;
-
-    if (!isSuperAdmin && link.badgeKey === "backup" && daysWithoutBackup !== null) {
-      badge = daysWithoutBackup >= 7
-        ? { text: "Perlu", className: "bg-amber-100 text-amber-700" }
-        : { text: "Aman", className: "bg-emerald-100 text-emerald-700" };
-    }
-    if (!isSuperAdmin && link.badgeKey === "lisensi" && licenseStatus) {
-      if (!licenseStatus.aktif || licenseStatus.jam_dimanipulasi) {
-        badge = { text: "Mati", className: "bg-red-100 text-red-700" };
-      } else if ((licenseStatus.sisa_hari ?? 0) <= 7) {
-        badge = { text: `${licenseStatus.sisa_hari}h`, className: "bg-orange-100 text-orange-700" };
-      }
-    }
-    // ── D1: Badge angka untuk stok rendah, upah belum lunas, hutang jatuh tempo
-    if (link.badgeKey === "stok" && (barangPeringatan?.length ?? 0) > 0) {
-      badge = {
-        text: String(barangPeringatan!.length),
-        className: "bg-amber-100 text-amber-700",
-      };
-    }
-    if (link.badgeKey === "upah" && (upahBelumLunas?.length ?? 0) > 0) {
-      badge = {
-        text: String(upahBelumLunas!.length),
-        className: "bg-orange-100 text-orange-700",
-      };
-    }
-    if (link.badgeKey === "hutang_tempo" && hutangJatuhTempo > 0) {
-      badge = {
-        text: String(hutangJatuhTempo),
-        className: "bg-red-100 text-red-700",
-      };
-    }
-
-    return (
-      <Link key={link.href} href={link.href}>
-        <div className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
-          isActive
-            ? "bg-white/14 text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]"
-            : "text-sidebar-foreground/72 hover:bg-white/8 hover:text-white"
-        }`}>
-          {isActive && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.8)]" />}
-          <div className={`grid h-8 w-8 place-items-center rounded-lg transition-colors ${isActive ? "bg-white/14" : "bg-white/5 group-hover:bg-white/10"}`}>
-            <Icon className="h-4.5 w-4.5" />
-          </div>
-          <span className="flex-1 text-sm">{link.label}</span>
-          {badge && (
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm ${badge.className}`}>
-              {badge.text}
-            </span>
-          )}
-        </div>
-      </Link>
-    );
-  };
-
-  // ── A3: Profil di footer sidebar ──────────────────────────────────────────
-  const FooterArea = () => (
-    <div className="mx-2 mt-3 space-y-1 border-t border-white/10 pt-3">
-      {/* E: Tombol Bantuan */}
-      <button
-        onClick={() => setHelpOpen(true)}
-        className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sidebar-foreground/72 hover:bg-white/8 hover:text-white cursor-pointer"
-      >
-        <HelpCircle className="h-5 w-5" />
-        <span>Bantuan</span>
-      </button>
-
-      {/* A3: Profil pindah ke footer */}
-      <Link href="/profil">
-        <div className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
-          location === "/profil"
-            ? "bg-white/14 text-white font-semibold"
-            : "text-sidebar-foreground/72 hover:bg-white/8 hover:text-white"
-        }`}>
-          <UserCircle className="h-5 w-5" />
-          <span className="flex-1 truncate">{user?.nama ?? "Profil"}</span>
-        </div>
-      </Link>
-
-      {window.electronApp && (
-        <div className="rounded-xl bg-white/5 px-3 py-2.5">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-sidebar-foreground/60">
-              Versi {appVersion ?? "..."}
-            </span>
-          </div>
-          <button
-            onClick={handleCheckUpdate}
-            disabled={checking}
-            className="flex w-full items-center gap-2 text-xs text-sidebar-foreground/70 hover:text-white transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
-            <span>{checking ? "Memeriksa..." : "Cek Pembaruan"}</span>
-          </button>
-          {checkResult && (
-            <p className="text-xs text-sidebar-foreground/50 mt-1 pl-5">{checkResult}</p>
-          )}
-        </div>
-      )}
-
-      <button
-        onClick={handleLogout}
-        disabled={logoutMutation.isPending}
-        className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-red-200 hover:bg-red-500/12 hover:text-red-100 cursor-pointer"
-      >
-        <LogOut className="h-5 w-5" />
-        <span>Keluar</span>
-      </button>
-    </div>
-  );
-
-  const NavLinks = () => (
-    <div className="py-3 space-y-1">
-      {isSuperAdmin ? (
-        <div className="space-y-1 px-0">
-          {adminLinks.map(renderLink)}
-        </div>
-      ) : (
-        ownerGroups.map((group) => (
-          <div key={group.label} className="mb-2">
-            <p className="px-3 pt-3 pb-1 text-[10px] font-extrabold tracking-[0.18em] text-sidebar-foreground/40 uppercase">
-              {group.label}
-            </p>
-            <div className="space-y-1">
-              {group.links.map(renderLink)}
-            </div>
-          </div>
-        ))
-      )}
-      <FooterArea />
+  // Content navigasi yang dipakai bersama di Desktop Sidebar dan Mobile Drawer
+  const NavContent = (
+    <div className="py-2">
+      <SidebarNavLinks
+        isSuperAdmin={isSuperAdmin}
+        location={location}
+        licenseStatus={licenseStatus}
+        daysWithoutBackup={daysWithoutBackup}
+        stokPeringatanCount={stokPeringatanCount}
+        upahBelumLunasCount={upahBelumLunasCount}
+        hutangJatuhTempoCount={hutangJatuhTempoCount}
+      />
+      <SidebarFooter
+        user={user}
+        location={location}
+        appVersion={appVersion}
+        checking={checking}
+        checkResult={checkResult}
+        isLoggingOut={logoutMutation.isPending}
+        onOpenHelp={() => setHelpOpen(true)}
+        onCheckUpdate={handleCheckUpdate}
+        onLogout={handleLogout}
+      />
     </div>
   );
 
@@ -444,114 +173,26 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-2 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-white/15 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-          <NavLinks />
+          {NavContent}
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col md:pl-64 min-w-0">
         <UpdateBanner />
-        {/* Banner status lisensi */}
-        {showLisensiBanner && lisensiMati && (
-          <div className="flex items-center gap-3 px-4 py-2 bg-red-50 border-b border-red-200 text-red-800 text-sm no-print">
-            <ShieldOff className="h-4 w-4 flex-shrink-0 text-red-600" />
-            <span className="flex-1">
-              {licenseStatus?.jam_dimanipulasi
-                ? "Tanggal sistem terdeteksi dimundurkan. Betulkan tanggal lalu klik Cek Ulang."
-                : "Lisensi tidak aktif — fitur tambah, edit, dan hapus data tidak tersedia."}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs border-red-400 text-red-700 hover:bg-red-100 flex-shrink-0"
-              onClick={handleRecheckLisensi}
-              disabled={recheckingLisensi}
-            >
-              <RefreshCw className={`h-3 w-3 mr-1 ${recheckingLisensi ? "animate-spin" : ""}`} />
-              Cek Ulang
-            </Button>
-            {!licenseStatus?.jam_dimanipulasi && (
-              <Link href="/lisensi">
-                <Button size="sm" variant="outline" className="h-7 text-xs border-red-400 text-red-700 hover:bg-red-100 flex-shrink-0">
-                  Aktivasi Sekarang
-                </Button>
-              </Link>
-            )}
-          </div>
-        )}
-        {showLisensiBanner && lisensiNearExpiry && (
-          <div className="flex items-center gap-3 px-4 py-2 bg-orange-50 border-b border-orange-200 text-orange-800 text-sm no-print">
-            <ShieldAlert className="h-4 w-4 flex-shrink-0 text-orange-600" />
-            <span className="flex-1">
-              Lisensi habis dalam <strong>{licenseStatus?.sisa_hari} hari</strong>. Segera perpanjang agar fitur tetap berjalan.
-            </span>
-            <Link href="/lisensi">
-              <Button size="sm" variant="outline" className="h-7 text-xs border-orange-400 text-orange-700 hover:bg-orange-100 flex-shrink-0">
-                Perpanjang
-              </Button>
-            </Link>
-          </div>
-        )}
-        {/* Banner pengingat backup */}
-        {!isSuperAdmin && !backupReminderDismissed && daysWithoutBackup !== null && daysWithoutBackup >= 7 && location !== "/backup" && (
-          <div className="flex items-center gap-3 px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm no-print">
-            <DatabaseBackup className="h-4 w-4 flex-shrink-0 text-amber-600" />
-            <span className="flex-1">
-              {daysWithoutBackup >= 999
-                ? "Anda belum pernah melakukan backup data."
-                : `Backup terakhir ${daysWithoutBackup} hari lalu.`}
-              {" "}Segera backup agar data tidak hilang.
-            </span>
-            <Link href="/backup">
-              <Button size="sm" variant="outline" className="h-7 text-xs border-amber-400 text-amber-700 hover:bg-amber-100 flex-shrink-0">
-                Backup Sekarang
-              </Button>
-            </Link>
-            <button
-              onClick={() => setBackupReminderDismissed(true)}
-              className="text-amber-500 hover:text-amber-700 flex-shrink-0"
-              aria-label="Tutup"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-        {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between p-4 border-b bg-white/85 backdrop-blur-xl no-print h-16 sticky top-0 z-10 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md">
-              <BookOpen className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-xl font-extrabold text-primary">Usahaku</h1>
-              <p className="text-[10px] text-muted-foreground leading-tight">by KetanTech</p>
-            </div>
-          </div>
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="rounded-xl bg-white/70">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] p-0 bg-sidebar text-sidebar-foreground border-sidebar-border">
-              <div className="relative overflow-hidden border-b border-white/10 p-4">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(110,231,183,0.22),transparent_55%)]" />
-                <div className="relative flex items-center gap-3">
-                  <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white/12 ring-1 ring-white/15">
-                    <BookOpen className="h-5 w-5 text-emerald-200" />
-                  </div>
-                  <div>
-                    <h1 className="text-xl font-extrabold text-white">Usahaku</h1>
-                    <p className="text-[10px] text-sidebar-foreground/55">by KetanTech</p>
-                  </div>
-                </div>
-              </div>
-              <div className="px-3 py-2">
-                <NavLinks />
-              </div>
-            </SheetContent>
-          </Sheet>
-        </header>
+
+        <LicenseBanner
+          licenseStatus={licenseStatus}
+          isSuperAdmin={isSuperAdmin}
+          location={location}
+          recheckingLisensi={recheckingLisensi}
+          onRecheckLisensi={handleRecheckLisensi}
+          backupReminderDismissed={backupReminderDismissed}
+          daysWithoutBackup={daysWithoutBackup}
+          onDismissBackupReminder={() => setBackupReminderDismissed(true)}
+        />
+
+        <MobileHeader>{NavContent}</MobileHeader>
 
         {/* Page Content */}
         <div className="flex-1 overflow-auto p-4 md:p-7">
@@ -563,7 +204,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </main>
 
-      {/* E: Help dialog */}
+      {/* Help Dialog */}
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
     </div>
   );

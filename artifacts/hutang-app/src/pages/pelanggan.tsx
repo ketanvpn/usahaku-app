@@ -18,6 +18,7 @@ import { Loader2, Plus, Edit, Trash2, Eye, Search } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useLicense } from "@/context/license-context";
 import { getErrorMessage } from "@/lib/format";
+import { PageHero } from "@/components/ui/page-hero";
 
 const pelangganSchema = z.object({
   nama: z.string().min(1, { message: "Nama wajib diisi" }),
@@ -117,16 +118,16 @@ export default function PelangganPage() {
 
   return (
     <div className="space-y-6">
-      <div className="page-hero flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h2 className="page-hero-title">Daftar Pelanggan</h2>
-          <p className="page-hero-description">Kelola identitas, kontak, alamat, dan catatan pelanggan dalam satu tempat.</p>
-        </div>
-        <Button onClick={() => handleOpenDialog()} disabled={!lisensiAktif} className="shadow-lg shadow-primary/15">
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Pelanggan
-        </Button>
-      </div>
+      <PageHero
+        title="Daftar Pelanggan"
+        description="Kelola identitas, kontak, alamat, dan catatan pelanggan dalam satu tempat."
+        actions={
+          <Button onClick={() => handleOpenDialog()} disabled={!lisensiAktif} className="shadow-lg shadow-primary/15">
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Pelanggan
+          </Button>
+        }
+      />
 
       <div className="toolbar-card">
         <div className="relative">
@@ -141,7 +142,7 @@ export default function PelangganPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent aria-describedby={undefined} className="rounded-2xl border bg-card/95 shadow-2xl sm:max-w-lg">
+        <DialogContent aria-describedby={undefined}>
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-xl font-extrabold tracking-tight">{editingPelanggan ? "Edit Pelanggan" : "Tambah Pelanggan"}</DialogTitle>
           </DialogHeader>

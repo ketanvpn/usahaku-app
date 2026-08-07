@@ -3,6 +3,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetUsaha, getGetUsahaQueryKey } from "@workspace/api-client-react";
+import {
+  fetchKeuanganList,
+  fetchRekapKeuangan,
+  fetchRekapKategoriKeuangan,
+  fetchRekapBulananKeuangan,
+  createKeuangan,
+  updateKeuangan,
+  deleteKeuangan,
+  type KeuanganItem,
+  type RekapKeuangan,
+  type RekapKategoriKeuangan,
+  type RekapBulananKeuangan,
+} from "@/lib/api-keuangan";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -23,74 +36,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import * as z from "zod";
 import { formatRupiah, formatDate, escapeHtml } from "@/lib/format";
 import { openPrintWindow } from "@/lib/print";
+import { PageHero } from "@/components/ui/page-hero";
+import { StatCard } from "@/components/ui/stat-card";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
-
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-interface KeuanganItem {
-  id: number;
-  tanggal: string;
-  tipe: "masuk" | "keluar";
-  kategori: string | null;
-  keterangan: string;
-  jumlah: number;
-}
-
-interface Rekap {
-  total_masuk: number;
-  total_keluar: number;
-  saldo: number;
-  jumlah_transaksi: number;
-}
-
-interface RekapKategori {
-  kategori: string;
-  tipe: string;
-  total: number;
-  jumlah_transaksi: number;
-}
-
-interface RekapBulanan {
-  bulan: number;
-  nama: string;
-  masuk: number;
-  keluar: number;
-}
-
-async function fetchKeuangan(params: { bulan: string; tahun: string; tipe: string }): Promise<KeuanganItem[]> {
-  const q = new URLSearchParams();
-  if (params.bulan) q.set("bulan", params.bulan);
-  if (params.tahun) q.set("tahun", params.tahun);
-  if (params.tipe && params.tipe !== "semua") q.set("tipe", params.tipe);
-  const r = await fetch(`${BASE}/api/keuangan?${q}`, { credentials: "include" });
-  if (!r.ok) throw new Error("Gagal memuat data keuangan");
-  return r.json();
-}
-
-async function fetchRekap(params?: { bulan?: string; tahun?: string }): Promise<Rekap> {
-  const q = new URLSearchParams();
-  if (params?.bulan) q.set("bulan", params.bulan);
-  if (params?.tahun) q.set("tahun", params.tahun);
-  const query = q.toString();
-  const r = await fetch(`${BASE}/api/keuangan/rekap${query ? `?${query}` : ""}`, { credentials: "include" });
-  if (!r.ok) throw new Error("Gagal memuat rekap");
-  return r.json();
-}
-
-async function fetchRekapKategori(params: { bulan: string; tahun: string }): Promise<RekapKategori[]> {
-  const q = new URLSearchParams({ bulan: params.bulan, tahun: params.tahun });
-  const r = await fetch(`${BASE}/api/keuangan/rekap-kategori?${q}`, { credentials: "include" });
-  if (!r.ok) throw new Error("Gagal memuat rekap kategori");
-  return r.json();
-}
-
-async function fetchRekapBulanan(tahun: string): Promise<RekapBulanan[]> {
-  const r = await fetch(`${BASE}/api/keuangan/rekap-bulanan?tahun=${tahun}`, { credentials: "include" });
-  if (!r.ok) throw new Error("Gagal memuat rekap bulanan");
-  return r.json();
-}
 
 const BULAN_NAMES = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
@@ -126,7 +76,7 @@ function handleExportCSV(items: KeuanganItem[], bulan: string, tahun: string) {
   URL.revokeObjectURL(url);
 }
 
-function handlePrint(items: KeuanganItem[], rekap: Rekap | undefined, bulan: string, tahun: string, namaUsaha: string) {
+function handlePrint(items: KeuanganItem[], rekap: RekapKeuangan | undefined, bulan: string, tahun: string, namaUsaha: string) {
   const namaBulan = BULAN_NAMES[parseInt(bulan) - 1];
   const tanggalCetak = new Intl.DateTimeFormat("id-ID", { day:"numeric", month:"long", year:"numeric" }).format(new Date());
 
@@ -205,27 +155,27 @@ export default function KeuanganPage() {
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["keuangan", filterParams],
-    queryFn: () => fetchKeuangan(filterParams),
+    queryFn: () => fetchKeuanganList(filterParams),
   });
 
   const { data: rekapPeriode } = useQuery({
     queryKey: ["keuangan-rekap", rekapParams],
-    queryFn: () => fetchRekap(rekapParams),
+    queryFn: () => fetchRekapKeuangan(rekapParams),
   });
 
   const { data: rekapTotal } = useQuery({
     queryKey: ["keuangan-rekap-total"],
-    queryFn: () => fetchRekap(),
+    queryFn: () => fetchRekapKeuangan(),
   });
 
   const { data: rekapKategori = [] } = useQuery({
     queryKey: ["keuangan-rekap-kategori", rekapParams],
-    queryFn: () => fetchRekapKategori(rekapParams),
+    queryFn: () => fetchRekapKategoriKeuangan(rekapParams),
   });
 
   const { data: rekapBulanan = [] } = useQuery({
     queryKey: ["keuangan-rekap-bulanan", filterTahun],
-    queryFn: () => fetchRekapBulanan(filterTahun),
+    queryFn: () => fetchRekapBulananKeuangan(filterTahun),
   });
 
   const invalidate = () => {
@@ -257,15 +207,10 @@ export default function KeuanganPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (values: KeuanganFormValues) => {
-      const url = editData ? `${BASE}/api/keuangan/${editData.id}` : `${BASE}/api/keuangan`;
-      const r = await fetch(url, {
-        method: editData ? "PUT" : "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || "Gagal menyimpan"); }
-      return r.json();
+      if (editData) {
+        return updateKeuangan(editData.id, values);
+      }
+      return createKeuangan(values);
     },
     onSuccess: () => { toast({ title: editData ? "Transaksi diperbarui" : "Transaksi ditambahkan" }); setDialogOpen(false); invalidate(); },
     onError: (e: Error) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
@@ -273,8 +218,7 @@ export default function KeuanganPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const r = await fetch(`${BASE}/api/keuangan/${id}`, { method: "DELETE", credentials: "include" });
-      if (!r.ok) throw new Error("Gagal menghapus");
+      return deleteKeuangan(id);
     },
     onSuccess: () => { toast({ title: "Transaksi dihapus" }); setDeleteId(null); invalidate(); },
     onError: (e: Error) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
@@ -291,64 +235,48 @@ export default function KeuanganPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="page-hero">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/75">Arus Kas Usaha</p>
-          <h1 className="page-hero-title mt-2">Pencatatan Keuangan</h1>
-          <p className="page-hero-description">Pantau uang masuk, uang keluar, saldo, grafik, dan rincian transaksi usaha dalam satu halaman.</p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" className="rounded-xl bg-background/80 shadow-sm" onClick={() => handleExportCSV(items, filterBulan, filterTahun)} disabled={items.length === 0}>
-            <Download className="h-4 w-4 mr-2" /> Unduh CSV
-          </Button>
-          <Button variant="outline" size="sm" className="rounded-xl bg-background/80 shadow-sm" onClick={() => handlePrint(items, rekapPeriode, filterBulan, filterTahun, namaUsaha)} disabled={items.length === 0}>
-            <Printer className="h-4 w-4 mr-2" /> Cetak
-          </Button>
-          <Button className="rounded-xl shadow-lg shadow-primary/20" onClick={openCreate} disabled={!lisensiAktif}>
-            <Plus className="h-4 w-4 mr-2" /> Tambah Transaksi
-          </Button>
-        </div>
-      </div>
+      <PageHero
+        eyebrow="Arus Kas Usaha"
+        title="Pencatatan Keuangan"
+        description="Pantau uang masuk, uang keluar, saldo, grafik, dan rincian transaksi usaha dalam satu halaman."
+        actions={
+          <>
+            <Button variant="outline" size="sm" className="rounded-xl bg-background/80 shadow-sm" onClick={() => handleExportCSV(items, filterBulan, filterTahun)} disabled={items.length === 0}>
+              <Download className="h-4 w-4 mr-2" /> Unduh CSV
+            </Button>
+            <Button variant="outline" size="sm" className="rounded-xl bg-background/80 shadow-sm" onClick={() => handlePrint(items, rekapPeriode, filterBulan, filterTahun, namaUsaha)} disabled={items.length === 0}>
+              <Printer className="h-4 w-4 mr-2" /> Cetak
+            </Button>
+            <Button className="rounded-xl shadow-lg shadow-primary/20" onClick={openCreate} disabled={!lisensiAktif}>
+              <Plus className="h-4 w-4 mr-2" /> Tambah Transaksi
+            </Button>
+          </>
+        }
+      />
 
       {/* Kartu Rekap */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="data-card border-green-200/70 bg-gradient-to-br from-green-50 to-emerald-50/70 dark:from-green-950/30 dark:to-emerald-950/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-2">
-              <span className="rounded-xl bg-green-500/10 p-2"><TrendingUp className="h-4 w-4" /></span> Total Masuk
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-green-700 dark:text-green-400">{formatRupiah(rekapTotal?.total_masuk ?? 0)}</p>
-            <p className="text-xs text-muted-foreground mt-1">Semua waktu</p>
-          </CardContent>
-        </Card>
-
-        <Card className="data-card border-red-200/70 bg-gradient-to-br from-red-50 to-rose-50/70 dark:from-red-950/30 dark:to-rose-950/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-2">
-              <span className="rounded-xl bg-red-500/10 p-2"><TrendingDown className="h-4 w-4" /></span> Total Keluar
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-red-700 dark:text-red-400">{formatRupiah(rekapTotal?.total_keluar ?? 0)}</p>
-            <p className="text-xs text-muted-foreground mt-1">Semua waktu</p>
-          </CardContent>
-        </Card>
-
-        <Card className={`data-card border-2 ${(rekapTotal?.saldo ?? 0) >= 0 ? "border-blue-200/70 bg-gradient-to-br from-blue-50 to-sky-50/70 dark:from-blue-950/30 dark:to-sky-950/10" : "border-orange-200/70 bg-gradient-to-br from-orange-50 to-amber-50/70 dark:from-orange-950/30 dark:to-amber-950/10"}`}>
-          <CardHeader className="pb-2">
-            <CardTitle className={`text-sm font-medium flex items-center gap-2 ${(rekapTotal?.saldo ?? 0) >= 0 ? "text-blue-700 dark:text-blue-400" : "text-orange-700 dark:text-orange-400"}`}>
-              <span className="rounded-xl bg-current/10 p-2"><Wallet className="h-4 w-4" /></span> Saldo
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className={`text-2xl font-bold ${(rekapTotal?.saldo ?? 0) >= 0 ? "text-blue-700 dark:text-blue-400" : "text-orange-700 dark:text-orange-400"}`}>
-              {formatRupiah(rekapTotal?.saldo ?? 0)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">{rekapTotal?.jumlah_transaksi ?? 0} transaksi</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Masuk"
+          value={formatRupiah(rekapTotal?.total_masuk ?? 0)}
+          subtitle="Semua waktu"
+          variant="success"
+          icon={<TrendingUp className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Total Keluar"
+          value={formatRupiah(rekapTotal?.total_keluar ?? 0)}
+          subtitle="Semua waktu"
+          variant="danger"
+          icon={<TrendingDown className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Saldo"
+          value={formatRupiah(rekapTotal?.saldo ?? 0)}
+          subtitle={`${rekapTotal?.jumlah_transaksi ?? 0} transaksi`}
+          variant={(rekapTotal?.saldo ?? 0) >= 0 ? "info" : "warning"}
+          icon={<Wallet className="h-5 w-5" />}
+        />
       </div>
 
       {/* Grafik Bulanan */}
