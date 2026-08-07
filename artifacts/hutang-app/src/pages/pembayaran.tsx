@@ -739,8 +739,6 @@ export default function PembayaranPage() {
                 )}
               </div>
             )}
-              </div>
-            )}
 
             {/* Preview Distribusi Realtime */}
             {distribusiPreview.length > 0 && (
