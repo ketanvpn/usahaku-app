@@ -3,9 +3,8 @@ import { Link } from "wouter";
 import {
   useGetPembayaranList, useDeletePembayaran, useGetPelangganList, useGetHutangList,
   getGetPembayaranListQueryKey, getGetHutangListQueryKey, Pembayaran, Hutang,
-  useGetBarangList
 } from "@workspace/api-client-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { PelangganCombobox } from "@/components/pelanggan-combobox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { formatRupiah, formatDate, escapeHtml, getErrorMessage } from "@/lib/format";
-import { Loader2, Plus, Trash2, Filter, Printer, ArrowRight, CheckCircle2, Clock } from "lucide-react";
+import { Loader2, Plus, Trash2, Filter, Printer, ArrowRight, CheckCircle2, Clock, Package } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useLicense } from "@/context/license-context";
 import { useAuth } from "@/hooks/use-auth";
@@ -304,7 +303,15 @@ export default function PembayaranPage() {
 
   const { data: pembayaranList, isLoading } = useGetPembayaranList({ pelanggan_id: filterPelanggan });
   const { data: pelangganList } = useGetPelangganList();
-  const { data: barangList } = useGetBarangList();
+  const BASE = import.meta.env.VITE_API_BASE ?? "";
+  const { data: barangList } = useQuery<Array<{ id: number; nama: string; satuan: string; harga_beli: number; harga_jual: number; stok: number }>>({
+    queryKey: ["barang"],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/barang`, { credentials: "include" });
+      if (!r.ok) throw new Error("Gagal memuat barang");
+      return r.json();
+    },
+  });
   const { data: hutangAktifList } = useGetHutangList(
     { pelanggan_id: formPelangganId || undefined, status: "aktif" },
     { query: { enabled: !!formPelangganId, queryKey: getGetHutangListQueryKey({ pelanggan_id: formPelangganId || undefined, status: "aktif" }) } }
