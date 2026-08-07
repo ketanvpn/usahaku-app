@@ -4,6 +4,9 @@ import { useGetMe, User, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
+export type { User };
+export type UserRole = "super_admin" | "owner";
+
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 interface AuthContextType {

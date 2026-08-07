@@ -54,96 +54,6 @@ function normalizeKey(str: string): string {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, "").trim();
 }
 
-// ── Kwitansi helpers ──────────────────────────────────────────────────────────
-
-interface KwitansiUpahData {
-  type: "single" | "batch";
-  pekerja_nama: string;
-  pekerja_jabatan: string;
-  keterangan: string;
-  tanggal_bayar: string;
-  jumlah: number;
-  catatan: string;
-  namaUsaha: string;
-}
-
-function buildKwitansiUpahHtml(
-  d: KwitansiUpahData,
-  extras: { ctx: PrintContext; logoBase64: string | null },
-): string {
-  const { ctx, logoBase64 } = extras;
-  const noKwitansi = `KWT-UPAH-${Date.now().toString().slice(-8)}`;
-  const judulKet = d.type === "batch" ? "Pembayaran seluruh upah tertunggak" : d.keterangan;
-
-  // Prefer nama dari context (data terbaru di app), fallback ke nama dari payload
-  // (snapshot saat tombol Bayar ditekan, sudah tertanam di KwitansiUpahData).
-  const namaUsaha = ctx.namaUsaha || d.namaUsaha || "Usaha";
-
-  const headerHtml = buildPrintHeaderHtml({
-    namaUsaha,
-    alamat: ctx.alamat,
-    telepon: ctx.telepon,
-    headerExtra: ctx.headerExtra,
-    logoBase64,
-    logoFilename: ctx.pengaturan?.logo_filename ?? null,
-    judul: "KWITANSI PEMBAYARAN UPAH",
-    meta: `No: ${noKwitansi} • Tgl: ${formatDate(d.tanggal_bayar)}`,
-  });
-
-  return `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
-<title>Kwitansi ${escapeHtml(noKwitansi)}</title>
-<style>
-@page { size: A5 landscape; margin: 8mm 10mm; }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #111; background: white; width: 182mm; }
-.wrap { border: 1.5px solid #333; border-radius: 3px; padding: 10px 14px; }
-${getDefaultPrintHeaderCss()}
-/* Override print header: kompak untuk A5 landscape */
-.print-header { padding-bottom: 6px; margin-bottom: 8px; border-bottom: 1px solid #333; }
-.print-logo { max-height: 40px; margin-bottom: 2px; }
-.print-nama-usaha { font-size: 13pt; }
-.print-alamat, .print-telepon, .print-header-extra { font-size: 8.5pt; }
-.print-judul { font-size: 11pt; margin-top: 3px; }
-.print-meta { font-size: 8pt; }
-table.detail { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 9pt; }
-table.detail td { padding: 2px 4px; vertical-align: top; }
-table.detail td:first-child { font-weight: 600; width: 110px; white-space: nowrap; }
-table.detail td.colon { width: 10px; }
-.nominal-box { margin-top: 10px; background: #f5f5f5; border: 1px solid #bbb; border-radius: 3px; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center; }
-.nominal-label { font-size: 8pt; color: #555; }
-.nominal-value { font-size: 13pt; font-weight: bold; color: #1a1a1a; }
-.footer-kwt { margin-top: 10px; display: flex; justify-content: flex-end; }
-.ttd-box { text-align: center; width: 130px; }
-.ttd-space { height: 38px; border-bottom: 1px solid #999; margin-bottom: 3px; }
-.ttd-label { font-size: 7.5pt; color: #555; }
-.bottom-note { margin-top: 7px; border-top: 1px dashed #bbb; padding-top: 6px; text-align: center; font-size: 7pt; color: #777; }
-</style>
-<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},600);});<\/script>
-</head><body>
-<div class="wrap">
-  ${headerHtml}
-  <table class="detail">
-    <tr><td>Nama Pekerja</td><td class="colon">:</td><td><strong>${escapeHtml(d.pekerja_nama)}</strong></td></tr>
-    ${d.pekerja_jabatan ? `<tr><td>Jabatan</td><td class="colon">:</td><td>${escapeHtml(d.pekerja_jabatan)}</td></tr>` : ""}
-    <tr><td>Keterangan</td><td class="colon">:</td><td>${escapeHtml(judulKet)}</td></tr>
-    <tr><td>Tanggal Bayar</td><td class="colon">:</td><td>${escapeHtml(formatDate(d.tanggal_bayar))}</td></tr>
-    ${d.catatan ? `<tr><td>Catatan</td><td class="colon">:</td><td>${escapeHtml(d.catatan)}</td></tr>` : ""}
-  </table>
-  <div class="nominal-box">
-    <span class="nominal-label">Jumlah Diterima</span>
-    <span class="nominal-value">${formatRupiah(d.jumlah)}</span>
-  </div>
-  <div class="footer-kwt">
-    <div class="ttd-box">
-      <div class="ttd-space"></div>
-      <div class="ttd-label">Tanda Tangan Pekerja</div>
-    </div>
-  </div>
-  <div class="bottom-note">Simpan kwitansi ini sebagai bukti pembayaran upah.</div>
-</div>
-</body></html>`;
-}
-
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
 const pekerjaSchema = z.object({
@@ -208,6 +118,11 @@ export default function GajiTenagaPage() {
   const [selectedUpahId, setSelectedUpahId] = useState<number | null>(null);
   const [isBayarDialogOpen, setIsBayarDialogOpen] = useState(false);
   const [deletingUpahId, setDeletingUpahId] = useState<number | null>(null);
+
+  // ── Borongan state ─────────────────────────────────────────────────────────
+  const [isBoronganMode, setIsBoronganMode] = useState(false);
+  const [boronganVolume, setBoronganVolume] = useState("");
+  const [boronganTarif, setBoronganTarif] = useState("");
 
   // ── Pekerja state ───────────────────────────────────────────────────────────
   const [searchPekerja, setSearchPekerja] = useState("");
@@ -1069,7 +984,7 @@ export default function GajiTenagaPage() {
                           onValueChange={(val) => {
                             setBoronganTarif(String(val));
                             const vol = parseFloat(boronganVolume) || 0;
-                            upahForm.setValue("jumlah_total", vol * val);
+                            upahForm.setValue("jumlah_total", vol * (Number(val) || 0));
                           }}
                           minValue={0}
                         />
