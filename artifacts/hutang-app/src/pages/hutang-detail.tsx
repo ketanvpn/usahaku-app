@@ -1,27 +1,39 @@
 import { useState } from "react";
 import { useRoute } from "wouter";
 import { 
-  useGetHutang, useDeletePembayaran,
-  getGetHutangQueryKey, getGetHutangListQueryKey, getGetPembayaranListQueryKey, getGetOwnerDashboardQueryKey
+  useGetHutang, useDeletePembayaran, useGetUsaha, useGetPelanggan,
+  getGetHutangQueryKey, getGetHutangListQueryKey, getGetPembayaranListQueryKey, getGetOwnerDashboardQueryKey, getGetUsahaQueryKey, getGetPelangganQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { formatRupiah, formatDate, getErrorMessage } from "@/lib/format";
+import { buildWhatsAppReminderUrl } from "@/lib/whatsapp";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Loader2, ArrowLeft, Calendar, FileText, User, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, Calendar, FileText, User, Trash2, MessageCircle } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
 export default function HutangDetail() {
+  const { user } = useAuth();
   const [, params] = useRoute("/hutang/:id");
   const id = parseInt(params?.id || "0");
 
   const { data, isLoading } = useGetHutang(id, {
     query: { enabled: !!id, queryKey: getGetHutangQueryKey(id) }
   });
+
+  const { data: pelangganData } = useGetPelanggan(data?.pelanggan_id ?? 0, {
+    query: { enabled: !!data?.pelanggan_id, queryKey: getGetPelangganQueryKey(data?.pelanggan_id ?? 0) }
+  });
+
+  const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, {
+    query: { enabled: !!user?.usaha_id, queryKey: getGetUsahaQueryKey(user?.usaha_id ?? 0) }
+  });
+  const namaUsaha = usahaData?.nama_usaha ?? "Usahaku";
 
   const [isDeletePayDialogOpen, setIsDeletePayDialogOpen] = useState(false);
   const [selectedPayId, setSelectedPayId] = useState<number | null>(null);
@@ -125,10 +137,34 @@ export default function HutangDetail() {
               <span className="text-xl font-bold text-orange-600">{formatRupiah(data.sisa_hutang)}</span>
             </div>
             {data.status === "aktif" && (
-              <div className="pt-4">
-                <Link href="/pembayaran" className="block">
+              <div className="flex flex-col gap-2 pt-4 sm:flex-row">
+                <Link href="/pembayaran" className="flex-1">
                   <Button className="w-full">Catat Pembayaran</Button>
                 </Link>
+                <a
+                  href={buildWhatsAppReminderUrl({
+                    telepon: pelangganData?.telepon,
+                    namaPelanggan: data.pelanggan_nama,
+                    namaUsaha,
+                    nominalHutang: data.nominal_hutang,
+                    sisaHutang: data.sisa_hutang,
+                    tanggalHutang: data.tanggal_hutang,
+                    tanggalJatuhTempo: data.tanggal_jatuh_tempo,
+                    keterangan: data.keterangan,
+                  })}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1"
+                >
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10 hover:text-emerald-800 dark:text-emerald-400"
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Kirim Tagihan via WA
+                  </Button>
+                </a>
               </div>
             )}
           </CardContent>

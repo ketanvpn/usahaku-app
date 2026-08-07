@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import {
   useGetPembayaranList, useDeletePembayaran, useGetPelangganList, useGetHutangList,
-  getGetPembayaranListQueryKey, getGetHutangListQueryKey, Pembayaran, Hutang
+  getGetPembayaranListQueryKey, getGetHutangListQueryKey, Pembayaran, Hutang,
+  useGetBarangList
 } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -296,9 +297,14 @@ export default function PembayaranPage() {
   const [nominalTotal, setNominalTotal] = useState<string>("");
   const [tanggalBayar, setTanggalBayar] = useState(new Date().toISOString().split("T")[0]!);
   const [catatan, setCatatan] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"tunai" | "barter">("tunai");
+  const [barterBarangId, setBarterBarangId] = useState<number | null>(null);
+  const [barterHargaSatuan, setBarterHargaSatuan] = useState<string>("");
+  const [barterKuantitas, setBarterKuantitas] = useState<string>("");
 
   const { data: pembayaranList, isLoading } = useGetPembayaranList({ pelanggan_id: filterPelanggan });
   const { data: pelangganList } = useGetPelangganList();
+  const { data: barangList } = useGetBarangList();
   const { data: hutangAktifList } = useGetHutangList(
     { pelanggan_id: formPelangganId || undefined, status: "aktif" },
     { query: { enabled: !!formPelangganId, queryKey: getGetHutangListQueryKey({ pelanggan_id: formPelangganId || undefined, status: "aktif" }) } }
@@ -338,9 +344,14 @@ export default function PembayaranPage() {
   }, [hutangDipilih]);
 
   const nominalAngka = useMemo(() => {
+    if (paymentMethod === "barter") {
+      const vol = parseFloat(barterKuantitas) || 0;
+      const harga = parseFloat(barterHargaSatuan) || 0;
+      return vol * harga;
+    }
     const n = parseFloat(nominalTotal);
     return isNaN(n) ? 0 : n;
-  }, [nominalTotal]);
+  }, [nominalTotal, paymentMethod, barterKuantitas, barterHargaSatuan]);
 
   const distribusiPreview = useMemo(() => {
     if (hutangDipilih.length === 0 || nominalAngka <= 0) return [];
@@ -359,7 +370,7 @@ export default function PembayaranPage() {
   }, [nominalAngka, selectedHutangIds.size, totalSisaDipilih]);
 
   const batchMutation = useMutation({
-    mutationFn: async (body: { hutang_ids: number[]; tanggal_bayar: string; nominal_total: number; catatan?: string }) => {
+    mutationFn: async (body: { hutang_ids: number[]; tanggal_bayar: string; nominal_total: number; catatan?: string; barter?: { barang_id: number; kuantitas: number; harga_satuan: number; } }) => {
       const res = await fetch("/api/pembayaran/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -376,6 +387,7 @@ export default function PembayaranPage() {
       queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
       queryClient.invalidateQueries({ queryKey: ["keuangan"] });
       queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
+      queryClient.invalidateQueries({ queryKey: ["barang"] });
       setIsDialogOpen(false);
       setBatchResult(data);
     },
@@ -390,6 +402,10 @@ export default function PembayaranPage() {
     setNominalTotal("");
     setTanggalBayar(new Date().toISOString().split("T")[0]!);
     setCatatan("");
+    setPaymentMethod("tunai");
+    setBarterBarangId(null);
+    setBarterHargaSatuan("");
+    setBarterKuantitas("");
     setIsDialogOpen(true);
   };
 
@@ -434,11 +450,32 @@ export default function PembayaranPage() {
       toast({ variant: "destructive", title: "Nominal melebihi total sisa hutang yang dipilih" });
       return;
     }
+
+    let barterPayload = undefined;
+    if (paymentMethod === "barter") {
+      if (!barterBarangId) {
+        toast({ variant: "destructive", title: "Pilih barang komoditas untuk barter" });
+        return;
+      }
+      const vol = parseFloat(barterKuantitas);
+      const harga = parseFloat(barterHargaSatuan);
+      if (isNaN(vol) || vol <= 0 || isNaN(harga) || harga <= 0) {
+        toast({ variant: "destructive", title: "Kuantitas dan harga barter harus diisi dengan angka valid" });
+        return;
+      }
+      barterPayload = {
+        barang_id: barterBarangId,
+        kuantitas: vol,
+        harga_satuan: harga,
+      };
+    }
+
     batchMutation.mutate({
       hutang_ids: Array.from(selectedHutangIds),
       tanggal_bayar: tanggalBayar,
       nominal_total: nominalAngka,
       catatan: catatan || undefined,
+      barter: barterPayload,
     });
   };
 
@@ -581,45 +618,127 @@ export default function PembayaranPage() {
               </div>
             )}
 
-            {/* Step 3: Nominal Bayar */}
+            {/* Step 3: Metode & Nominal Bayar */}
             {selectedHutangIds.size > 0 && (
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">3. Nominal yang Dibayar (Rp)</label>
-                <CurrencyInput
-                  minValue={1}
-                  maxValue={totalSisaDipilih}
-                  value={nominalTotal}
-                  onValueChange={setNominalTotal}
-                  placeholder="Masukkan jumlah yang dibayar..."
-                />
-                <div className="flex flex-wrap gap-2">
-                  <CurrencyQuickAdd
-                    className="contents"
-                    onAdd={(nominal) => {
-                      const current = Number(nominalTotal) || 0;
-                      setNominalTotal(String(Math.min(totalSisaDipilih, current + nominal)));
-                    }}
-                    isDisabled={(nominal) => nominal > totalSisaDipilih}
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => setNominalTotal(String(totalSisaDipilih))}
-                    disabled={totalSisaDipilih <= 0}
-                  >
-                    Pas
-                  </Button>
+              <div className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">3. Metode Pembayaran</label>
+                  <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as "tunai" | "barter")}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tunai">Tunai / Transfer (Uang)</SelectItem>
+                      <SelectItem value="barter">Setor Hasil Panen (Barter Komoditas)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Maksimal: {formatRupiah(totalSisaDipilih)} — boleh dikurangi, sistem akan otomatis bayar dari nota terlama.
-                </p>
-                {nominalAngka > totalSisaDipilih + 0.01 && (
-                  <p className="text-xs text-destructive font-medium">
-                    Nominal melebihi total sisa hutang yang dipilih!
-                  </p>
+
+                {paymentMethod === "barter" ? (
+                  <div className="space-y-4 rounded-xl border bg-amber-50/50 p-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-amber-800">
+                      <Package className="h-4 w-4" /> Informasi Setor Hasil Panen
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium">Pilih Barang Komoditas</label>
+                        <Select 
+                          value={String(barterBarangId)} 
+                          onValueChange={(v) => {
+                            const id = Number(v);
+                            setBarterBarangId(id);
+                            const selected = barangList?.find(b => b.id === id);
+                            if (selected) {
+                              setBarterHargaSatuan(String(selected.harga_beli)); // Default ke harga beli/tengkulak
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Pilih komoditas..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {barangList?.map(b => (
+                              <SelectItem key={b.id} value={String(b.id)}>{b.nama} ({b.satuan})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium">Harga per Satuan</label>
+                        <CurrencyInput
+                          value={barterHargaSatuan}
+                          onValueChange={(val) => setBarterHargaSatuan(String(val))}
+                          placeholder="Rp..."
+                          className="bg-white"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium">Kuantitas Disetorkan</label>
+                      <Input 
+                        type="number" 
+                        min="0" 
+                        step="any"
+                        placeholder="Misal: 1500 (kg)" 
+                        value={barterKuantitas}
+                        onChange={(e) => setBarterKuantitas(e.target.value)}
+                        className="bg-white"
+                      />
+                    </div>
+                    
+                    <div className="flex justify-between items-center rounded-lg bg-white p-2.5 px-3 border border-amber-200">
+                      <span className="text-sm font-medium text-amber-900">Nilai Dikonversi:</span>
+                      <span className="font-bold text-amber-700 text-lg">
+                        {formatRupiah((parseFloat(barterKuantitas) || 0) * (parseFloat(barterHargaSatuan) || 0))}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Nilai konversi akan otomatis digunakan untuk melunasi sisa hutang yang dipilih sebesar <b>{formatRupiah(totalSisaDipilih)}</b>. Kelebihan setoran (jika ada) tidak dikembalikan sebagai kembalian tunai di sistem ini. Stok komoditas akan otomatis bertambah.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">3. Nominal yang Dibayar (Rp)</label>
+                    <CurrencyInput
+                      minValue={1}
+                      maxValue={totalSisaDipilih}
+                      value={nominalTotal}
+                      onValueChange={setNominalTotal}
+                      placeholder="Masukkan jumlah yang dibayar..."
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <CurrencyQuickAdd
+                        className="contents"
+                        onAdd={(nominal) => {
+                          const current = Number(nominalTotal) || 0;
+                          setNominalTotal(String(Math.min(totalSisaDipilih, current + nominal)));
+                        }}
+                        isDisabled={(nominal) => nominal > totalSisaDipilih}
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setNominalTotal(String(totalSisaDipilih))}
+                        disabled={totalSisaDipilih <= 0}
+                      >
+                        Pas
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Maksimal: {formatRupiah(totalSisaDipilih)} — boleh dikurangi, sistem akan otomatis bayar dari nota terlama.
+                    </p>
+                    {nominalAngka > totalSisaDipilih + 0.01 && (
+                      <p className="text-xs text-destructive font-medium">
+                        Nominal melebihi total sisa tagihan!
+                      </p>
+                    )}
+                  </div>
                 )}
+              </div>
+            )}
               </div>
             )}
 

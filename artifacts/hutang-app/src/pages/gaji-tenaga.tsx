@@ -29,12 +29,15 @@ import { formatRupiah, formatDate, escapeHtml } from "@/lib/format";
 import { openPrintWindow } from "@/lib/print";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Loader2, Plus, Edit, Trash2, Search, HardHat, Banknote, Users, TrendingDown, Clock, Download, Printer, Link2, Link2Off } from "lucide-react";
 import { useLicense } from "@/context/license-context";
 import { useAuth } from "@/hooks/use-auth";
-import { usePrintContext, loadLogoForPrint, type PrintContext } from "@/hooks/use-print-context";
-import { buildPrintHeaderHtml, getDefaultPrintHeaderCss } from "@/lib/struk";
+import { usePrintContext, loadLogoForPrint } from "@/hooks/use-print-context";
+import { buildKwitansiUpahHtml, type KwitansiUpahData } from "@/components/gaji/kwitansi-print";
+import { PekerjaModal, type PekerjaFormValues } from "@/components/gaji/pekerja-modal";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -1022,20 +1025,79 @@ export default function GajiTenagaPage() {
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={upahForm.control} name="jumlah_total" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Total Gaji <span className="text-destructive">*</span></FormLabel>
-                  <FormControl>
-                    <CurrencyInput
-                      minValue={1}
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      placeholder="0"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              
+              <div className="rounded-xl border bg-slate-50/50 p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <FormLabel className="text-sm font-semibold text-slate-800">Mode Borongan (Hitung Otomatis)</FormLabel>
+                  <Switch
+                    checked={isBoronganMode}
+                    onCheckedChange={(checked) => {
+                      setIsBoronganMode(checked);
+                      if (!checked) {
+                        upahForm.setValue("jumlah_total", 0);
+                        setBoronganVolume("");
+                        setBoronganTarif("");
+                      }
+                    }}
+                  />
+                </div>
+                
+                {isBoronganMode ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Volume / Kuantitas</Label>
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          step="any"
+                          placeholder="Misal: 3.5"
+                          value={boronganVolume}
+                          onChange={(e) => {
+                            setBoronganVolume(e.target.value);
+                            const vol = parseFloat(e.target.value) || 0;
+                            const trf = parseFloat(boronganTarif) || 0;
+                            upahForm.setValue("jumlah_total", vol * trf);
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Tarif per Satuan</Label>
+                        <CurrencyInput
+                          placeholder="Misal: 15000"
+                          value={boronganTarif}
+                          onValueChange={(val) => {
+                            setBoronganTarif(String(val));
+                            const vol = parseFloat(boronganVolume) || 0;
+                            upahForm.setValue("jumlah_total", vol * val);
+                          }}
+                          minValue={0}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center rounded-lg bg-slate-100 p-2 px-3 border border-slate-200">
+                      <span className="text-xs font-medium text-slate-600">Total Upah Otomatis:</span>
+                      <span className="font-bold text-primary">{formatRupiah(upahForm.watch("jumlah_total") || 0)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <FormField control={upahForm.control} name="jumlah_total" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Total Gaji <span className="text-destructive">*</span></FormLabel>
+                      <FormControl>
+                        <CurrencyInput
+                          minValue={1}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="0"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                )}
+              </div>
+
               <FormField control={upahForm.control} name="tanggal_kerja" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tanggal Kerja <span className="text-destructive">*</span></FormLabel>

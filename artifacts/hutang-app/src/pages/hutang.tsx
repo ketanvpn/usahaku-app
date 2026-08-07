@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Link } from "wouter";
 import {
   useGetHutangList, useCreateHutang, useUpdateHutang, useDeleteHutang, useGetPelangganList,
+  useGetUsaha, getGetUsahaQueryKey,
   getGetHutangListQueryKey, getGetPembayaranListQueryKey, getGetOwnerDashboardQueryKey, Hutang, GetHutangListStatus
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -22,10 +24,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { formatRupiah, formatDate, getErrorMessage } from "@/lib/format";
+import { buildWhatsAppReminderUrl } from "@/lib/whatsapp";
 import { Badge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { Loader2, Plus, Edit, Trash2, Eye, Filter, Search, FileText, CalendarClock } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Eye, Filter, Search, FileText, CalendarClock, MessageCircle } from "lucide-react";
 import { useLicense } from "@/context/license-context";
+import { PageHero } from "@/components/ui/page-hero";
 
 const hutangSchema = z.object({
   pelanggan_id: z.coerce.number().min(1, { message: "Pilih pelanggan" }),
@@ -64,6 +68,7 @@ function getJatuhTempoBadge(tanggalJatuhTempo: string | null | undefined, status
 }
 
 export default function HutangPage() {
+  const { user } = useAuth();
   const [filterStatus, setFilterStatus] = useState<GetHutangListStatus | undefined>(undefined);
   const [filterPelanggan, setFilterPelanggan] = useState<number | undefined>(undefined);
   const [search, setSearch] = useState("");
@@ -73,6 +78,11 @@ export default function HutangPage() {
     pelanggan_id: filterPelanggan
   });
   const { data: pelangganList } = useGetPelangganList();
+  const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, {
+    query: { enabled: !!user?.usaha_id, queryKey: getGetUsahaQueryKey(user?.usaha_id ?? 0) },
+  });
+  const namaUsaha = usahaData?.nama_usaha ?? "Usahaku";
+  const pelangganMap = new Map((pelangganList ?? []).map(p => [p.id, p]));
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -169,16 +179,16 @@ export default function HutangPage() {
 
   return (
     <div className="space-y-6">
-      <div className="page-hero flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h2 className="page-hero-title">Data Hutang</h2>
-          <p className="page-hero-description">Catat, pantau jatuh tempo, dan kelola sisa hutang pelanggan dengan lebih rapi.</p>
-        </div>
-        <Button onClick={() => handleOpenDialog()} disabled={!lisensiAktif} className="shadow-lg shadow-primary/15">
-          <Plus className="mr-2 h-4 w-4" />
-          Catat Hutang Baru
-        </Button>
-      </div>
+      <PageHero
+        title="Data Hutang"
+        description="Catat, pantau jatuh tempo, dan kelola sisa hutang pelanggan dengan lebih rapi."
+        actions={
+          <Button onClick={() => handleOpenDialog()} disabled={!lisensiAktif} className="shadow-lg shadow-primary/15">
+            <Plus className="mr-2 h-4 w-4" />
+            Catat Hutang Baru
+          </Button>
+        }
+      />
 
       <div className="toolbar-card flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="relative flex-1">
@@ -251,6 +261,43 @@ export default function HutangPage() {
                     <FormControl>
                       <Input type="date" {...field} value={field.value ?? ""} />
                     </FormControl>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-[10px]"
+                        onClick={() => {
+                          const date = new Date(updateForm.getValues("tanggal_hutang") || new Date());
+                          date.setDate(date.getDate() + 30);
+                          field.onChange(date.toISOString().split("T")[0]);
+                        }}
+                      >
+                        +30 Hari
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-[10px]"
+                        onClick={() => {
+                          const date = new Date(updateForm.getValues("tanggal_hutang") || new Date());
+                          date.setDate(date.getDate() + 90);
+                          field.onChange(date.toISOString().split("T")[0]);
+                        }}
+                      >
+                        +90 Hari (Panen)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[10px] text-muted-foreground"
+                        onClick={() => field.onChange("")}
+                      >
+                        Clear
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -312,6 +359,56 @@ export default function HutangPage() {
                     <FormControl>
                       <Input type="date" {...field} value={field.value ?? ""} />
                     </FormControl>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-[10px]"
+                        onClick={() => {
+                          const date = new Date();
+                          date.setDate(date.getDate() + 30);
+                          field.onChange(date.toISOString().split("T")[0]);
+                        }}
+                      >
+                        +30 Hari
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-[10px]"
+                        onClick={() => {
+                          const date = new Date();
+                          date.setDate(date.getDate() + 90);
+                          field.onChange(date.toISOString().split("T")[0]);
+                        }}
+                      >
+                        +90 Hari (Panen)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-[10px]"
+                        onClick={() => {
+                          const date = new Date();
+                          date.setDate(date.getDate() + 120);
+                          field.onChange(date.toISOString().split("T")[0]);
+                        }}
+                      >
+                        +120 Hari
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[10px] text-muted-foreground"
+                        onClick={() => field.onChange("")}
+                      >
+                        Clear
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -438,6 +535,31 @@ export default function HutangPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
+                            {h.status === "aktif" && (
+                              <a
+                                href={buildWhatsAppReminderUrl({
+                                  telepon: pelangganMap.get(h.pelanggan_id)?.telepon,
+                                  namaPelanggan: h.pelanggan_nama,
+                                  namaUsaha,
+                                  nominalHutang: h.nominal_hutang,
+                                  sisaHutang: h.sisa_hutang,
+                                  tanggalHutang: h.tanggal_hutang,
+                                  tanggalJatuhTempo: h.tanggal_jatuh_tempo,
+                                  keterangan: h.keterangan,
+                                })}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="action-icon-btn text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400"
+                                  title="Kirim Tagihan via WhatsApp"
+                                >
+                                  <MessageCircle className="h-4 w-4" />
+                                </Button>
+                              </a>
+                            )}
                             <Link href={`/hutang/${h.id}`}>
                               <Button variant="ghost" size="icon" className="action-icon-btn" title="Detail">
                                 <Eye className="h-4 w-4" />

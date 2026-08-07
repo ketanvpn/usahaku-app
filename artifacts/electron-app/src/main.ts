@@ -1868,6 +1868,12 @@ app.on("window-all-closed", () => {
 app.on("will-quit", () => {
   isQuitting = true;
   if (gdriveAutoBackupTimer) clearInterval(gdriveAutoBackupTimer);
+  try {
+    writeLog("App quitting, running snapshot auto-backup...");
+    performAutoBackup();
+  } catch (err: unknown) {
+    writeLog(`Auto-backup on quit error: ${err}`);
+  }
   writeLog("App quitting, killing backend...");
   if (backendProcess) {
     backendProcess.kill();

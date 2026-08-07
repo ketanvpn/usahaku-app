@@ -1,20 +1,28 @@
 import { useRoute } from "wouter";
-import { useGetPelanggan, getGetPelangganQueryKey } from "@workspace/api-client-react";
+import { useGetPelanggan, useGetUsaha, getGetPelangganQueryKey, getGetUsahaQueryKey } from "@workspace/api-client-react";
+import { useAuth } from "@/hooks/use-auth";
 import { formatRupiah, formatDate } from "@/lib/format";
+import { buildWhatsAppReminderUrl } from "@/lib/whatsapp";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, User, Phone, MapPin, AlignLeft, TrendingUp, CheckCircle2 } from "lucide-react";
+import { Loader2, ArrowLeft, User, Phone, MapPin, AlignLeft, TrendingUp, CheckCircle2, MessageCircle } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
 export default function PelangganDetail() {
+  const { user } = useAuth();
   const [, params] = useRoute("/pelanggan/:id");
   const id = parseInt(params?.id || "0");
 
   const { data, isLoading } = useGetPelanggan(id, {
     query: { enabled: !!id, queryKey: getGetPelangganQueryKey(id) },
   });
+
+  const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, {
+    query: { enabled: !!user?.usaha_id, queryKey: getGetUsahaQueryKey(user?.usaha_id ?? 0) },
+  });
+  const namaUsaha = usahaData?.nama_usaha ?? "Usahaku";
 
   if (isLoading) {
     return (
@@ -32,16 +40,38 @@ export default function PelangganDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/pelanggan">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-primary">{data.nama}</h2>
-          <p className="text-muted-foreground">Profil pelanggan dan riwayat hutangnya.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/pelanggan">
+            <Button variant="outline" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-primary">{data.nama}</h2>
+            <p className="text-muted-foreground">Profil pelanggan dan riwayat hutangnya.</p>
+          </div>
         </div>
+        {sisaAktif > 0 && (
+          <a
+            href={buildWhatsAppReminderUrl({
+              telepon: data.telepon,
+              namaPelanggan: data.nama,
+              namaUsaha,
+              nominalHutang: data.total_hutang,
+              sisaHutang: sisaAktif,
+            })}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Button
+              className="rounded-xl border border-emerald-600/30 bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700"
+            >
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Kirim Rincian Tagihan WA
+            </Button>
+          </a>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

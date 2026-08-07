@@ -348,17 +348,22 @@ export default function KasirPage() {
         return;
       }
 
+      if (e.key === "F9" || (e.ctrlKey && e.key === "Enter")) {
+        if (canSubmit) {
+          e.preventDefault();
+          selesaikanMutation.mutate();
+        }
+        return;
+      }
+
       if (e.key === "Escape") {
         if (hapusId !== null) setHapusId(null);
         else if (showHasil) setShowHasil(false);
         else if (showRiwayat) setShowRiwayat(false);
-        return;
-      }
-
-      if (e.ctrlKey && e.key === "Enter") {
-        if (canSubmit) {
-          e.preventDefault();
-          selesaikanMutation.mutate();
+        else if (cart.length > 0) {
+          if (confirm("Kosongkan keranjang belanja?")) {
+            resetKasir();
+          }
         }
         return;
       }
@@ -409,11 +414,14 @@ export default function KasirPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 ref={searchInputRef}
-                placeholder="Cari barang... (Ctrl+K)"
+                placeholder="Cari barang atau scan barcode... (Tekan F2 untuk fokus)"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pl-9 h-10 rounded-xl bg-white/80"
+                className="pl-9 pr-14 h-10 rounded-xl bg-white/80"
               />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold bg-muted px-1.5 py-0.5 rounded text-muted-foreground border">
+                F2
+              </span>
             </div>
           </div>
 
@@ -617,8 +625,11 @@ export default function KasirPage() {
           </div>
 
           {/* Uang Bayar */}
-            <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground font-medium">Uang Diterima</label>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-muted-foreground font-medium">Uang Diterima</label>
+              <span className="text-[10px] font-bold bg-muted px-1.5 py-0.5 rounded text-muted-foreground border">F4</span>
+            </div>
             <CurrencyInput
               ref={bayarInputRef}
               placeholder="Masukkan nominal..."
@@ -672,17 +683,21 @@ export default function KasirPage() {
           />
 
           {/* Tombol Selesaikan */}
-              <Button
-                className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/15"
-                disabled={!canSubmit}
-                onClick={() => selesaikanMutation.mutate()}
-              >
-                {selesaikanMutation.isPending ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Memproses...</>
-                ) : (
-                  <><CheckCircle className="h-4 w-4 mr-2" />Bayar Sekarang</>
-                )}
-              </Button>
+          <Button
+            className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/15"
+            disabled={!canSubmit}
+            onClick={() => selesaikanMutation.mutate()}
+          >
+            {selesaikanMutation.isPending ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Memproses...</>
+            ) : (
+              <div className="flex items-center justify-center gap-2">
+                <CheckCircle className="h-4 w-4" />
+                <span>Bayar Sekarang</span>
+                <span className="text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded ml-1">F9</span>
+              </div>
+            )}
+          </Button>
 
           {cart.length > 0 && total > 0 && uangBayarNum > 0 && uangBayarNum < total && (
             <p className="text-xs text-red-500 text-center">

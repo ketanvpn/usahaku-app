@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, pembayaranTable, hutangTable, pelangganTable, usahaTable, keuanganTable } from "@workspace/db";
+import { db, pembayaranTable, hutangTable, pelangganTable, usahaTable, keuanganTable, stokBarangTable, barangTable } from "@workspace/db";
 import { eq, and, desc, like, inArray } from "drizzle-orm";
 import {
   CreatePembayaranBody,
@@ -180,6 +180,11 @@ const BatchPembayaranBody = z.object({
   tanggal_bayar: z.string().min(1, "Tanggal wajib diisi"),
   nominal_total: z.number().positive("Nominal harus lebih dari 0"),
   catatan: z.string().optional(),
+  barter: z.object({
+    barang_id: z.number().int().positive(),
+    kuantitas: z.number().positive(),
+    harga_satuan: z.number().positive(),
+  }).optional(),
 });
 
 router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): Promise<void> => {
@@ -195,7 +200,17 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
     return;
   }
 
-  const { hutang_ids, tanggal_bayar, nominal_total, catatan } = parsed.data;
+  const { hutang_ids, tanggal_bayar, nominal_total, catatan, barter } = parsed.data;
+
+  // Validate Barter
+  if (barter) {
+    const [barang] = await db.select().from(barangTable)
+      .where(and(eq(barangTable.id, barter.barang_id), eq(barangTable.usahaId, usahaId)));
+    if (!barang) {
+      res.status(404).json({ error: "Barang komoditas untuk barter tidak ditemukan." });
+      return;
+    }
+  }
 
   // Ambil semua hutang yang dipilih, pastikan milik usaha ini
   const hutangs = await db.select().from(hutangTable)
@@ -270,12 +285,17 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
       const newSisaHutang = parseFloat(hutang.nominalHutang) - newTotalDibayar;
       const newStatus: "lunas" | "aktif" = newSisaHutang <= 0 ? "lunas" : "aktif";
 
+      let keuanganKeterangan = `Bayar hutang: ${pelanggan?.nama ?? ""}${hutang.keterangan ? ` (${hutang.keterangan})` : ""}`;
+      if (barter) {
+        keuanganKeterangan += ` — [Barter Panen] ${barter.kuantitas} x Rp${barter.harga_satuan}`;
+      }
+
       const [keuangan] = tx.insert(keuanganTable).values({
         usahaId,
         tanggal: tanggal_bayar,
         tipe: "masuk",
         kategori: "Pelunasan Hutang",
-        keterangan: `Bayar hutang: ${pelanggan?.nama ?? ""}${hutang.keterangan ? ` (${hutang.keterangan})` : ""}`,
+        keterangan: keuanganKeterangan,
         jumlah: bayar.toString(),
       }).returning().all();
 
@@ -310,6 +330,23 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
         status_baru: newStatus,
       });
     }
+
+    // Eksekusi penambahan stok jika menggunakan sistem barter
+    if (barter) {
+      const [barang] = tx.select().from(stokBarangTable)
+        .where(and(eq(stokBarangTable.id, barter.barang_id), eq(stokBarangTable.usahaId, usahaId)));
+      
+      if (barang) {
+        const stokLama = parseFloat(barang.stok);
+        const stokBaru = stokLama + barter.kuantitas;
+        
+        tx.update(stokBarangTable).set({
+          stok: stokBaru.toString(),
+          updatedAt: new Date()
+        }).where(eq(stokBarangTable.id, barter.barang_id)).run();
+      }
+    }
+
     return results;
   });
 
