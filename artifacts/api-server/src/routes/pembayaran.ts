@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, pembayaranTable, hutangTable, pelangganTable, usahaTable, keuanganTable, stokBarangTable, barangTable } from "@workspace/db";
+import { db, pembayaranTable, hutangTable, pelangganTable, usahaTable, keuanganTable, transaksiStokTable, barangTable } from "@workspace/db";
 import { eq, and, desc, like, inArray } from "drizzle-orm";
 import {
   CreatePembayaranBody,
@@ -333,17 +333,26 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
 
     // Eksekusi penambahan stok jika menggunakan sistem barter
     if (barter) {
-      const [barang] = tx.select().from(stokBarangTable)
-        .where(and(eq(stokBarangTable.id, barter.barang_id), eq(stokBarangTable.usahaId, usahaId)));
+      const [barang] = tx.select().from(barangTable)
+        .where(and(eq(barangTable.id, barter.barang_id), eq(barangTable.usahaId, usahaId)));
       
       if (barang) {
         const stokLama = parseFloat(barang.stok);
         const stokBaru = stokLama + barter.kuantitas;
         
-        tx.update(stokBarangTable).set({
+        tx.update(barangTable).set({
           stok: stokBaru.toString(),
-          updatedAt: new Date()
-        }).where(eq(stokBarangTable.id, barter.barang_id)).run();
+        }).where(eq(barangTable.id, barter.barang_id)).run();
+
+        tx.insert(transaksiStokTable).values({
+          usahaId,
+          barangId: barter.barang_id,
+          tanggal: tanggal_bayar,
+          tipe: "masuk",
+          jumlah: barter.kuantitas.toString(),
+          hargaSatuan: barter.harga_satuan.toString(),
+          keterangan: `Barter dari pelunasan hutang: ${pelanggan?.nama ?? ""}`,
+        }).run();
       }
     }
 
