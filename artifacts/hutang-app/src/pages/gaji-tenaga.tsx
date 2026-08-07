@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { CurrencyQuickAdd } from "@/components/ui/currency-quick-add";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,6 +26,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { formatRupiah, formatDate, escapeHtml } from "@/lib/format";
+import { openPrintWindow } from "@/lib/print";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
@@ -62,25 +64,12 @@ interface KwitansiUpahData {
   namaUsaha: string;
 }
 
-function openPrintWindow(html: string) {
-  if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
-    window.electronApp.openInBrowser(html);
-  } else {
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const tab = window.open(url, "_blank");
-    if (tab) tab.addEventListener("load", () => setTimeout(() => URL.revokeObjectURL(url), 2000));
-  }
-}
-
 function buildKwitansiUpahHtml(
   d: KwitansiUpahData,
   extras: { ctx: PrintContext; logoBase64: string | null },
 ): string {
   const { ctx, logoBase64 } = extras;
   const noKwitansi = `KWT-UPAH-${Date.now().toString().slice(-8)}`;
-  const fmtRp = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
-  const fmtTgl = (s: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(s));
   const judulKet = d.type === "batch" ? "Pembayaran seluruh upah tertunggak" : d.keterangan;
 
   // Prefer nama dari context (data terbaru di app), fallback ke nama dari payload
@@ -95,7 +84,7 @@ function buildKwitansiUpahHtml(
     logoBase64,
     logoFilename: ctx.pengaturan?.logo_filename ?? null,
     judul: "KWITANSI PEMBAYARAN UPAH",
-    meta: `No: ${noKwitansi} • Tgl: ${fmtTgl(d.tanggal_bayar)}`,
+    meta: `No: ${noKwitansi} • Tgl: ${formatDate(d.tanggal_bayar)}`,
   });
 
   return `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
@@ -134,12 +123,12 @@ table.detail td.colon { width: 10px; }
     <tr><td>Nama Pekerja</td><td class="colon">:</td><td><strong>${escapeHtml(d.pekerja_nama)}</strong></td></tr>
     ${d.pekerja_jabatan ? `<tr><td>Jabatan</td><td class="colon">:</td><td>${escapeHtml(d.pekerja_jabatan)}</td></tr>` : ""}
     <tr><td>Keterangan</td><td class="colon">:</td><td>${escapeHtml(judulKet)}</td></tr>
-    <tr><td>Tanggal Bayar</td><td class="colon">:</td><td>${escapeHtml(fmtTgl(d.tanggal_bayar))}</td></tr>
+    <tr><td>Tanggal Bayar</td><td class="colon">:</td><td>${escapeHtml(formatDate(d.tanggal_bayar))}</td></tr>
     ${d.catatan ? `<tr><td>Catatan</td><td class="colon">:</td><td>${escapeHtml(d.catatan)}</td></tr>` : ""}
   </table>
   <div class="nominal-box">
     <span class="nominal-label">Jumlah Diterima</span>
-    <span class="nominal-value">${fmtRp(d.jumlah)}</span>
+    <span class="nominal-value">${formatRupiah(d.jumlah)}</span>
   </div>
   <div class="footer-kwt">
     <div class="ttd-box">
@@ -1200,22 +1189,14 @@ export default function GajiTenagaPage() {
                             />
                           </FormControl>
                           <div className="flex flex-wrap gap-1 pt-1">
-                            {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
-                              <Button
-                                key={nominal}
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-7 px-2 text-[11px]"
-                                onClick={() => {
-                                  const current = Number(field.value) || 0;
-                                  field.onChange(Math.min(upahDetail.sisa_upah, current + nominal));
-                                }}
-                                disabled={upahDetail.sisa_upah <= 0}
-                              >
-                                +{formatRupiah(nominal)}
-                              </Button>
-                            ))}
+                            <CurrencyQuickAdd
+                              className="contents"
+                              onAdd={(nominal) => {
+                                const current = Number(field.value) || 0;
+                                field.onChange(Math.min(upahDetail.sisa_upah, current + nominal));
+                              }}
+                              isDisabled={() => upahDetail.sisa_upah <= 0}
+                            />
                             <Button
                               type="button"
                               variant="secondary"
@@ -1595,22 +1576,14 @@ export default function GajiTenagaPage() {
                         />
                       </FormControl>
                       <div className="flex flex-wrap gap-1 pt-1">
-                        {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
-                          <Button
-                            key={nominal}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-[11px]"
-                            onClick={() => {
-                              const current = Number(field.value) || 0;
-                              field.onChange(Math.min(totalSisaBatch, current + nominal));
-                            }}
-                            disabled={totalSisaBatch <= 0}
-                          >
-                            +{formatRupiah(nominal)}
-                          </Button>
-                        ))}
+                        <CurrencyQuickAdd
+                          className="contents"
+                          onAdd={(nominal) => {
+                            const current = Number(field.value) || 0;
+                            field.onChange(Math.min(totalSisaBatch, current + nominal));
+                          }}
+                          isDisabled={() => totalSisaBatch <= 0}
+                        />
                         <Button
                           type="button"
                           variant="secondary"

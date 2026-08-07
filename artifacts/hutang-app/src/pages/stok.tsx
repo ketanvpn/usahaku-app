@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { CurrencyQuickAdd } from "@/components/ui/currency-quick-add";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -643,13 +644,7 @@ export default function StokPage() {
                     <FormControl>
                       <CurrencyInput minValue={0} value={field.value} onValueChange={field.onChange} placeholder="0" />
                     </FormControl>
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
-                        <Button key={nominal} type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={() => field.onChange((Number(field.value) || 0) + nominal)}>
-                          +{formatRupiah(nominal)}
-                        </Button>
-                      ))}
-                    </div>
+                    <CurrencyQuickAdd onAdd={(nominal) => field.onChange((Number(field.value) || 0) + nominal)} />
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -658,13 +653,7 @@ export default function StokPage() {
                     <FormControl>
                       <CurrencyInput minValue={0} value={field.value} onValueChange={field.onChange} placeholder="0" />
                     </FormControl>
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
-                        <Button key={nominal} type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={() => field.onChange((Number(field.value) || 0) + nominal)}>
-                          +{formatRupiah(nominal)}
-                        </Button>
-                      ))}
-                    </div>
+                    <CurrencyQuickAdd onAdd={(nominal) => field.onChange((Number(field.value) || 0) + nominal)} />
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -741,13 +730,7 @@ export default function StokPage() {
                     <FormControl>
                       <CurrencyInput minValue={0} value={field.value} onValueChange={field.onChange} placeholder="0" />
                     </FormControl>
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
-                        <Button key={nominal} type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={() => field.onChange((Number(field.value) || 0) + nominal)}>
-                          +{formatRupiah(nominal)}
-                        </Button>
-                      ))}
-                    </div>
+                    <CurrencyQuickAdd onAdd={(nominal) => field.onChange((Number(field.value) || 0) + nominal)} />
                     <FormMessage />
                   </FormItem>
                 )} />

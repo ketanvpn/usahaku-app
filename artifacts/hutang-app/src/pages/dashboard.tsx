@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useGetOwnerDashboard } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
-import { formatRupiah, formatDate } from "@/lib/format";
+import { formatRupiah, formatDate, formatRupiahShort, formatDateShort, formatDateRange, getBackupInfoText } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,8 @@ import { Link } from "wouter";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
+
+import type { TooltipProps } from "recharts";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -28,44 +30,14 @@ interface TrenItem {
   keluar: number;
 }
 
-function fmtRupiahSingkat(value: number) {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(".0", "")}jt`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}rb`;
-  return String(value);
-}
-
-function fmtTanggalPendek(iso: string) {
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-}
-
-function fmtTanggalRange(iso: string) {
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function getBackupInfoText(): string {
-  const last = localStorage.getItem("lastBackupDate");
-  if (!last) return "Belum ada backup manual";
-  const diffMs = Date.now() - new Date(last).getTime();
-  if (Number.isNaN(diffMs) || diffMs < 0) return "Backup manual: baru saja";
-  const minutes = Math.floor(diffMs / (1000 * 60));
-  if (minutes < 1) return "Backup manual: baru saja";
-  if (minutes < 60) return `Backup manual: ${minutes} menit lalu`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `Backup manual: ${hours} jam lalu`;
-  const days = Math.floor(hours / 24);
-  return `Backup manual: ${days} hari lalu`;
-}
-
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-border rounded-lg shadow-lg p-3 text-sm">
       <p className="font-semibold text-foreground mb-1">{label}</p>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <p key={p.name} style={{ color: p.color }}>
-          {p.name === "masuk" ? "▲ Masuk" : "▼ Keluar"}: {formatRupiah(p.value)}
+          {p.name === "masuk" ? "▲ Masuk" : "▼ Keluar"}: {formatRupiah(p.value ?? 0)}
         </p>
       ))}
     </div>
@@ -143,7 +115,7 @@ export default function OwnerDashboard() {
 
   const chartData = trenData.map(d => ({
     ...d,
-    label: fmtTanggalPendek(d.tanggal),
+    label: formatDateShort(d.tanggal),
   }));
 
   const rangeStart = trenData.length > 0 ? trenData[0].tanggal : null;
@@ -350,7 +322,7 @@ export default function OwnerDashboard() {
               </CardDescription>
               {rangeStart && rangeEnd && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Periode aktif: {fmtTanggalRange(rangeStart)} - {fmtTanggalRange(rangeEnd)}
+                  Periode aktif: {formatDateRange(rangeStart)} - {formatDateRange(rangeEnd)}
                 </p>
               )}
             </div>
@@ -393,7 +365,7 @@ export default function OwnerDashboard() {
                   interval={trenHari === 30 ? 4 : 0}
                 />
                 <YAxis
-                  tickFormatter={fmtRupiahSingkat}
+                  tickFormatter={formatRupiahShort}
                   tick={{ fontSize: 11, fill: "hsl(215 15% 48%)" }}
                   tickLine={false}
                   axisLine={false}

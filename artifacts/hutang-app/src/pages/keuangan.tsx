@@ -6,6 +6,7 @@ import { useGetUsaha, getGetUsahaQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { CurrencyQuickAdd } from "@/components/ui/currency-quick-add";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,24 +22,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import * as z from "zod";
 import { formatRupiah, formatDate, escapeHtml } from "@/lib/format";
+import { openPrintWindow } from "@/lib/print";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-function openPrintWindow(html: string) {
-  if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
-    window.electronApp.openInBrowser(html);
-  } else {
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const tab = window.open(url, "_blank");
-    if (tab) {
-      tab.addEventListener("load", () => setTimeout(() => URL.revokeObjectURL(url), 2000));
-    }
-  }
-}
 
 interface KeuanganItem {
   id: number;
@@ -103,14 +92,6 @@ async function fetchRekapBulanan(tahun: string): Promise<RekapBulanan[]> {
   return r.json();
 }
 
-function fmtRp(n: number) {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
-}
-
-function fmtTgl(s: string) {
-  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(s));
-}
-
 const BULAN_NAMES = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
 const keuanganSchema = z.object({
@@ -151,11 +132,11 @@ function handlePrint(items: KeuanganItem[], rekap: Rekap | undefined, bulan: str
 
   const rows = items.map((i) => `
     <tr>
-      <td>${fmtTgl(i.tanggal)}</td>
+      <td>${formatDate(i.tanggal)}</td>
       <td><span class="badge ${i.tipe === "masuk" ? "badge-masuk" : "badge-keluar"}">${i.tipe === "masuk" ? "Masuk" : "Keluar"}</span></td>
       <td>${escapeHtml(i.kategori ?? "-")}</td>
       <td>${escapeHtml(i.keterangan)}</td>
-      <td class="right">${fmtRp(i.jumlah)}</td>
+      <td class="right">${formatRupiah(i.jumlah)}</td>
     </tr>`).join("");
 
   const html = `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8">
@@ -190,9 +171,9 @@ function handlePrint(items: KeuanganItem[], rekap: Rekap | undefined, bulan: str
     <div class="header-meta">Dicetak: ${escapeHtml(tanggalCetak)}</div>
   </div>
   <div class="summary">
-    <div class="summary-box"><div class="label">Total Masuk</div><div class="value masuk-val">${fmtRp(rekap?.total_masuk ?? 0)}</div></div>
-    <div class="summary-box"><div class="label">Total Keluar</div><div class="value keluar-val">${fmtRp(rekap?.total_keluar ?? 0)}</div></div>
-    <div class="summary-box"><div class="label">Saldo</div><div class="value saldo-val">${fmtRp(rekap?.saldo ?? 0)}</div></div>
+    <div class="summary-box"><div class="label">Total Masuk</div><div class="value masuk-val">${formatRupiah(rekap?.total_masuk ?? 0)}</div></div>
+    <div class="summary-box"><div class="label">Total Keluar</div><div class="value keluar-val">${formatRupiah(rekap?.total_keluar ?? 0)}</div></div>
+    <div class="summary-box"><div class="label">Saldo</div><div class="value saldo-val">${formatRupiah(rekap?.saldo ?? 0)}</div></div>
   </div>
   <table>
     <thead><tr><th>Tanggal</th><th>Tipe</th><th>Kategori</th><th>Keterangan</th><th class="right">Jumlah</th></tr></thead>
@@ -305,7 +286,7 @@ export default function KeuanganPage() {
 
   const chartData = rekapBulanan;
 
-  const tooltipFormatter = (value: number) => fmtRp(value);
+  const tooltipFormatter = (value: number) => formatRupiah(value);
 
   return (
     <div className="space-y-6">
@@ -600,20 +581,7 @@ export default function KeuanganPage() {
                       placeholder="50.000"
                     />
                   </FormControl>
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
-                      <Button
-                        key={nominal}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-[11px]"
-                        onClick={() => field.onChange((Number(field.value) || 0) + nominal)}
-                      >
-                        +{formatRupiah(nominal)}
-                      </Button>
-                    ))}
-                  </div>
+                  <CurrencyQuickAdd onAdd={(nominal) => field.onChange((Number(field.value) || 0) + nominal)} />
                   <FormMessage />
                 </FormItem>
               )} />

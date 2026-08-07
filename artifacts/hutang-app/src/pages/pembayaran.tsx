@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { CurrencyQuickAdd } from "@/components/ui/currency-quick-add";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -87,12 +88,6 @@ function hitungDistribusiFIFO(hutangs: Hutang[], nominalTotal: number): Distribu
   return result;
 }
 
-function fmtRupiah(n: number) {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
-}
-function fmtDate(iso: string) {
-  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
-}
 
 function buildKwitansiGabunganHtml(batch: BatchResult, extras: PrintExtras): string {
   const { ctx, logoBase64 } = extras;
@@ -100,7 +95,7 @@ function buildKwitansiGabunganHtml(batch: BatchResult, extras: PrintExtras): str
   // batch (snapshot saat batch dibuat di server).
   const namaUsaha = ctx.namaUsaha || batch.nama_usaha || "Usaha";
   const pelangganNama = batch.pelanggan_nama;
-  const tanggal = fmtDate(batch.tanggal_bayar);
+  const tanggal = formatDate(batch.tanggal_bayar);
   const totalDibayar = batch.total_dibayar;
   const catatan = batch.catatan || "";
   const nomorPertama = batch.pembayaran_list[0]?.nomor_kwitansi || "KWT-?";
@@ -110,15 +105,15 @@ function buildKwitansiGabunganHtml(batch: BatchResult, extras: PrintExtras): str
 
   const rowsHtml = batch.pembayaran_list.map(p => {
     const label = p.hutang_keterangan
-      ? `${escapeHtml(fmtDate(p.hutang_tanggal))} — ${escapeHtml(p.hutang_keterangan)}`
-      : escapeHtml(fmtDate(p.hutang_tanggal));
+      ? `${escapeHtml(formatDate(p.hutang_tanggal))} — ${escapeHtml(p.hutang_keterangan)}`
+      : escapeHtml(formatDate(p.hutang_tanggal));
     const statusHtml = p.status_baru === "lunas"
       ? `<span class="green">✓ LUNAS</span>`
-      : `Sisa ${fmtRupiah(p.sisa_hutang_setelah)}`;
+      : `Sisa ${formatRupiah(p.sisa_hutang_setelah)}`;
     return `
       <tr>
         <td>${label}</td>
-        <td class="right">${fmtRupiah(p.nominal_bayar)}</td>
+        <td class="right">${formatRupiah(p.nominal_bayar)}</td>
         <td class="right">${statusHtml}</td>
       </tr>`;
   }).join("");
@@ -178,7 +173,7 @@ ${getDefaultPrintHeaderCss()}
 
   <div class="nominal-box">
     <div class="nominal-label">Total Dibayar</div>
-    <div class="nominal-nilai">${fmtRupiah(totalDibayar)}</div>
+    <div class="nominal-nilai">${formatRupiah(totalDibayar)}</div>
   </div>
 
   <table class="detail-tbl">
@@ -195,7 +190,7 @@ ${getDefaultPrintHeaderCss()}
     <tfoot>
       <tr class="total-row">
         <td>Total</td>
-        <td class="right green">${fmtRupiah(totalDibayar)}</td>
+        <td class="right green">${formatRupiah(totalDibayar)}</td>
         <td></td>
       </tr>
     </tfoot>
@@ -232,7 +227,7 @@ function buildKwitansiLamaHtml(p: PembayaranFull, extras: PrintExtras): string {
   const { ctx, logoBase64 } = extras;
   const nomorKwitansi = p.nomor_kwitansi || `KWT-${p.id}`;
   const namaUsaha = ctx.namaUsaha || p.nama_usaha || "Usaha";
-  const tanggal = fmtDate(p.tanggal_bayar);
+  const tanggal = formatDate(p.tanggal_bayar);
   const nominalBayar = p.nominal_bayar;
   const hutangNominal = p.hutang_nominal ?? 0;
   const sisaHutang = p.sisa_hutang_setelah ?? 0;
@@ -277,11 +272,11 @@ ${headerHtml}
 <tr><td class="lbl">Diterima dari</td><td class="sep">:</td><td><strong>${escapeHtml(p.pelanggan_nama)}</strong></td></tr>
 <tr><td class="lbl">Keterangan Hutang</td><td class="sep">:</td><td>${escapeHtml(keterangan)}</td></tr>
 </table>
-<div class="nominal-box"><div class="nominal-label">Jumlah Dibayar</div><div class="nominal-nilai">${fmtRupiah(nominalBayar)}</div></div>
+<div class="nominal-box"><div class="nominal-label">Jumlah Dibayar</div><div class="nominal-nilai">${formatRupiah(nominalBayar)}</div></div>
 <table class="detail-tbl">
-<tr><td>Hutang Awal</td><td class="right">${fmtRupiah(hutangNominal)}</td></tr>
-<tr><td>Dibayar Kali Ini</td><td class="right green">+ ${fmtRupiah(nominalBayar)}</td></tr>
-<tr class="total-row"><td>Sisa Hutang</td><td class="right ${sisaHutang<=0?"green":"orange"}">${sisaHutang<=0?"✓ LUNAS":fmtRupiah(sisaHutang)}</td></tr>
+<tr><td>Hutang Awal</td><td class="right">${formatRupiah(hutangNominal)}</td></tr>
+<tr><td>Dibayar Kali Ini</td><td class="right green">+ ${formatRupiah(nominalBayar)}</td></tr>
+<tr class="total-row"><td>Sisa Hutang</td><td class="right ${sisaHutang<=0?"green":"orange"}">${sisaHutang<=0?"✓ LUNAS":formatRupiah(sisaHutang)}</td></tr>
 </table>
 ${catatan?`<div style="font-size:9pt;color:#555;font-style:italic;margin:6px 4px">Catatan: ${escapeHtml(catatan)}</div>`:""}
 <div class="ttd-area"><div class="ttd-box"><div>Penerima,</div><div class="ttd-space"></div><div class="ttd-line">(________________)</div></div></div>
@@ -598,22 +593,14 @@ export default function PembayaranPage() {
                   placeholder="Masukkan jumlah yang dibayar..."
                 />
                 <div className="flex flex-wrap gap-2">
-                  {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
-                    <Button
-                      key={nominal}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => {
-                        const current = Number(nominalTotal) || 0;
-                        setNominalTotal(String(Math.min(totalSisaDipilih, current + nominal)));
-                      }}
-                      disabled={nominal > totalSisaDipilih}
-                    >
-                      +{formatRupiah(nominal)}
-                    </Button>
-                  ))}
+                  <CurrencyQuickAdd
+                    className="contents"
+                    onAdd={(nominal) => {
+                      const current = Number(nominalTotal) || 0;
+                      setNominalTotal(String(Math.min(totalSisaDipilih, current + nominal)));
+                    }}
+                    isDisabled={(nominal) => nominal > totalSisaDipilih}
+                  />
                   <Button
                     type="button"
                     variant="secondary"

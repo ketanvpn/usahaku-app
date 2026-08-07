@@ -34,4 +34,11 @@ describe("license-crypto", () => {
     expect(result.valid).toBe(true);
     expect(result.tipe).toBe("6bulan");
   });
+
+  it("verifies offline master key even if backend had a different secret", () => {
+    const { key } = generateLicenseKey("1tahun", "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE");
+    const result = verifyLicenseKey(key);
+    expect(result.valid).toBe(true);
+    expect(result.tipe).toBe("1tahun");
+  });
 });

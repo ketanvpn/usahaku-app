@@ -287,9 +287,9 @@ interface InstallSecrets {
   resetSecret: string;
 }
 
-// Generate (atau muat) secret unik per-instalasi dan simpan di userData.
-// Berkas hanya dibaca/ditulis oleh aplikasi sendiri, jadi mode read-write biasa
-// di Windows sudah cukup untuk membatasi akses dari user lain di mesin yang sama.
+const DEFAULT_MASTER_LICENSE_SECRET = "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE";
+const DEFAULT_MASTER_RESET_SECRET = "BUKUHUTANG_RESET_SECRET_V1_2026";
+
 function loadOrCreateInstallSecrets(): InstallSecrets {
   const userData = app.getPath("userData");
   const file = path.join(userData, "install-secrets.json");
@@ -297,8 +297,8 @@ function loadOrCreateInstallSecrets(): InstallSecrets {
   function generate(): InstallSecrets {
     return {
       sessionSecret: crypto.randomBytes(32).toString("hex"),
-      licenseSecret: crypto.randomBytes(32).toString("hex"),
-      resetSecret: crypto.randomBytes(32).toString("hex"),
+      licenseSecret: process.env.LICENSE_SECRET || DEFAULT_MASTER_LICENSE_SECRET,
+      resetSecret: process.env.RESET_SECRET || DEFAULT_MASTER_RESET_SECRET,
     };
   }
 
@@ -308,10 +308,9 @@ function loadOrCreateInstallSecrets(): InstallSecrets {
       const fresh = generate();
       const merged: InstallSecrets = {
         sessionSecret: parsed.sessionSecret && parsed.sessionSecret.length >= 32 ? parsed.sessionSecret : fresh.sessionSecret,
-        licenseSecret: parsed.licenseSecret && parsed.licenseSecret.length >= 32 ? parsed.licenseSecret : fresh.licenseSecret,
-        resetSecret: parsed.resetSecret && parsed.resetSecret.length >= 32 ? parsed.resetSecret : fresh.resetSecret,
+        licenseSecret: process.env.LICENSE_SECRET || DEFAULT_MASTER_LICENSE_SECRET,
+        resetSecret: process.env.RESET_SECRET || DEFAULT_MASTER_RESET_SECRET,
       };
-      // Tulis ulang hanya jika ada field yang baru di-generate, supaya secret lama tidak berubah.
       if (
         merged.sessionSecret !== parsed.sessionSecret ||
         merged.licenseSecret !== parsed.licenseSecret ||

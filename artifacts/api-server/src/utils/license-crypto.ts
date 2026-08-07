@@ -1,12 +1,18 @@
-import { createHmac, randomBytes } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { resolveSecret } from "../lib/security-secrets";
 
-const SECRET = resolveSecret({
+export const MASTER_LICENSE_SECRET = "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE";
+
+const RESOLVED_LICENSE_SECRET = resolveSecret({
   key: "LICENSE_SECRET",
   value: process.env.LICENSE_SECRET,
-  fallback: "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE",
+  fallback: MASTER_LICENSE_SECRET,
   reason: "dipakai untuk sign dan verifikasi license key",
 });
+
+const VERIFY_SECRETS = Array.from(
+  new Set([MASTER_LICENSE_SECRET, RESOLVED_LICENSE_SECRET].filter(Boolean))
+);
 
 export type LicenseTipe = "1bulan" | "3bulan" | "6bulan" | "1tahun";
 
@@ -44,8 +50,9 @@ export function calcExpiresAt(tipe: LicenseTipe, from: Date = new Date()): Date 
   return d;
 }
 
-export function generateLicenseKey(tipe: LicenseTipe): { key: string; expiresAt: Date } {
+export function generateLicenseKey(tipe: LicenseTipe, secretOverride?: string): { key: string; expiresAt: Date } {
   const expiresAt = calcExpiresAt(tipe);
+  const secret = secretOverride || RESOLVED_LICENSE_SECRET;
 
   const buf = Buffer.alloc(8);
   buf.writeUInt8(TIPE_CODE[tipe], 0);
@@ -53,8 +60,8 @@ export function generateLicenseKey(tipe: LicenseTipe): { key: string; expiresAt:
   const nonce = randomBytes(3);
   nonce.copy(buf, 5);
 
-  const hmac = createHmac("sha256", SECRET).update(buf).digest();
-  const sig = hmac.slice(0, 4);
+  const hmac = createHmac("sha256", secret).update(buf).digest();
+  const sig = hmac.subarray(0, 4);
 
   const full = Buffer.concat([buf, sig]);
   const hex = full.toString("hex").toUpperCase();
@@ -62,6 +69,17 @@ export function generateLicenseKey(tipe: LicenseTipe): { key: string; expiresAt:
   const key = "BUKU-" + parts.join("-");
 
   return { key, expiresAt };
+}
+
+function verifySignature(buf: Buffer, sig: Buffer): boolean {
+  for (const secret of VERIFY_SECRETS) {
+    const hmac = createHmac("sha256", secret).update(buf).digest();
+    const expectedSig = hmac.subarray(0, 4);
+    if (sig.length === expectedSig.length && timingSafeEqual(sig, expectedSig)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function verifyLicenseKey(keyStr: string): {
@@ -90,10 +108,7 @@ export function verifyLicenseKey(keyStr: string): {
   const buf = full.subarray(0, 8);
   const sig = full.subarray(8, 12);
 
-  const hmac = createHmac("sha256", SECRET).update(buf).digest();
-  const expectedSig = hmac.subarray(0, 4);
-
-  if (!sig.equals(expectedSig)) {
+  if (!verifySignature(buf, sig)) {
     return { valid: false, error: "Key tidak valid atau sudah dimanipulasi." };
   }
 

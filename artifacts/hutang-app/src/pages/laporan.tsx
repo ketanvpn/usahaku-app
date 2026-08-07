@@ -13,6 +13,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { formatRupiah, formatDate, escapeHtml } from "@/lib/format";
+import { openPrintWindow } from "@/lib/print";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
@@ -35,37 +36,6 @@ import {
 } from "recharts";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-// ─── helpers ──────────────────────────────────────────────────────────────────
-function fmtRupiah(n: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency", currency: "IDR", minimumFractionDigits: 0,
-  }).format(n);
-}
-function fmtDate(iso: string) {
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "numeric", month: "long", year: "numeric",
-  }).format(new Date(iso));
-}
-
-// ─── Print / PDF ──────────────────────────────────────────────────────────────
-// Electron build : kirim HTML ke main process → tulis ke file temp →
-//                  shell.openPath() buka di browser default → Ctrl+P / Save as PDF
-// Browser biasa  : buka via blob URL di tab baru
-function openPrintWindow(html: string) {
-  if (window.electronApp?.isElectron && typeof window.electronApp.openInBrowser === "function") {
-    // Electron: tulis ke temp file lalu buka di browser default
-    window.electronApp.openInBrowser(html);
-  } else {
-    // Browser biasa: buka di tab baru via blob URL
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const tab = window.open(url, "_blank");
-    if (tab) {
-      tab.addEventListener("load", () => setTimeout(() => URL.revokeObjectURL(url), 2000));
-    }
-  }
-}
 
 // ─── Shared print CSS ─────────────────────────────────────────────────────────
 const PRINT_CSS = `
@@ -137,20 +107,20 @@ function buildPrintHutang(opts: {
   const summaryBlock = isSinglePelanggan
     ? `<div class="summary-box"><div class="summary-title">Ringkasan: ${escapeHtml(pelangganNama)}</div>
        <table class="sum-tbl">
-         <tr><td>Total Hutang</td><td>:</td><td>${fmtRupiah(totalHutang)}</td></tr>
-         <tr><td>Total Dibayar</td><td>:</td><td class="green">${fmtRupiah(totalDibayar)}</td></tr>
-         <tr><td>Sisa Hutang</td><td>:</td><td class="orange"><b>${fmtRupiah(totalSisa)}</b></td></tr>
+         <tr><td>Total Hutang</td><td>:</td><td>${formatRupiah(totalHutang)}</td></tr>
+         <tr><td>Total Dibayar</td><td>:</td><td class="green">${formatRupiah(totalDibayar)}</td></tr>
+         <tr><td>Sisa Hutang</td><td>:</td><td class="orange"><b>${formatRupiah(totalSisa)}</b></td></tr>
        </table></div>` : "";
   const dataRows = rows.length === 0
     ? `<tr><td colspan="7" style="text-align:center;padding:20px;color:#666">Tidak ada data.</td></tr>`
     : rows.map(r => `<tr>
-        <td class="nowrap">${fmtDate(r.tanggal_hutang)}</td>
+        <td class="nowrap">${formatDate(r.tanggal_hutang)}</td>
         <td class="bold">${escapeHtml(r.nama_pelanggan)}</td>
         <td class="muted">${escapeHtml(r.keterangan || "—")}</td>
         <td><span class="badge ${r.status === "aktif" ? "badge-aktif" : "badge-lunas"}">${r.status === "aktif" ? "Belum lunas" : "Lunas"}</span></td>
-        <td class="right">${fmtRupiah(r.nominal_hutang)}</td>
-        <td class="right green">${fmtRupiah(r.total_dibayar)}</td>
-        <td class="right orange bold">${fmtRupiah(r.sisa_hutang)}</td>
+        <td class="right">${formatRupiah(r.nominal_hutang)}</td>
+        <td class="right green">${formatRupiah(r.total_dibayar)}</td>
+        <td class="right orange bold">${formatRupiah(r.sisa_hutang)}</td>
       </tr>`).join("");
 
   return printHead(judul) + `
@@ -163,8 +133,8 @@ ${summaryBlock}
 <th class="right">Nominal Hutang</th><th class="right">Total Dibayar</th><th class="right">Sisa Hutang</th></tr></thead>
 <tbody>${dataRows}</tbody>
 ${rows.length > 0 ? `<tfoot><tr><td colspan="4" class="right">TOTAL</td>
-<td class="right">${fmtRupiah(totalHutang)}</td><td class="right green">${fmtRupiah(totalDibayar)}</td>
-<td class="right orange">${fmtRupiah(totalSisa)}</td></tr></tfoot>` : ""}
+<td class="right">${formatRupiah(totalHutang)}</td><td class="right green">${formatRupiah(totalDibayar)}</td>
+<td class="right orange">${formatRupiah(totalSisa)}</td></tr></tfoot>` : ""}
 </table>` + printFoot();
 }
 
@@ -179,11 +149,11 @@ function buildPrintKeuangan(opts: {
   const dataRows = rows.length === 0
     ? `<tr><td colspan="5" style="text-align:center;padding:20px;color:#666">Tidak ada data.</td></tr>`
     : rows.map(r => `<tr>
-        <td class="nowrap">${fmtDate(r.tanggal)}</td>
+        <td class="nowrap">${formatDate(r.tanggal)}</td>
         <td><span class="badge ${r.tipe === "masuk" ? "badge-masuk" : "badge-keluar"}">${r.tipe === "masuk" ? "Masuk" : "Keluar"}</span></td>
         <td>${escapeHtml(r.kategori)}</td>
         <td class="muted">${escapeHtml(r.keterangan || "—")}</td>
-        <td class="right ${r.tipe === "masuk" ? "green" : "red"}">${r.tipe === "masuk" ? "+" : "-"}${fmtRupiah(r.jumlah)}</td>
+        <td class="right ${r.tipe === "masuk" ? "green" : "red"}">${r.tipe === "masuk" ? "+" : "-"}${formatRupiah(r.jumlah)}</td>
       </tr>`).join("");
 
   return printHead(judul) + `
@@ -192,9 +162,9 @@ ${filterTableHtml(fiLines)}
 <div class="summary-box">
   <div class="summary-title">Ringkasan Keuangan</div>
   <table class="sum-tbl">
-    <tr><td>Total Masuk</td><td>:</td><td class="green">${fmtRupiah(totalMasuk)}</td></tr>
-    <tr><td>Total Keluar</td><td>:</td><td class="red">${fmtRupiah(totalKeluar)}</td></tr>
-    <tr><td>Saldo Bersih</td><td>:</td><td class="${saldo >= 0 ? "green" : "red"}"><b>${fmtRupiah(saldo)}</b></td></tr>
+    <tr><td>Total Masuk</td><td>:</td><td class="green">${formatRupiah(totalMasuk)}</td></tr>
+    <tr><td>Total Keluar</td><td>:</td><td class="red">${formatRupiah(totalKeluar)}</td></tr>
+    <tr><td>Saldo Bersih</td><td>:</td><td class="${saldo >= 0 ? "green" : "red"}"><b>${formatRupiah(saldo)}</b></td></tr>
   </table>
 </div>
 <table class="data-table">
@@ -202,7 +172,7 @@ ${filterTableHtml(fiLines)}
 <thead><tr><th>Tanggal</th><th>Tipe</th><th>Kategori</th><th>Keterangan</th><th class="right">Nominal</th></tr></thead>
 <tbody>${dataRows}</tbody>
 ${rows.length > 0 ? `<tfoot><tr><td colspan="4" class="right">SALDO BERSIH (${rows.length} transaksi)</td>
-<td class="right ${saldo >= 0 ? "green" : "red"}">${fmtRupiah(saldo)}</td></tr></tfoot>` : ""}
+<td class="right ${saldo >= 0 ? "green" : "red"}">${formatRupiah(saldo)}</td></tr></tfoot>` : ""}
 </table>` + printFoot();
 }
 
@@ -221,8 +191,8 @@ function buildPrintStok(opts: {
         <td class="right bold ${b.stok <= b.stok_minimum ? "orange" : "green"}">${b.stok}</td>
         <td class="right muted">${b.stok_minimum}</td>
         <td><span class="badge ${b.stok <= b.stok_minimum ? "badge-habis" : "badge-aman"}">${b.stok <= b.stok_minimum ? "Hampir Habis" : "Aman"}</span></td>
-        <td class="right">${fmtRupiah(parseFloat(b.harga_beli))}</td>
-        <td class="right">${fmtRupiah(parseFloat(b.harga_jual))}</td>
+        <td class="right">${formatRupiah(parseFloat(b.harga_beli))}</td>
+        <td class="right">${formatRupiah(parseFloat(b.harga_jual))}</td>
       </tr>`).join("");
 
   return printHead(judul) + `
@@ -259,16 +229,16 @@ function buildPrintKasir(opts: {
   const harianRows = harian.length === 0
     ? `<tr><td colspan="3" style="text-align:center;padding:16px;color:#666">Tidak ada data.</td></tr>`
     : harian.map(r => `<tr>
-        <td class="nowrap">${fmtDate(r.tanggal)}</td>
+        <td class="nowrap">${formatDate(r.tanggal)}</td>
         <td class="right">${r.jumlah} transaksi</td>
-        <td class="right green bold">${fmtRupiah(r.total)}</td>
+        <td class="right green bold">${formatRupiah(r.total)}</td>
       </tr>`).join("");
   const topRows = topProduk.length === 0
     ? `<tr><td colspan="3" style="text-align:center;padding:16px;color:#666">Tidak ada data.</td></tr>`
     : topProduk.map((r, i) => `<tr>
         <td>${i + 1}. ${escapeHtml(r.nama_barang)}</td>
         <td class="right">${r.total_qty} ${escapeHtml(r.satuan)}</td>
-        <td class="right green bold">${fmtRupiah(r.total_omset)}</td>
+        <td class="right green bold">${formatRupiah(r.total_omset)}</td>
       </tr>`).join("");
 
   return printHead(judul) + `
@@ -280,9 +250,9 @@ ${filterTableHtml([
 <div class="summary-box">
   <div class="summary-title">Ringkasan Penjualan</div>
   <table class="sum-tbl">
-    <tr><td>Total Penjualan</td><td>:</td><td class="green bold">${fmtRupiah(ringkasan.total_penjualan)}</td></tr>
+    <tr><td>Total Penjualan</td><td>:</td><td class="green bold">${formatRupiah(ringkasan.total_penjualan)}</td></tr>
     <tr><td>Jumlah Transaksi</td><td>:</td><td>${ringkasan.jumlah_transaksi} transaksi</td></tr>
-    <tr><td>Rata-rata/Transaksi</td><td>:</td><td>${fmtRupiah(ringkasan.rata_rata)}</td></tr>
+    <tr><td>Rata-rata/Transaksi</td><td>:</td><td>${formatRupiah(ringkasan.rata_rata)}</td></tr>
   </table>
 </div>
 <p style="font-weight:bold;margin:12px 0 4px">Detail Penjualan Harian</p>
@@ -1322,21 +1292,21 @@ export default function LaporanPage() {
                 <CardTitle className="text-sm font-medium">Total Gaji Dicatat</CardTitle>
                 <Wallet className="h-4 w-4 text-primary" />
               </CardHeader>
-              <CardContent><p className="text-2xl font-bold">{fmtRupiah(totalUpahDicatat)}</p></CardContent>
+              <CardContent><p className="text-2xl font-bold">{formatRupiah(totalUpahDicatat)}</p></CardContent>
             </Card>
             <Card className="border-l-4 border-l-emerald-500">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium">Total Sudah Dibayar</CardTitle>
                 <TrendingUp className="h-4 w-4 text-emerald-600" />
               </CardHeader>
-              <CardContent><p className="text-2xl font-bold text-emerald-600">{fmtRupiah(totalUpahDibayar)}</p></CardContent>
+              <CardContent><p className="text-2xl font-bold text-emerald-600">{formatRupiah(totalUpahDibayar)}</p></CardContent>
             </Card>
             <Card className="border-l-4 border-l-red-500">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium">Sisa Gaji</CardTitle>
                 <TrendingDown className="h-4 w-4 text-red-600" />
               </CardHeader>
-              <CardContent><p className="text-2xl font-bold text-red-700">{fmtRupiah(totalUpahBelumDibayar)}</p></CardContent>
+              <CardContent><p className="text-2xl font-bold text-red-700">{formatRupiah(totalUpahBelumDibayar)}</p></CardContent>
             </Card>
           </div>
 
@@ -1362,9 +1332,9 @@ export default function LaporanPage() {
                           <TableCell className="font-medium">{p.nama}</TableCell>
                           <TableCell className="text-muted-foreground">{p.jabatan || "—"}</TableCell>
                           <TableCell className="text-right">{p.jumlah_catatan}</TableCell>
-                          <TableCell className="text-right">{fmtRupiah(p.total_upah)}</TableCell>
-                          <TableCell className="text-right text-emerald-700">{fmtRupiah(p.total_dibayar)}</TableCell>
-                          <TableCell className={`text-right font-bold ${p.sisa > 0 ? "text-red-700" : "text-muted-foreground"}`}>{fmtRupiah(p.sisa)}</TableCell>
+                          <TableCell className="text-right">{formatRupiah(p.total_upah)}</TableCell>
+                          <TableCell className="text-right text-emerald-700">{formatRupiah(p.total_dibayar)}</TableCell>
+                          <TableCell className={`text-right font-bold ${p.sisa > 0 ? "text-red-700" : "text-muted-foreground"}`}>{formatRupiah(p.sisa)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -1401,9 +1371,9 @@ export default function LaporanPage() {
                               <TableCell className="font-medium">{u.pekerja_nama}</TableCell>
                               <TableCell>{u.keterangan}</TableCell>
                               <TableCell className="text-muted-foreground">{u.tanggal_kerja}</TableCell>
-                              <TableCell className="text-right">{fmtRupiah(u.jumlah_total)}</TableCell>
-                              <TableCell className="text-right text-emerald-700">{fmtRupiah(u.total_dibayar)}</TableCell>
-                              <TableCell className={`text-right font-bold ${u.sisa_upah > 0 ? "text-red-700" : "text-muted-foreground"}`}>{fmtRupiah(u.sisa_upah)}</TableCell>
+                              <TableCell className="text-right">{formatRupiah(u.jumlah_total)}</TableCell>
+                              <TableCell className="text-right text-emerald-700">{formatRupiah(u.total_dibayar)}</TableCell>
+                              <TableCell className={`text-right font-bold ${u.sisa_upah > 0 ? "text-red-700" : "text-muted-foreground"}`}>{formatRupiah(u.sisa_upah)}</TableCell>
                               <TableCell>
                                 {u.status === "lunas"
                                   ? <Badge variant="outline" className="border-emerald-400 text-emerald-700 bg-emerald-50">Lunas</Badge>

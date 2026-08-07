@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { CurrencyQuickAdd } from "@/components/ui/currency-quick-add";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -182,12 +183,12 @@ export default function HutangPage() {
       <div className="toolbar-card flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
+          <Input
             type="text"
             placeholder="Cari nama pelanggan atau keterangan..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-11 w-full rounded-xl border border-input bg-white/80 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="h-11 w-full rounded-xl bg-white/80 pl-9"
           />
         </div>
         <div className="flex flex-wrap gap-2 items-center">
@@ -264,20 +265,7 @@ export default function HutangPage() {
                         placeholder="0"
                       />
                     </FormControl>
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
-                        <Button
-                          key={nominal}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-2 text-[11px]"
-                          onClick={() => field.onChange((Number(field.value) || 0) + nominal)}
-                        >
-                          +{formatRupiah(nominal)}
-                        </Button>
-                      ))}
-                    </div>
+                    <CurrencyQuickAdd onAdd={(nominal) => field.onChange((Number(field.value) || 0) + nominal)} />
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -338,20 +326,7 @@ export default function HutangPage() {
                         placeholder="0"
                       />
                     </FormControl>
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {[50000, 100000, 250000, 500000, 1000000].map((nominal) => (
-                        <Button
-                          key={nominal}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-2 text-[11px]"
-                          onClick={() => field.onChange((Number(field.value) || 0) + nominal)}
-                        >
-                          +{formatRupiah(nominal)}
-                        </Button>
-                      ))}
-                    </div>
+                    <CurrencyQuickAdd onAdd={(nominal) => field.onChange((Number(field.value) || 0) + nominal)} />
                     <FormMessage />
                   </FormItem>
                 )} />
