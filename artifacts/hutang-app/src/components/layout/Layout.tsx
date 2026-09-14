@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useMemo, useCallback } from "react";
+import { ReactNode, useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { BookOpen } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -29,6 +29,11 @@ export function Layout({ children }: { children: ReactNode }) {
   const [daysWithoutBackup, setDaysWithoutBackup] = useState<number | null>(null);
   const [recheckingLisensi, setRecheckingLisensi] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+
+  const contentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    contentRef.current?.scrollTo(0, 0);
+  }, [location]);
 
   // Status Lisensi
   const { data: licenseStatus } = useQuery<LicenseStatus>({
@@ -195,7 +200,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <MobileHeader>{NavContent}</MobileHeader>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-auto p-4 md:p-7">
+        <div ref={contentRef} className="flex-1 overflow-auto p-4 md:p-7">
           <div className="mx-auto w-full max-w-[1500px] animate-soft-in">
             <LicenseContext.Provider value={licenseContextValue}>
               {children}

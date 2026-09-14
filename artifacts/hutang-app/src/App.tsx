@@ -90,35 +90,45 @@ const queryClient = new QueryClient({
   },
 });
 
+function ProtectedRoutes() {
+  return (
+    <ProtectedRoute>
+      <Layout>
+        <Suspense fallback={<PageLoadingFallback />}>
+          <Switch>
+            {PROTECTED_ROUTES.map(({ path, component: Component, allowedRoles }) => (
+              <Route key={path} path={path}>
+                <ProtectedRoute allowedRoles={allowedRoles}>
+                  <Component />
+                </ProtectedRoute>
+              </Route>
+            ))}
+
+            {/* Root route: Role-based redirect via ProtectedRoute */}
+            <Route path="/">
+              <div />
+            </Route>
+
+            {/* 404 inside layout */}
+            <Route component={NotFound} />
+          </Switch>
+        </Suspense>
+      </Layout>
+    </ProtectedRoute>
+  );
+}
+
 function Router() {
   return (
     <Switch>
-      {/* Public Pages */}
+      {/* Public Pages (no sidebar) */}
       <Route path="/setup" component={SetupPage} />
       <Route path="/login" component={LoginPage} />
 
-      {/* Declarative Protected Routes with Shell Layout & Suspense Fallback */}
-      {PROTECTED_ROUTES.map(({ path, component: Component, allowedRoles }) => (
-        <Route key={path} path={path}>
-          <ProtectedRoute allowedRoles={allowedRoles}>
-            <Layout>
-              <Suspense fallback={<PageLoadingFallback />}>
-                <Component />
-              </Suspense>
-            </Layout>
-          </ProtectedRoute>
-        </Route>
-      ))}
-
-      {/* Root route: Role-based redirect via ProtectedRoute */}
-      <Route path="/">
-        <ProtectedRoute>
-          <div />
-        </ProtectedRoute>
+      {/* All protected routes share a single Layout instance */}
+      <Route>
+        <ProtectedRoutes />
       </Route>
-
-      {/* 404 Fallback */}
-      <Route component={NotFound} />
     </Switch>
   );
 }
