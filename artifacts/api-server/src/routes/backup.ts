@@ -2,13 +2,203 @@ import { Router, type IRouter } from "express";
 import express from "express";
 import { db, sqliteRaw, usahaTable, pelangganTable, hutangTable, pembayaranTable, keuanganTable, barangTable, transaksiStokTable, transaksiKasirTable, transaksiKasirItemTable, pekerjaTable, upahPekerjaTable, bayarUpahTable, pengaturanTable, suppliersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
-// Restore JSON bisa besar (data ribuan transaksi). Override body limit 50 MB
+const nullableString = z.string().nullable().optional();
+const nullableId = z.number().int().nullable().optional();
+const money = z.coerce.number();
+
+const BackupUsahaSchema = z.object({
+  id: z.number().int(),
+  nama_usaha: z.string(),
+  alamat: nullableString,
+  telepon: nullableString,
+  catatan: nullableString,
+  created_at: z.string(),
+});
+
+const BackupPelangganSchema = z.object({
+  id: z.number().int(),
+  usaha_id: z.number().int(),
+  nama: z.string(),
+  telepon: nullableString,
+  alamat: nullableString,
+  catatan: nullableString,
+  created_at: z.string(),
+});
+
+const BackupHutangSchema = z.object({
+  id: z.number().int(),
+  usaha_id: z.number().int(),
+  pelanggan_id: z.number().int(),
+  tanggal_hutang: z.string(),
+  tanggal_jatuh_tempo: nullableString,
+  keterangan: nullableString,
+  nominal_hutang: money,
+  total_dibayar: money,
+  sisa_hutang: money,
+  status: z.string(),
+  keuangan_id: nullableId,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+const BackupPembayaranSchema = z.object({
+  id: z.number().int(),
+  usaha_id: z.number().int(),
+  hutang_id: z.number().int(),
+  pelanggan_id: z.number().int(),
+  tanggal_bayar: z.string(),
+  nominal_bayar: money,
+  catatan: nullableString,
+  nomor_kwitansi: nullableString,
+  sisa_hutang_setelah: money.nullable().optional(),
+  keuangan_id: nullableId,
+  created_at: z.string(),
+});
+
+const BackupKeuanganSchema = z.object({
+  id: z.number().int(),
+  usaha_id: z.number().int(),
+  tanggal: z.string(),
+  tipe: z.string(),
+  kategori: nullableString,
+  keterangan: z.string(),
+  jumlah: money,
+  created_at: z.string(),
+});
+
+const BackupBarangSchema = z.object({
+  id: z.number().int(),
+  usaha_id: z.number().int(),
+  nama: z.string(),
+  satuan: z.string(),
+  harga_beli: money,
+  harga_jual: money,
+  stok: money,
+  stok_minimum: money,
+  kategori: nullableString,
+  created_at: z.string(),
+});
+
+const BackupTransaksiStokSchema = z.object({
+  id: z.number().int(),
+  usaha_id: z.number().int(),
+  barang_id: z.number().int(),
+  tanggal: z.string(),
+  tipe: z.string(),
+  jumlah: money,
+  harga_satuan: money,
+  keterangan: nullableString,
+  keuangan_id: nullableId,
+  supplier_id: nullableId,
+  created_at: z.string(),
+});
+
+const BackupTransaksiKasirSchema = z.object({
+  id: z.number().int(),
+  usaha_id: z.number().int(),
+  tanggal: z.string(),
+  total: money,
+  diskon: money,
+  uang_bayar: money,
+  kembalian: money,
+  catatan: nullableString,
+  keuangan_id: nullableId,
+  created_at: z.string(),
+});
+
+const BackupTransaksiKasirItemSchema = z.object({
+  id: z.number().int(),
+  transaksi_kasir_id: z.number().int(),
+  barang_id: z.number().int(),
+  nama_barang: z.string(),
+  satuan: z.string(),
+  jumlah: money,
+  harga_satuan: money,
+  subtotal: money,
+});
+
+const BackupPekerjaSchema = z.object({
+  id: z.number().int(),
+  usaha_id: z.number().int(),
+  pelanggan_id: nullableId,
+  nama: z.string(),
+  telepon: nullableString,
+  jabatan: nullableString,
+  catatan: nullableString,
+  created_at: z.string(),
+});
+
+const BackupUpahPekerjaSchema = z.object({
+  id: z.number().int(),
+  usaha_id: z.number().int(),
+  pekerja_id: z.number().int(),
+  keterangan: z.string(),
+  jumlah_total: money,
+  total_dibayar: money,
+  sisa_upah: money,
+  tanggal_kerja: z.string(),
+  status: z.string(),
+  catatan: nullableString,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+const BackupBayarUpahSchema = z.object({
+  id: z.number().int(),
+  usaha_id: z.number().int(),
+  upah_id: z.number().int(),
+  jumlah: money,
+  tanggal_bayar: z.string(),
+  keuangan_id: nullableId,
+  pembayaran_id: nullableId,
+  catatan: nullableString,
+  created_at: z.string(),
+});
+
+const BackupPengaturanSchema = z.object({
+  key: z.string(),
+  value: nullableString,
+  updated_at: z.string(),
+});
+
+const BackupSupplierSchema = z.object({
+  id: z.number().int(),
+  usaha_id: z.number().int(),
+  nama: z.string(),
+  telepon: nullableString,
+  alamat: nullableString,
+  catatan: nullableString,
+  created_at: z.string(),
+});
+
+const BackupSchema = z.object({
+  version: z.string(),
+  exported_at: z.string(),
+  usaha_id: z.number().int(),
+  usaha: BackupUsahaSchema,
+  pelanggan: z.array(BackupPelangganSchema),
+  hutang: z.array(BackupHutangSchema),
+  pembayaran: z.array(BackupPembayaranSchema),
+  keuangan: z.array(BackupKeuanganSchema).default([]),
+  barang: z.array(BackupBarangSchema).default([]),
+  transaksi_stok: z.array(BackupTransaksiStokSchema).default([]),
+  transaksi_kasir: z.array(BackupTransaksiKasirSchema).default([]),
+  transaksi_kasir_item: z.array(BackupTransaksiKasirItemSchema).default([]),
+  pekerja: z.array(BackupPekerjaSchema).default([]),
+  upah_pekerja: z.array(BackupUpahPekerjaSchema).default([]),
+  bayar_upah: z.array(BackupBayarUpahSchema).default([]),
+  pengaturan: z.array(BackupPengaturanSchema).default([]),
+  suppliers: z.array(BackupSupplierSchema).default([]),
+});
+
+// Restore JSON bisa besar (data ribuan transaksi). Override body limit 10 MB
 // hanya di route ini supaya endpoint lain tetap dibatasi 1 MB di app.ts.
-const restoreBodyParser = express.json({ limit: "50mb" });
+const restoreBodyParser = express.json({ limit: "10mb" });
 
 router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
   const usahaId = req.session.usahaId;
@@ -229,12 +419,16 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
     return;
   }
 
-  const backup = req.body;
-
-  if (!backup.version || !Array.isArray(backup.pelanggan) || !Array.isArray(backup.hutang) || !Array.isArray(backup.pembayaran)) {
-    res.status(400).json({ error: "Format file backup tidak valid. Pastikan file yang diunggah benar." });
+  const parseResult = BackupSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errors = parseResult.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
+    res.status(400).json({
+      error: "Data backup tidak valid. Periksa format file.",
+      details: errors.slice(0, 20),
+    });
     return;
   }
+  const validatedBackup = parseResult.data;
 
   // usaha_id di dalam file backup tidak harus sama dengan usaha aktif —
   // semua data akan di-map ke usaha yang sedang login (mendukung pindah PC / install baru)
@@ -243,8 +437,11 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
   // db.transaction(async ...) tidak didukung — akan throw "Transaction function cannot return a promise".
   // Solusi: gunakan sqliteRaw.transaction() (better-sqlite3 native) dengan callback sinkron.
 
+  let currentTable = "persiapan restore";
+
   try {
     const transact = sqliteRaw.transaction(() => {
+      currentTable = "penghapusan data lama";
       // ── Hapus semua data lama (urutan penting karena foreign key) ───────────
 
       // Hapus item kasir dulu (child dari transaksi_kasir)
@@ -270,12 +467,13 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       sqliteRaw.prepare("DELETE FROM suppliers         WHERE usaha_id = ?").run(usahaId);
 
       // ── 1. Restore keuangan — bangun peta ID lama → baru ──────────────────
+      currentTable = "keuangan";
       const keuanganIdMap = new Map<number, number>();
-      if (Array.isArray(backup.keuangan)) {
+      if (Array.isArray(validatedBackup.keuangan)) {
         const stmtKeu = sqliteRaw.prepare(
           "INSERT INTO keuangan (usaha_id, tanggal, tipe, kategori, keterangan, jumlah) VALUES (?, ?, ?, ?, ?, ?)"
         );
-        for (const k of backup.keuangan) {
+        for (const k of validatedBackup.keuangan) {
           const r = stmtKeu.run(
             usahaId, k.tanggal, k.tipe, k.kategori ?? null, k.keterangan ?? "", String(k.jumlah)
           );
@@ -284,11 +482,12 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       }
 
       // ── 2. Restore pelanggan — bangun peta ID lama → baru ─────────────────
+      currentTable = "pelanggan";
       const pelangganIdMap = new Map<number, number>();
       const stmtPel = sqliteRaw.prepare(
         "INSERT INTO pelanggan (usaha_id, nama, telepon, alamat, catatan) VALUES (?, ?, ?, ?, ?)"
       );
-      for (const p of backup.pelanggan) {
+      for (const p of validatedBackup.pelanggan) {
         const r = stmtPel.run(
           usahaId, p.nama, p.telepon ?? null, p.alamat ?? null, p.catatan ?? null
         );
@@ -296,12 +495,13 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       }
 
       // ── 3. Restore barang — bangun peta ID lama → baru ────────────────────
+      currentTable = "barang";
       const barangIdMap = new Map<number, number>();
-      if (Array.isArray(backup.barang)) {
+      if (Array.isArray(validatedBackup.barang)) {
         const stmtBar = sqliteRaw.prepare(
           "INSERT INTO barang (usaha_id, nama, satuan, harga_beli, harga_jual, stok, stok_minimum, kategori) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         );
-        for (const b of backup.barang) {
+        for (const b of validatedBackup.barang) {
           const r = stmtBar.run(
             usahaId, b.nama, b.satuan,
             String(b.harga_beli), String(b.harga_jual),
@@ -313,11 +513,12 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       }
 
       // ── 4. Restore hutang — bangun peta ID lama → baru ────────────────────
+      currentTable = "hutang";
       const hutangIdMap = new Map<number, number>();
       const stmtHutang = sqliteRaw.prepare(
         "INSERT INTO hutang (usaha_id, pelanggan_id, tanggal_hutang, tanggal_jatuh_tempo, keterangan, nominal_hutang, total_dibayar, sisa_hutang, status, keuangan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       );
-      for (const h of backup.hutang) {
+      for (const h of validatedBackup.hutang) {
         const newPelangganId = pelangganIdMap.get(h.pelanggan_id) ?? h.pelanggan_id;
         const newKeuanganId  = h.keuangan_id != null ? (keuanganIdMap.get(h.keuangan_id) ?? null) : null;
         const r = stmtHutang.run(
@@ -332,12 +533,13 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       }
 
       // ── 5. Restore pembayaran ──────────────────────────────────────────────
+      currentTable = "pembayaran";
       const pembayaranIdMap = new Map<number, number>();
       const stmtBayar = sqliteRaw.prepare(
         "INSERT INTO pembayaran (usaha_id, hutang_id, pelanggan_id, tanggal_bayar, nominal_bayar, catatan, nomor_kwitansi, sisa_hutang_setelah, keuangan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
       );
-      if (Array.isArray(backup.pembayaran)) {
-        for (const p of backup.pembayaran) {
+      if (Array.isArray(validatedBackup.pembayaran)) {
+        for (const p of validatedBackup.pembayaran) {
           const newHutangId    = hutangIdMap.get(p.hutang_id) ?? p.hutang_id;
           const newPelangganId = pelangganIdMap.get(p.pelanggan_id) ?? p.pelanggan_id;
           const newKeuanganId  = p.keuangan_id != null ? (keuanganIdMap.get(p.keuangan_id) ?? null) : null;
@@ -353,14 +555,15 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       }
 
       // ── 5b. Restore suppliers (v1.10+) — bangun peta ID lama → baru ────────
+      currentTable = "suppliers";
       // Backup v1.7-v1.9 tidak punya field ini → dilewati, transaksi_stok
       // baru tidak akan punya supplier (default null).
       const supplierIdMap = new Map<number, number>();
-      if (Array.isArray(backup.suppliers)) {
+      if (Array.isArray(validatedBackup.suppliers)) {
         const stmtSup = sqliteRaw.prepare(
           "INSERT INTO suppliers (usaha_id, nama, telepon, alamat, catatan) VALUES (?, ?, ?, ?, ?)"
         );
-        for (const s of backup.suppliers) {
+        for (const s of validatedBackup.suppliers) {
           if (typeof s?.nama !== "string" || s.nama.length === 0) continue;
           const r = stmtSup.run(
             usahaId, s.nama, s.telepon ?? null, s.alamat ?? null, s.catatan ?? null
@@ -370,11 +573,12 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       }
 
       // ── 6. Restore transaksi stok ──────────────────────────────────────────
-      if (Array.isArray(backup.transaksi_stok)) {
+      currentTable = "transaksi_stok";
+      if (Array.isArray(validatedBackup.transaksi_stok)) {
         const stmtStok = sqliteRaw.prepare(
           "INSERT INTO transaksi_stok (usaha_id, barang_id, tanggal, tipe, jumlah, harga_satuan, keterangan, keuangan_id, supplier_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
-        for (const t of backup.transaksi_stok) {
+        for (const t of validatedBackup.transaksi_stok) {
           const newBarangId   = barangIdMap.get(t.barang_id) ?? t.barang_id;
           const newKeuanganId = t.keuangan_id != null ? (keuanganIdMap.get(t.keuangan_id) ?? null) : null;
           // v1.10+: map supplier_id lama → baru. Kalau backup lama (tanpa supplier)
@@ -390,12 +594,13 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       }
 
       // ── 7. Restore transaksi kasir — bangun peta ID lama → baru ───────────
+      currentTable = "transaksi_kasir";
       const kasirIdMap = new Map<number, number>();
-      if (Array.isArray(backup.transaksi_kasir)) {
+      if (Array.isArray(validatedBackup.transaksi_kasir)) {
         const stmtKasir = sqliteRaw.prepare(
           "INSERT INTO transaksi_kasir (usaha_id, tanggal, total, diskon, uang_bayar, kembalian, catatan, keuangan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         );
-        for (const k of backup.transaksi_kasir) {
+        for (const k of validatedBackup.transaksi_kasir) {
           const newKeuanganId = k.keuangan_id != null ? (keuanganIdMap.get(k.keuangan_id) ?? null) : null;
           const r = stmtKasir.run(
             usahaId, k.tanggal,
@@ -408,11 +613,12 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       }
 
       // ── 8. Restore item kasir ──────────────────────────────────────────────
-      if (Array.isArray(backup.transaksi_kasir_item)) {
+      currentTable = "transaksi_kasir_item";
+      if (Array.isArray(validatedBackup.transaksi_kasir_item)) {
         const stmtKasirItem = sqliteRaw.prepare(
           "INSERT INTO transaksi_kasir_item (transaksi_kasir_id, barang_id, nama_barang, satuan, jumlah, harga_satuan, subtotal) VALUES (?, ?, ?, ?, ?, ?, ?)"
         );
-        for (const i of backup.transaksi_kasir_item) {
+        for (const i of validatedBackup.transaksi_kasir_item) {
           const newKasirId  = kasirIdMap.get(i.transaksi_kasir_id) ?? i.transaksi_kasir_id;
           const newBarangId = barangIdMap.get(i.barang_id) ?? i.barang_id;
           stmtKasirItem.run(
@@ -424,12 +630,13 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       }
 
       // ── 9. Restore pekerja — bangun peta ID lama → baru ──────────────────
+      currentTable = "pekerja";
       const pekerjaIdMap = new Map<number, number>();
-      if (Array.isArray(backup.pekerja)) {
+      if (Array.isArray(validatedBackup.pekerja)) {
         const stmtPekerja = sqliteRaw.prepare(
           "INSERT INTO pekerja (usaha_id, pelanggan_id, nama, telepon, jabatan, catatan) VALUES (?, ?, ?, ?, ?, ?)"
         );
-        for (const p of backup.pekerja) {
+        for (const p of validatedBackup.pekerja) {
           const newPelangganId = p.pelanggan_id != null ? (pelangganIdMap.get(p.pelanggan_id) ?? null) : null;
           const r = stmtPekerja.run(
             usahaId, newPelangganId, p.nama, p.telepon ?? null, p.jabatan ?? null, p.catatan ?? null
@@ -439,12 +646,13 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       }
 
       // ── 10. Restore upah_pekerja — bangun peta ID lama → baru ─────────────
+      currentTable = "upah_pekerja";
       const upahIdMap = new Map<number, number>();
-      if (Array.isArray(backup.upah_pekerja)) {
+      if (Array.isArray(validatedBackup.upah_pekerja)) {
         const stmtUpah = sqliteRaw.prepare(
           "INSERT INTO upah_pekerja (usaha_id, pekerja_id, keterangan, jumlah_total, total_dibayar, sisa_upah, tanggal_kerja, status, catatan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
-        for (const u of backup.upah_pekerja) {
+        for (const u of validatedBackup.upah_pekerja) {
           const newPekerjaId = pekerjaIdMap.get(u.pekerja_id) ?? u.pekerja_id;
           const r = stmtUpah.run(
             usahaId, newPekerjaId, u.keterangan,
@@ -457,11 +665,12 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       }
 
       // ── 11. Restore bayar_upah ────────────────────────────────────────────
-      if (Array.isArray(backup.bayar_upah)) {
+      currentTable = "bayar_upah";
+      if (Array.isArray(validatedBackup.bayar_upah)) {
         const stmtBayarUpah = sqliteRaw.prepare(
           "INSERT INTO bayar_upah (usaha_id, upah_id, jumlah, tanggal_bayar, keuangan_id, pembayaran_id, catatan) VALUES (?, ?, ?, ?, ?, ?, ?)"
         );
-        for (const b of backup.bayar_upah) {
+        for (const b of validatedBackup.bayar_upah) {
           const newUpahId     = upahIdMap.get(b.upah_id) ?? b.upah_id;
           const newKeuanganId = b.keuangan_id != null ? (keuanganIdMap.get(b.keuangan_id) ?? null) : null;
           const newPembayaranId = b.pembayaran_id != null ? (pembayaranIdMap.get(b.pembayaran_id) ?? null) : null;
@@ -473,22 +682,24 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       }
 
       // ── 12. Perbarui info usaha dari backup ───────────────────────────────
-      if (backup.usaha && typeof backup.usaha === "object") {
+      currentTable = "usaha";
+      if (validatedBackup.usaha) {
         sqliteRaw.prepare(
           "UPDATE usaha SET nama_usaha = COALESCE(?, nama_usaha), alamat = ?, telepon = ?, catatan = ? WHERE id = ?"
         ).run(
-          backup.usaha.nama_usaha ?? null,
-          backup.usaha.alamat    ?? null,
-          backup.usaha.telepon   ?? null,
-          backup.usaha.catatan   ?? null,
+        validatedBackup.usaha.nama_usaha ?? null,
+        validatedBackup.usaha.alamat    ?? null,
+        validatedBackup.usaha.telepon   ?? null,
+        validatedBackup.usaha.catatan   ?? null,
           usahaId
         );
       }
 
       // ── 13. Restore pengaturan (v1.8+) ────────────────────────────────────
+      currentTable = "pengaturan";
       // Backup lama (v1.7) tidak punya field ini — dilewati. Backup v1.8 akan
       // mengganti semua pengaturan untuk usaha ini.
-      if (Array.isArray(backup.pengaturan)) {
+      if (Array.isArray(validatedBackup.pengaturan)) {
         sqliteRaw.prepare("DELETE FROM pengaturan WHERE usaha_id = ?").run(usahaId);
         const stmtPengaturan = sqliteRaw.prepare(
           "INSERT INTO pengaturan (usaha_id, key, value) VALUES (?, ?, ?)"
@@ -496,7 +707,7 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
         // Whitelist key di sini juga, mirroring routes/pengaturan.ts. Kalau backup
         // dari versi yang lebih baru bawa key tambahan, kita simpan apa adanya
         // (forward-compat). Hanya validasi tipe.
-        for (const p of backup.pengaturan) {
+        for (const p of validatedBackup.pengaturan) {
           if (typeof p?.key !== "string" || p.key.length === 0 || p.key.length > 64) continue;
           if (p.value !== null && typeof p.value !== "string") continue;
           stmtPengaturan.run(usahaId, p.key, p.value ?? null);
@@ -507,8 +718,8 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
     transact(); // jalankan seluruh transaksi secara sinkron
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[backup/restore] Error dalam transaksi restore:", message, err instanceof Error ? err.stack : "");
-    res.status(500).json({ error: `Restore gagal, semua perubahan dibatalkan: ${message}` });
+     console.error(`[backup/restore] Error saat restore tabel ${currentTable}:`, message, err instanceof Error ? err.stack : "");
+     res.status(500).json({ error: `Restore gagal pada tabel ${currentTable}, semua perubahan dibatalkan: ${message}` });
     return;
   }
 
