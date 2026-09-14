@@ -39,6 +39,15 @@ export interface KeuntunganKasir {
   margin_persen: number;
 }
 
+export interface KeuntunganBulananItem {
+  bulan: number;
+  nama: string;
+  omset: number;
+  modal: number;
+  keuntungan: number;
+  margin_persen: number;
+}
+
 export interface KeuanganInputBody {
   tanggal: string;
   tipe: "masuk" | "keluar";
@@ -100,6 +109,10 @@ export async function fetchKeuntunganKasir(params?: { bulan?: string; tahun?: st
   if (params?.tahun) q.set("tahun", params.tahun);
   const query = q.toString();
   return customFetch<KeuntunganKasir>(`/api/laporan/kasir/keuntungan${query ? `?${query}` : ""}`);
+}
+
+export async function fetchKeuntunganBulanan(tahun: string): Promise<KeuntunganBulananItem[]> {
+  return customFetch<KeuntunganBulananItem[]>(`/api/laporan/kasir/keuntungan-bulanan?tahun=${encodeURIComponent(tahun)}`);
 }
 
 export async function createKeuangan(body: KeuanganInputBody): Promise<KeuanganItem> {

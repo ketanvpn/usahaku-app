@@ -246,6 +246,72 @@ router.get("/laporan/kasir/keuntungan", requireAuth, async (req, res): Promise<v
   });
 });
 
+// ── Laporan Kasir: Keuntungan Bulanan (tren 12 bulan) ──────────────────────
+router.get("/laporan/kasir/keuntungan-bulanan", requireAuth, async (req, res): Promise<void> => {
+  const usahaId = req.session.usahaId;
+  if (!usahaId) { res.status(403).json({ error: "Akses ditolak." }); return; }
+
+  const tahun = parseInt((req.query.tahun as string) || String(new Date().getFullYear()));
+  if (isNaN(tahun) || tahun < 2000 || tahun > 2100) {
+    res.status(400).json({ error: "Tahun tidak valid." });
+    return;
+  }
+
+  const BULAN_NAMES = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+
+  const items = await db
+    .select({
+      bulan: sql<string>`strftime('%m', ${transaksiKasirTable.tanggal})`,
+      jumlah: transaksiKasirItemTable.jumlah,
+      subtotal: transaksiKasirItemTable.subtotal,
+      hargaBeliSnapshot: transaksiKasirItemTable.hargaBeli,
+      hargaBeliBarang: barangTable.hargaBeli,
+    })
+    .from(transaksiKasirItemTable)
+    .innerJoin(transaksiKasirTable, eq(transaksiKasirItemTable.transaksiKasirId, transaksiKasirTable.id))
+    .leftJoin(barangTable, eq(transaksiKasirItemTable.barangId, barangTable.id))
+    .where(and(
+      eq(transaksiKasirTable.usahaId, usahaId),
+      gte(transaksiKasirTable.tanggal, `${tahun}-01-01`),
+      lte(transaksiKasirTable.tanggal, `${tahun}-12-31`)
+    ));
+
+  const perBulan = new Map<number, { omset: number; modal: number }>();
+  for (const item of items) {
+    const bulanNum = parseInt(item.bulan);
+    const qty = toNum(item.jumlah);
+    const omset = toNum(item.subtotal);
+    const hargaBeli = item.hargaBeliSnapshot
+      ? toNum(item.hargaBeliSnapshot)
+      : (item.hargaBeliBarang ? toNum(item.hargaBeliBarang) : 0);
+    const modal = qty * hargaBeli;
+
+    const existing = perBulan.get(bulanNum);
+    if (existing) {
+      existing.omset += omset;
+      existing.modal += modal;
+    } else {
+      perBulan.set(bulanNum, { omset, modal });
+    }
+  }
+
+  const result = Array.from({ length: 12 }, (_, i) => {
+    const bulanNum = i + 1;
+    const data = perBulan.get(bulanNum) ?? { omset: 0, modal: 0 };
+    const keuntungan = data.omset - data.modal;
+    return {
+      bulan: bulanNum,
+      nama: BULAN_NAMES[i],
+      omset: data.omset,
+      modal: data.modal,
+      keuntungan,
+      margin_persen: data.omset > 0 ? Math.round((keuntungan / data.omset) * 100) : 0,
+    };
+  });
+
+  res.json(result);
+});
+
 // ── Laporan Pembelian per Supplier (v1.1.1) ─────────────────────────────────
 // Query params:
 //   - bulan: 1-12 (opsional)

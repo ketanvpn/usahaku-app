@@ -9,6 +9,7 @@ import {
   fetchRekapKategoriKeuangan,
   fetchRekapBulananKeuangan,
   fetchKeuntunganKasir,
+  fetchKeuntunganBulanan,
   createKeuangan,
   updateKeuangan,
   deleteKeuangan,
@@ -17,6 +18,7 @@ import {
   type RekapKategoriKeuangan,
   type RekapBulananKeuangan,
   type KeuntunganKasir,
+  type KeuntunganBulananItem,
 } from "@/lib/api-keuangan";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -185,12 +187,18 @@ export default function KeuanganPage() {
     queryFn: () => fetchRekapBulananKeuangan(filterTahun),
   });
 
+  const { data: keuntunganBulanan = [] } = useQuery<KeuntunganBulananItem[]>({
+    queryKey: ["keuangan-keuntungan-bulanan", filterTahun],
+    queryFn: () => fetchKeuntunganBulanan(filterTahun),
+  });
+
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["keuangan"] });
     qc.invalidateQueries({ queryKey: ["keuangan-rekap"] });
     qc.invalidateQueries({ queryKey: ["keuangan-rekap-total"] });
     qc.invalidateQueries({ queryKey: ["keuangan-rekap-kategori"] });
     qc.invalidateQueries({ queryKey: ["keuangan-rekap-bulanan"] });
+    qc.invalidateQueries({ queryKey: ["keuangan-keuntungan-bulanan"] });
   };
 
   const form = useForm<KeuanganFormValues>({
@@ -310,6 +318,38 @@ export default function KeuanganPage() {
               <Legend />
               <Bar dataKey="masuk" name="Masuk" fill="#16a34a" radius={[3, 3, 0, 0]} />
               <Bar dataKey="keluar" name="Keluar" fill="#dc2626" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Grafik Keuntungan Bulanan */}
+      <Card className="data-card">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" /> Grafik Keuntungan Penjualan {filterTahun}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={keuntunganBulanan} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="nama" tick={{ fontSize: 11 }} />
+              <YAxis tickFormatter={(v) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}jt` : v >= 1000 ? `${(v/1000).toFixed(0)}rb` : String(v)} tick={{ fontSize: 10 }} />
+              <Tooltip
+                formatter={(value: number, name: string) => {
+                  const label = name === "omset" ? "Omset" : name === "modal" ? "Modal" : "Keuntungan";
+                  return [formatRupiah(value), label];
+                }}
+                labelFormatter={(label: string) => {
+                  const item = keuntunganBulanan.find(k => k.nama === label);
+                  return item ? `${label} (margin: ${item.margin_persen}%)` : label;
+                }}
+              />
+              <Legend />
+              <Bar dataKey="omset" name="Omset" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="modal" name="Modal" fill="#ef4444" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="keuntungan" name="Keuntungan" fill="#22c55e" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
