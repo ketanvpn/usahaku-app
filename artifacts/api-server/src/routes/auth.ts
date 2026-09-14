@@ -23,10 +23,7 @@ const RESET_SECRET_LEGACY = resolveSecret({
   reason: "fallback verifikasi reset code lama",
 });
 
-const LEGACY_RESET_SECRETS = [
-  "BUKUHUTANG_RESET_SECRET_V1_2026",
-  "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE",
-];
+const LEGACY_RESET_SECRETS: string[] = [];
 
 function verifyResetSignature(payload: string, expected: Buffer): boolean {
   const candidates = [RESET_SECRET_PRIMARY, RESET_SECRET_LEGACY, ...LEGACY_RESET_SECRETS];

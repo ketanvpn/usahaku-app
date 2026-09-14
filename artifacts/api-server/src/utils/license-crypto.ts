@@ -1,18 +1,18 @@
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { resolveSecret } from "../lib/security-secrets";
 
-export const MASTER_LICENSE_SECRET = "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE";
+// Legacy hardcoded secret for verifying v1 keys generated before per-install secrets.
+// NOT exported — only used internally for backward-compatible verification.
+const LEGACY_LICENSE_SECRET = "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE";
 
 const RESOLVED_LICENSE_SECRET = resolveSecret({
   key: "LICENSE_SECRET",
   value: process.env.LICENSE_SECRET,
-  fallback: MASTER_LICENSE_SECRET,
+  fallback: "",
   reason: "dipakai untuk sign dan verifikasi license key",
 });
 
-const VERIFY_SECRETS = Array.from(
-  new Set([MASTER_LICENSE_SECRET, RESOLVED_LICENSE_SECRET].filter(Boolean))
-);
+const VERIFY_SECRETS = [RESOLVED_LICENSE_SECRET, LEGACY_LICENSE_SECRET].filter(Boolean);
 
 export type LicenseTipe = "1bulan" | "3bulan" | "6bulan" | "1tahun";
 
@@ -50,9 +50,8 @@ export function calcExpiresAt(tipe: LicenseTipe, from: Date = new Date()): Date 
   return d;
 }
 
-export function generateLicenseKey(tipe: LicenseTipe, secretOverride?: string): { key: string; expiresAt: Date } {
+export function generateLicenseKey(tipe: LicenseTipe): { key: string; expiresAt: Date } {
   const expiresAt = calcExpiresAt(tipe);
-  const secret = secretOverride || RESOLVED_LICENSE_SECRET;
 
   const buf = Buffer.alloc(8);
   buf.writeUInt8(TIPE_CODE[tipe], 0);
@@ -60,7 +59,7 @@ export function generateLicenseKey(tipe: LicenseTipe, secretOverride?: string): 
   const nonce = randomBytes(3);
   nonce.copy(buf, 5);
 
-  const hmac = createHmac("sha256", secret).update(buf).digest();
+  const hmac = createHmac("sha256", RESOLVED_LICENSE_SECRET).update(buf).digest();
   const sig = hmac.subarray(0, 4);
 
   const full = Buffer.concat([buf, sig]);
