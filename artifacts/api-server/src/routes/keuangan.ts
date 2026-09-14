@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, keuanganTable } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { requireAuth, requireLicense } from "../middlewares/auth";
+import { toNum } from "../utils/money";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -26,7 +27,7 @@ function formatKeuangan(k: typeof keuanganTable.$inferSelect) {
     tipe: k.tipe,
     kategori: k.kategori ?? null,
     keterangan: k.keterangan,
-    jumlah: parseFloat(k.jumlah),
+    jumlah: toNum(k.jumlah),
     created_at: k.createdAt instanceof Date ? k.createdAt.toISOString() : new Date(k.createdAt).toISOString(),
   };
 }
@@ -49,7 +50,7 @@ router.get("/keuangan/rekap-kategori", requireAuth, async (req, res): Promise<vo
   for (const r of rows) {
     const key = `${r.tipe}__${r.kategori ?? "Lainnya"}`;
     if (!map[key]) map[key] = { tipe: r.tipe, total: 0, jumlah_transaksi: 0 };
-    map[key].total += parseFloat(r.jumlah) || 0;
+    map[key].total += toNum(r.jumlah);
     map[key].jumlah_transaksi += 1;
   }
 
@@ -76,7 +77,7 @@ router.get("/keuangan/rekap-bulanan", requireAuth, async (req, res): Promise<voi
   for (let i = 1; i <= 12; i++) bulanMap[i] = { masuk: 0, keluar: 0 };
   for (const r of rows) {
     const bulan = parseInt(r.tanggal.split("-")[1]);
-    const nominal = parseFloat(r.jumlah) || 0;
+    const nominal = toNum(r.jumlah);
     if (r.tipe === "masuk") bulanMap[bulan].masuk += nominal;
     else bulanMap[bulan].keluar += nominal;
   }
@@ -132,7 +133,7 @@ router.get("/keuangan/rekap", requireAuth, async (req, res): Promise<void> => {
   let totalMasuk = 0;
   let totalKeluar = 0;
   for (const r of rows) {
-    const nominal = parseFloat(r.jumlah) || 0;
+    const nominal = toNum(r.jumlah);
     if (r.tipe === "masuk") totalMasuk += nominal;
     else totalKeluar += nominal;
   }

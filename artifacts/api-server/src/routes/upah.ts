@@ -12,6 +12,7 @@ import {
   DeleteBayarUpahParams,
 } from "@workspace/api-zod";
 import { requireAuth, requireLicense } from "../middlewares/auth";
+import { toNum } from "../utils/money";
 
 const router: IRouter = Router();
 
@@ -27,9 +28,9 @@ function formatUpah(
     pekerja_nama: pekerjaNama,
     pekerja_jabatan: pekerjaJabatan ?? null,
     keterangan: u.keterangan,
-    jumlah_total: parseFloat(u.jumlahTotal),
-    total_dibayar: parseFloat(u.totalDibayar),
-    sisa_upah: parseFloat(u.sisaUpah),
+    jumlah_total: toNum(u.jumlahTotal),
+    total_dibayar: toNum(u.totalDibayar),
+    sisa_upah: toNum(u.sisaUpah),
     tanggal_kerja: u.tanggalKerja,
     status: u.status,
     catatan: u.catatan ?? null,
@@ -42,7 +43,7 @@ function formatBayar(b: typeof bayarUpahTable.$inferSelect) {
   return {
     id: b.id,
     upah_id: b.upahId,
-    jumlah: parseFloat(b.jumlah),
+    jumlah: toNum(b.jumlah),
     tanggal_bayar: b.tanggalBayar,
     catatan: b.catatan ?? null,
     pembayaran_id: b.pembayaranId ?? null,
@@ -193,7 +194,7 @@ router.put("/upah/:id", requireAuth, requireLicense, async (req, res): Promise<v
   if (parsed.data.catatan !== undefined) updateData.catatan = parsed.data.catatan ?? null;
   if (parsed.data.jumlah_total !== undefined) {
     const jumlah = parsed.data.jumlah_total;
-    const totalDibayar = parseFloat(existing.totalDibayar);
+    const totalDibayar = toNum(existing.totalDibayar);
     const sisa = jumlah - totalDibayar;
     updateData.jumlahTotal = jumlah.toString();
     updateData.sisaUpah = Math.max(0, sisa).toString();
@@ -292,7 +293,7 @@ router.post("/upah/:id/bayar", requireAuth, requireLicense, async (req, res): Pr
   const pekerja = row.pekerja;
   const jumlahBayar = parsed.data.jumlah;
   const potongHutang = Math.max(0, parsed.data.potong_hutang ?? 0);
-  const sisaSekarang = parseFloat(upah.sisaUpah);
+  const sisaSekarang = toNum(upah.sisaUpah);
 
   if (jumlahBayar <= 0) {
     res.status(400).json({ error: "Jumlah bayar harus lebih dari 0." });
@@ -325,7 +326,7 @@ router.post("/upah/:id/bayar", requireAuth, requireLicense, async (req, res): Pr
       return;
     }
 
-    const sisaHutang = parseFloat(hutang.sisaHutang);
+    const sisaHutang = toNum(hutang.sisaHutang);
     if (potongHutang > sisaHutang) {
       res.status(400).json({ error: `Potongan hutang (${potongHutang}) melebihi sisa hutang (${sisaHutang}).` });
       return;
@@ -334,8 +335,8 @@ router.post("/upah/:id/bayar", requireAuth, requireLicense, async (req, res): Pr
     targetHutang = hutang;
   }
 
-  const totalDibayarBaru = parseFloat(upah.totalDibayar) + jumlahBayar;
-  const sisaBaru = parseFloat(upah.jumlahTotal) - totalDibayarBaru;
+  const totalDibayarBaru = toNum(upah.totalDibayar) + jumlahBayar;
+  const sisaBaru = toNum(upah.jumlahTotal) - totalDibayarBaru;
   const statusBaru = sisaBaru <= 0 ? "lunas" : "belum_lunas";
 
   const keteranganKeuangan = potongHutang > 0
@@ -363,8 +364,8 @@ router.post("/upah/:id/bayar", requireAuth, requireLicense, async (req, res): Pr
     let pembayaranId: number | null = null;
 
     if (potongHutang > 0 && targetHutang) {
-      const sisaHutangSetelah = Math.max(0, parseFloat(targetHutang.sisaHutang) - potongHutang);
-      const totalDibayarHutangBaru = parseFloat(targetHutang.totalDibayar) + potongHutang;
+      const sisaHutangSetelah = Math.max(0, toNum(targetHutang.sisaHutang) - potongHutang);
+      const totalDibayarHutangBaru = toNum(targetHutang.totalDibayar) + potongHutang;
       const statusHutangBaru = sisaHutangSetelah <= 0 ? "lunas" : "aktif";
 
       const [pembayaran] = tx.insert(pembayaranTable).values({
@@ -490,12 +491,12 @@ router.delete("/bayar-upah/:id", requireAuth, requireLicense, async (req, res): 
     : [];
   const hutangTerkaitMap = new Map(hutangTerkaitList.map((h) => [h.id, h]));
 
-  const jumlahBayar = parseFloat(bayar.jumlah);
-  const totalDibayarBaru = Math.max(0, parseFloat(upah.totalDibayar) - jumlahBayar);
-  const sisaBaru = parseFloat(upah.jumlahTotal) - totalDibayarBaru;
+  const jumlahBayar = toNum(bayar.jumlah);
+  const totalDibayarBaru = Math.max(0, toNum(upah.totalDibayar) - jumlahBayar);
+  const sisaBaru = toNum(upah.jumlahTotal) - totalDibayarBaru;
   const statusBaru = sisaBaru <= 0 ? "lunas" : "belum_lunas";
 
-  const potongHutang = pembayaranTerkait ? parseFloat(pembayaranTerkait.nominalBayar) : 0;
+  const potongHutang = pembayaranTerkait ? toNum(pembayaranTerkait.nominalBayar) : 0;
 
   // Cek apakah keuangan_id ini dipakai oleh bayar_upah lain (artinya ini bagian dari batch payment)
   let sisaBayarBatch: { jumlah: string }[] = [];
@@ -512,7 +513,7 @@ router.delete("/bayar-upah/:id", requireAuth, requireLicense, async (req, res): 
     if (bayar.keuanganId) {
       if (sisaBayarBatch.length > 0) {
         // Batch payment: kurangi nominal gaji yang dibatalkan saja
-        const jumlahBaru = Math.max(0, parseFloat(keuanganTerkait?.jumlah ?? "0") - jumlahBayar);
+        const jumlahBaru = Math.max(0, toNum(keuanganTerkait?.jumlah ?? "0") - jumlahBayar);
         if (jumlahBaru <= 0) {
           tx.delete(keuanganTable).where(eq(keuanganTable.id, bayar.keuanganId)).run();
         } else {
@@ -528,15 +529,15 @@ router.delete("/bayar-upah/:id", requireAuth, requireLicense, async (req, res): 
     if (bayar.pembayaranId && pembayaranTerkaitList.length > 0 && bayarLainDenganPembayaran.length === 0) {
       const bayarPerHutang = new Map<number, number>();
       for (const pembayaran of pembayaranTerkaitList) {
-        bayarPerHutang.set(pembayaran.hutangId, (bayarPerHutang.get(pembayaran.hutangId) ?? 0) + parseFloat(pembayaran.nominalBayar));
+        bayarPerHutang.set(pembayaran.hutangId, (bayarPerHutang.get(pembayaran.hutangId) ?? 0) + toNum(pembayaran.nominalBayar));
       }
 
       for (const [hutangId, totalBayar] of bayarPerHutang) {
         const hutang = hutangTerkaitMap.get(hutangId);
         if (!hutang) continue;
 
-        const totalDibayarHutangBaru = Math.max(0, parseFloat(hutang.totalDibayar) - totalBayar);
-        const sisaHutangBaru = parseFloat(hutang.nominalHutang) - totalDibayarHutangBaru;
+        const totalDibayarHutangBaru = Math.max(0, toNum(hutang.totalDibayar) - totalBayar);
+        const sisaHutangBaru = toNum(hutang.nominalHutang) - totalDibayarHutangBaru;
         tx.update(hutangTable).set({
           totalDibayar: totalDibayarHutangBaru.toString(),
           sisaHutang: Math.max(0, sisaHutangBaru).toString(),

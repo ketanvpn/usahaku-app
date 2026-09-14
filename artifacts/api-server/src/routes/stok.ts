@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, barangTable, transaksiStokTable, keuanganTable, suppliersTable } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { requireAuth, requireLicense } from "../middlewares/auth";
+import { toNum } from "../utils/money";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -46,16 +47,16 @@ const StokKeluarSchema = z.object({
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtBarang(b: typeof barangTable.$inferSelect) {
-  const stok = parseFloat(b.stok);
-  const stokMin = parseFloat(b.stokMinimum);
+  const stok = toNum(b.stok);
+  const stokMin = toNum(b.stokMinimum);
   return {
     id: b.id,
     usaha_id: b.usahaId,
     nama: b.nama,
     satuan: b.satuan,
     kategori: b.kategori ?? "",
-    harga_beli: parseFloat(b.hargaBeli),
-    harga_jual: parseFloat(b.hargaJual),
+    harga_beli: toNum(b.hargaBeli),
+    harga_jual: toNum(b.hargaJual),
     stok,
     stok_minimum: stokMin,
     peringatan: stok <= stokMin && stokMin > 0,
@@ -76,9 +77,9 @@ function fmtTransaksi(
     satuan,
     tanggal: t.tanggal,
     tipe: t.tipe,
-    jumlah: parseFloat(t.jumlah),
-    harga_satuan: parseFloat(t.hargaSatuan),
-    total: parseFloat(t.jumlah) * parseFloat(t.hargaSatuan),
+    jumlah: toNum(t.jumlah),
+    harga_satuan: toNum(t.hargaSatuan),
+    total: toNum(t.jumlah) * toNum(t.hargaSatuan),
     keterangan: t.keterangan ?? null,
     keuangan_id: t.keuanganId ?? null,
     supplier_id: t.supplierId ?? null,
@@ -252,9 +253,9 @@ router.post("/stok/masuk", requireAuth, requireLicense, async (req, res): Promis
     supplier = s;
   }
 
-  const harga = harga_satuan ?? parseFloat(barang.hargaBeli);
+  const harga = harga_satuan ?? toNum(barang.hargaBeli);
   const total = jumlah * harga;
-  const stokBaru = parseFloat(barang.stok) + jumlah;
+  const stokBaru = toNum(barang.stok) + jumlah;
 
   const { transaksi } = db.transaction((tx) => {
     let keuanganId: number | null = null;
@@ -314,13 +315,13 @@ router.post("/stok/keluar", requireAuth, requireLicense, async (req, res): Promi
     .where(and(eq(barangTable.id, barang_id), eq(barangTable.usahaId, usahaId)));
   if (!barang) { res.status(404).json({ error: "Barang tidak ditemukan" }); return; }
 
-  const stokSaat = parseFloat(barang.stok);
+  const stokSaat = toNum(barang.stok);
   if (jumlah > stokSaat) {
     res.status(400).json({ error: `Stok tidak cukup. Stok saat ini: ${stokSaat} ${barang.satuan}` });
     return;
   }
 
-  const harga = harga_satuan ?? parseFloat(barang.hargaJual);
+  const harga = harga_satuan ?? toNum(barang.hargaJual);
   const total = jumlah * harga;
   const stokBaru = stokSaat - jumlah;
 
@@ -357,7 +358,7 @@ router.post("/stok/keluar", requireAuth, requireLicense, async (req, res): Promi
   res.status(201).json({
     transaksi: fmtTransaksi(transaksi, barang.nama, barang.satuan),
     stok_baru: stokBaru,
-    peringatan_stok: stokBaru <= parseFloat(barang.stokMinimum) && parseFloat(barang.stokMinimum) > 0,
+    peringatan_stok: stokBaru <= toNum(barang.stokMinimum) && toNum(barang.stokMinimum) > 0,
     keuangan_otomatis: transaksi.keuanganId !== null,
   });
 });
@@ -379,8 +380,8 @@ router.delete("/stok/transaksi/:id", requireAuth, requireLicense, async (req, re
     .where(and(eq(barangTable.id, transaksi.barangId), eq(barangTable.usahaId, usahaId)));
   if (!barang) { res.status(404).json({ error: "Barang tidak ditemukan" }); return; }
 
-  const jumlah = parseFloat(transaksi.jumlah);
-  const stokSaat = parseFloat(barang.stok);
+  const jumlah = toNum(transaksi.jumlah);
+  const stokSaat = toNum(barang.stok);
   const stokBaru = transaksi.tipe === "masuk" ? stokSaat - jumlah : stokSaat + jumlah;
 
   db.transaction((tx) => {

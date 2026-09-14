@@ -10,6 +10,7 @@ import {
   DeleteHutangParams,
 } from "@workspace/api-zod";
 import { requireAuth, requireLicense } from "../middlewares/auth";
+import { toNum } from "../utils/money";
 
 const router: IRouter = Router();
 
@@ -22,9 +23,9 @@ function formatHutang(h: typeof hutangTable.$inferSelect, pelangganNama: string)
     tanggal_hutang: h.tanggalHutang,
     tanggal_jatuh_tempo: h.tanggalJatuhTempo ?? null,
     keterangan: h.keterangan ?? null,
-    nominal_hutang: parseFloat(h.nominalHutang),
-    total_dibayar: parseFloat(h.totalDibayar),
-    sisa_hutang: parseFloat(h.sisaHutang),
+    nominal_hutang: toNum(h.nominalHutang),
+    total_dibayar: toNum(h.totalDibayar),
+    sisa_hutang: toNum(h.sisaHutang),
     status: h.status,
     created_at: h.createdAt.toISOString(),
     updated_at: h.updatedAt.toISOString(),
@@ -164,7 +165,7 @@ router.get("/hutang/:id", requireAuth, async (req, res): Promise<void> => {
       pelanggan_id: p.pelangganId,
       pelanggan_nama: row.pelangganNama ?? "",
       tanggal_bayar: p.tanggalBayar,
-      nominal_bayar: parseFloat(p.nominalBayar),
+      nominal_bayar: toNum(p.nominalBayar),
       catatan: p.catatan ?? null,
       created_at: p.createdAt.toISOString(),
     })),
@@ -208,7 +209,7 @@ router.put("/hutang/:id", requireAuth, requireLicense, async (req, res): Promise
       return;
     }
     const nominal = parsed.data.nominal_hutang;
-    const totalDibayar = parseFloat(existing.totalDibayar);
+    const totalDibayar = toNum(existing.totalDibayar);
     const sisa = nominal - totalDibayar;
     updateData.nominalHutang = nominal.toString();
     updateData.sisaHutang = Math.max(0, sisa).toString();

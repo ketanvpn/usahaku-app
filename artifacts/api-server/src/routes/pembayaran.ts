@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, pembayaranTable, hutangTable, pelangganTable, usahaTable, keuanganTable, transaksiStokTable, barangTable } from "@workspace/db";
-import { eq, and, desc, like, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import {
   CreatePembayaranBody,
   GetPembayaranListQueryParams,
@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-zod";
 import { z } from "zod";
 import { requireAuth, requireLicense } from "../middlewares/auth";
+import { toNum, toStr, generateKwitansiNumber } from "../utils/money";
 
 const router: IRouter = Router();
 
@@ -51,12 +52,12 @@ router.get("/pembayaran", requireAuth, async (req, res): Promise<void> => {
     pelanggan_id: p.pelangganId,
     pelanggan_nama: pelangganNama ?? "",
     tanggal_bayar: p.tanggalBayar,
-    nominal_bayar: parseFloat(p.nominalBayar),
+    nominal_bayar: toNum(p.nominalBayar),
     catatan: p.catatan ?? null,
     nomor_kwitansi: p.nomorKwitansi ?? null,
     hutang_keterangan: hutangKeterangan ?? null,
-    hutang_nominal: hutangNominal ? parseFloat(hutangNominal) : 0,
-    sisa_hutang_setelah: p.sisaHutangSetelah ? parseFloat(p.sisaHutangSetelah) : null,
+    hutang_nominal: hutangNominal ? toNum(hutangNominal) : 0,
+    sisa_hutang_setelah: p.sisaHutangSetelah ? toNum(p.sisaHutangSetelah) : null,
     nama_usaha: namaUsaha ?? "",
     created_at: p.createdAt.toISOString(),
   })));
@@ -93,7 +94,7 @@ router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promis
     return;
   }
 
-  const sisaHutang = parseFloat(hutang.sisaHutang);
+  const sisaHutang = toNum(hutang.sisaHutang);
   if (parsed.data.nominal_bayar > sisaHutang) {
     res.status(400).json({
       error: `Nominal bayar (${parsed.data.nominal_bayar}) melebihi sisa hutang (${sisaHutang}). Masukkan jumlah yang sesuai.`,
@@ -104,24 +105,11 @@ router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promis
   const [pelanggan] = await db.select().from(pelangganTable).where(eq(pelangganTable.id, hutang.pelangganId));
   const [usaha] = await db.select().from(usahaTable).where(eq(usahaTable.id, usahaId));
 
-  // Generate nomor kwitansi berdasarkan tahun ini
-  const tahun = new Date().getFullYear();
-  const existingKwitansi = await db.select({ nomor: pembayaranTable.nomorKwitansi })
-    .from(pembayaranTable)
-    .where(and(eq(pembayaranTable.usahaId, usahaId), like(pembayaranTable.nomorKwitansi, `KWT-${tahun}-%`)));
-  let maxUrut = 0;
-  for (const k of existingKwitansi) {
-    if (k.nomor) {
-      const parts = k.nomor.split("-");
-      const urut = parseInt(parts[parts.length - 1] || "0");
-      if (!isNaN(urut) && urut > maxUrut) maxUrut = urut;
-    }
-  }
-  const nomorKwitansi = `KWT-${tahun}-${String(maxUrut + 1).padStart(4, "0")}`;
+  const nomorKwitansi = generateKwitansiNumber(usahaId);
 
-  const sisaSetelah = Math.max(0, parseFloat(hutang.nominalHutang) - (parseFloat(hutang.totalDibayar) + parsed.data.nominal_bayar));
-  const newTotalDibayar = parseFloat(hutang.totalDibayar) + parsed.data.nominal_bayar;
-  const newSisaHutang = parseFloat(hutang.nominalHutang) - newTotalDibayar;
+  const sisaSetelah = Math.max(0, toNum(hutang.nominalHutang) - (toNum(hutang.totalDibayar) + parsed.data.nominal_bayar));
+  const newTotalDibayar = toNum(hutang.totalDibayar) + parsed.data.nominal_bayar;
+  const newSisaHutang = toNum(hutang.nominalHutang) - newTotalDibayar;
   const newStatus = newSisaHutang <= 0 ? "lunas" : "aktif";
 
   // Semua operasi tulis dalam satu transaction agar atomik
@@ -132,7 +120,7 @@ router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promis
       tipe: "masuk",
       kategori: "Pelunasan Hutang",
       keterangan: `Bayar hutang: ${pelanggan?.nama ?? ""}${hutang.keterangan ? ` (${hutang.keterangan})` : ""}`,
-      jumlah: parsed.data.nominal_bayar.toString(),
+      jumlah: toStr(parsed.data.nominal_bayar),
     }).returning().all();
 
     const [pembayaran] = tx.insert(pembayaranTable).values({
@@ -140,16 +128,16 @@ router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promis
       hutangId: parsed.data.hutang_id,
       pelangganId: hutang.pelangganId,
       tanggalBayar: parsed.data.tanggal_bayar,
-      nominalBayar: parsed.data.nominal_bayar.toString(),
+      nominalBayar: toStr(parsed.data.nominal_bayar),
       catatan: parsed.data.catatan ?? null,
       nomorKwitansi,
-      sisaHutangSetelah: sisaSetelah.toString(),
+        sisaHutangSetelah: toStr(sisaSetelah),
       keuanganId: keuangan.id,
     }).returning().all();
 
     tx.update(hutangTable).set({
-      totalDibayar: newTotalDibayar.toString(),
-      sisaHutang: Math.max(0, newSisaHutang).toString(),
+      totalDibayar: toStr(newTotalDibayar),
+      sisaHutang: toStr(Math.max(0, newSisaHutang)),
       status: newStatus,
       updatedAt: new Date(),
     }).where(eq(hutangTable.id, parsed.data.hutang_id)).run();
@@ -164,11 +152,11 @@ router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promis
     pelanggan_id: pembayaran.pelangganId,
     pelanggan_nama: pelanggan?.nama ?? "",
     tanggal_bayar: pembayaran.tanggalBayar,
-    nominal_bayar: parseFloat(pembayaran.nominalBayar),
+    nominal_bayar: toNum(pembayaran.nominalBayar),
     catatan: pembayaran.catatan ?? null,
     nomor_kwitansi: nomorKwitansi,
     hutang_keterangan: hutang.keterangan ?? null,
-    hutang_nominal: parseFloat(hutang.nominalHutang),
+    hutang_nominal: toNum(hutang.nominalHutang),
     sisa_hutang_setelah: sisaSetelah,
     nama_usaha: usaha?.namaUsaha ?? "",
     created_at: pembayaran.createdAt.toISOString(),
@@ -237,8 +225,8 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
   // Urutkan dari tanggal terlama (FIFO)
   hutangs.sort((a, b) => a.tanggalHutang.localeCompare(b.tanggalHutang));
 
-  const totalSisa = hutangs.reduce((sum, h) => sum + parseFloat(h.sisaHutang), 0);
-  if (nominal_total > totalSisa + 0.01) {
+  const totalSisa = hutangs.reduce((sum, h) => sum + toNum(h.sisaHutang), 0);
+  if (nominal_total > totalSisa) {
     res.status(400).json({ error: `Nominal melebihi total sisa hutang (${totalSisa}).` });
     return;
   }
@@ -247,26 +235,17 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
   const [pelanggan] = await db.select().from(pelangganTable).where(eq(pelangganTable.id, pelangganId));
   const [usaha] = await db.select().from(usahaTable).where(eq(usahaTable.id, usahaId));
 
-  // Generate nomor kwitansi berurutan
   const tahun = new Date().getFullYear();
-  const existingKwitansi = await db.select({ nomor: pembayaranTable.nomorKwitansi })
-    .from(pembayaranTable)
-    .where(and(eq(pembayaranTable.usahaId, usahaId), like(pembayaranTable.nomorKwitansi, `KWT-${tahun}-%`)));
-  let maxUrut = 0;
-  for (const k of existingKwitansi) {
-    if (k.nomor) {
-      const parts = k.nomor.split("-");
-      const urut = parseInt(parts[parts.length - 1] || "0");
-      if (!isNaN(urut) && urut > maxUrut) maxUrut = urut;
-    }
-  }
+  const firstKwitansi = generateKwitansiNumber(usahaId, tahun);
+  const firstUrutMatch = firstKwitansi.split("-");
+  const baseUrut = parseInt(firstUrutMatch[firstUrutMatch.length - 1] || "1") - 1;
 
   // Distribusi FIFO
   let remaining = nominal_total;
   const distributions: Array<{ hutang: typeof hutangs[0]; bayar: number }> = [];
   for (const hutang of hutangs) {
-    if (remaining <= 0.001) break;
-    const sisa = parseFloat(hutang.sisaHutang);
+    if (remaining <= 0) break;
+    const sisa = toNum(hutang.sisaHutang);
     const bayar = Math.min(sisa, remaining);
     if (bayar > 0) {
       distributions.push({ hutang, bayar });
@@ -279,10 +258,10 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
     const results = [];
     for (let i = 0; i < distributions.length; i++) {
       const { hutang, bayar } = distributions[i]!;
-      const nomorKwitansi = `KWT-${tahun}-${String(maxUrut + i + 1).padStart(4, "0")}`;
-      const sisaSetelah = Math.max(0, parseFloat(hutang.sisaHutang) - bayar);
-      const newTotalDibayar = parseFloat(hutang.totalDibayar) + bayar;
-      const newSisaHutang = parseFloat(hutang.nominalHutang) - newTotalDibayar;
+      const nomorKwitansi = `KWT-${tahun}-${String(baseUrut + i + 1).padStart(4, "0")}`;
+      const sisaSetelah = Math.max(0, toNum(hutang.sisaHutang) - bayar);
+      const newTotalDibayar = toNum(hutang.totalDibayar) + bayar;
+      const newSisaHutang = toNum(hutang.nominalHutang) - newTotalDibayar;
       const newStatus: "lunas" | "aktif" = newSisaHutang <= 0 ? "lunas" : "aktif";
 
       let keuanganKeterangan = `Bayar hutang: ${pelanggan?.nama ?? ""}${hutang.keterangan ? ` (${hutang.keterangan})` : ""}`;
@@ -296,7 +275,7 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
         tipe: "masuk",
         kategori: "Pelunasan Hutang",
         keterangan: keuanganKeterangan,
-        jumlah: bayar.toString(),
+        jumlah: toStr(bayar),
       }).returning().all();
 
       const [pembayaran] = tx.insert(pembayaranTable).values({
@@ -304,16 +283,16 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
         hutangId: hutang.id,
         pelangganId: hutang.pelangganId,
         tanggalBayar: tanggal_bayar,
-        nominalBayar: bayar.toString(),
+        nominalBayar: toStr(bayar),
         catatan: catatan ?? null,
         nomorKwitansi,
-        sisaHutangSetelah: sisaSetelah.toString(),
+      sisaHutangSetelah: toStr(sisaSetelah),
         keuanganId: keuangan!.id,
       }).returning().all();
 
       tx.update(hutangTable).set({
-        totalDibayar: newTotalDibayar.toString(),
-        sisaHutang: Math.max(0, newSisaHutang).toString(),
+        totalDibayar: toStr(newTotalDibayar),
+        sisaHutang: toStr(Math.max(0, newSisaHutang)),
         status: newStatus,
         updatedAt: new Date(),
       }).where(eq(hutangTable.id, hutang.id)).run();
@@ -323,7 +302,7 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
         hutang_id: hutang.id,
         hutang_tanggal: hutang.tanggalHutang,
         hutang_keterangan: hutang.keterangan ?? null,
-        hutang_nominal: parseFloat(hutang.nominalHutang),
+        hutang_nominal: toNum(hutang.nominalHutang),
         nominal_bayar: bayar,
         sisa_hutang_setelah: sisaSetelah,
         nomor_kwitansi: nomorKwitansi,
@@ -337,11 +316,11 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
         .where(and(eq(barangTable.id, barter.barang_id), eq(barangTable.usahaId, usahaId)));
       
       if (barang) {
-        const stokLama = parseFloat(barang.stok);
+        const stokLama = toNum(barang.stok);
         const stokBaru = stokLama + barter.kuantitas;
         
         tx.update(barangTable).set({
-          stok: stokBaru.toString(),
+          stok: toStr(stokBaru),
         }).where(eq(barangTable.id, barter.barang_id)).run();
 
         tx.insert(transaksiStokTable).values({
@@ -349,8 +328,8 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
           barangId: barter.barang_id,
           tanggal: tanggal_bayar,
           tipe: "masuk",
-          jumlah: barter.kuantitas.toString(),
-          hargaSatuan: barter.harga_satuan.toString(),
+          jumlah: toStr(barter.kuantitas),
+          hargaSatuan: toStr(barter.harga_satuan),
           keterangan: `Barter dari pelunasan hutang: ${pelanggan?.nama ?? ""}`,
         }).run();
       }
@@ -421,11 +400,11 @@ router.delete("/pembayaran/:id", requireAuth, requireLicense, async (req, res): 
   // Semua operasi tulis dalam satu transaction agar atomik
   db.transaction((tx) => {
     if (hutang) {
-      const newTotalDibayar = Math.max(0, parseFloat(hutang.totalDibayar) - parseFloat(pembayaran.nominalBayar));
-      const newSisaHutang = parseFloat(hutang.nominalHutang) - newTotalDibayar;
+      const newTotalDibayar = Math.max(0, toNum(hutang.totalDibayar) - toNum(pembayaran.nominalBayar));
+      const newSisaHutang = toNum(hutang.nominalHutang) - newTotalDibayar;
       tx.update(hutangTable).set({
-        totalDibayar: newTotalDibayar.toString(),
-        sisaHutang: newSisaHutang.toString(),
+        totalDibayar: toStr(newTotalDibayar),
+        sisaHutang: toStr(newSisaHutang),
         status: newSisaHutang > 0 ? "aktif" : "lunas",
         updatedAt: new Date(),
       }).where(eq(hutangTable.id, hutang.id)).run();

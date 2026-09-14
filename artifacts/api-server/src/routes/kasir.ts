@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, barangTable, transaksiStokTable, keuanganTable, transaksiKasirTable, transaksiKasirItemTable, usahaTable } from "@workspace/db";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { requireAuth, requireLicense } from "../middlewares/auth";
+import { toNum } from "../utils/money";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -49,7 +50,7 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
       res.status(404).json({ error: `Barang ID ${item.barang_id} tidak ditemukan` });
       return;
     }
-    const stokSaat = parseFloat(barang.stok);
+    const stokSaat = toNum(barang.stok);
     if (item.jumlah > stokSaat) {
       res.status(400).json({ error: `Stok ${barang.nama} tidak cukup. Stok: ${stokSaat} ${barang.satuan}` });
       return;
@@ -61,7 +62,7 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
   let subtotalItems = 0;
   const itemsCalc = items.map((item, i) => {
     const barang = barangList[i];
-    const harga = item.harga_satuan ?? parseFloat(barang.hargaJual);
+    const harga = item.harga_satuan ?? toNum(barang.hargaJual);
     const subtotal = item.jumlah * harga;
     subtotalItems += subtotal;
     return { barang, jml: item.jumlah, harga, subtotal };
@@ -91,7 +92,7 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
     }).returning().all();
 
     for (const { barang, jml, harga } of itemsCalc) {
-      const stokBaru = parseFloat(barang.stok) - jml;
+      const stokBaru = toNum(barang.stok) - jml;
       tx.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id)).run();
       tx.insert(transaksiStokTable).values({
         usahaId,
@@ -148,9 +149,9 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
       barang_id: ki.barangId,
       nama_barang: ki.namaBarang,
       satuan: ki.satuan,
-      jumlah: parseFloat(ki.jumlah),
-      harga_satuan: parseFloat(ki.hargaSatuan),
-      subtotal: parseFloat(ki.subtotal),
+      jumlah: toNum(ki.jumlah),
+      harga_satuan: toNum(ki.hargaSatuan),
+      subtotal: toNum(ki.subtotal),
     })),
   });
 });
@@ -171,10 +172,10 @@ router.get("/kasir/transaksi", requireAuth, async (req, res): Promise<void> => {
     return {
       id: k.id,
       tanggal: k.tanggal,
-      total: parseFloat(k.total),
-      diskon: parseFloat(k.diskon ?? "0"),
-      uang_bayar: parseFloat(k.uangBayar),
-      kembalian: parseFloat(k.kembalian),
+      total: toNum(k.total),
+      diskon: toNum(k.diskon ?? "0"),
+      uang_bayar: toNum(k.uangBayar),
+      kembalian: toNum(k.kembalian),
       catatan: k.catatan ?? null,
       created_at: k.createdAt instanceof Date ? k.createdAt.toISOString() : new Date(k.createdAt).toISOString(),
       items: items.map(i => ({
@@ -182,9 +183,9 @@ router.get("/kasir/transaksi", requireAuth, async (req, res): Promise<void> => {
         barang_id: i.barangId,
         nama_barang: i.namaBarang,
         satuan: i.satuan,
-        jumlah: parseFloat(i.jumlah),
-        harga_satuan: parseFloat(i.hargaSatuan),
-        subtotal: parseFloat(i.subtotal),
+        jumlah: toNum(i.jumlah),
+        harga_satuan: toNum(i.hargaSatuan),
+        subtotal: toNum(i.subtotal),
       })),
     };
   }));
@@ -238,7 +239,7 @@ router.delete("/kasir/transaksi/:id", requireAuth, requireLicense, async (req, r
       const [barang] = tx.select().from(barangTable)
         .where(and(eq(barangTable.id, item.barangId), eq(barangTable.usahaId, usahaId))).all();
       if (barang) {
-        const stokBaru = parseFloat(barang.stok) + parseFloat(item.jumlah);
+        const stokBaru = toNum(barang.stok) + toNum(item.jumlah);
         tx.update(barangTable).set({ stok: String(stokBaru) }).where(eq(barangTable.id, barang.id)).run();
       }
     }
