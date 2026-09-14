@@ -57,7 +57,7 @@ export function BayarUpahDialog(p: Props) {
     >
       <DialogContent
         aria-describedby={undefined}
-        className="max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border-border/60 shadow-2xl"
+        className="max-w-lg max-h-[90vh] !overflow-hidden !flex !flex-col rounded-3xl border-border/60 shadow-2xl"
       >
         <DialogHeader>
           <DialogTitle>Bayar Upah</DialogTitle>
@@ -68,7 +68,7 @@ export function BayarUpahDialog(p: Props) {
           </div>
         ) : (
           detail && (
-            <div className="space-y-4">
+            <div className="flex flex-col flex-1 min-h-0 space-y-4">
               <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
                 <div className="font-semibold text-base">
                   {detail.pekerja_nama}
@@ -127,51 +127,51 @@ export function BayarUpahDialog(p: Props) {
                 <Form {...p.bayarForm}>
                   <form
                     onSubmit={p.bayarForm.handleSubmit(p.submitBayar)}
-                    className="space-y-3 border-t pt-3"
+                    className="flex flex-col flex-1 min-h-0 gap-3 border-t pt-3"
                   >
-                    <p className="text-sm font-medium">Tambah Pembayaran</p>
-                    {p.linkedPelangganId && (
-                      <div className="rounded-lg border bg-blue-50/60 p-3 space-y-2 text-sm">
-                        <div className="flex items-center justify-between gap-2">
-                          <div>
-                            <p className="font-semibold">Opsi potong hutang</p>
-                            <p className="text-xs text-muted-foreground">
-                              {p.linkedPelangganDetail
-                                ? `Terkait pelanggan: ${p.linkedPelangganDetail.nama}`
-                                : "Memuat data pelanggan..."}
-                            </p>
+                    <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
+                      <p className="text-sm font-medium">Tambah Pembayaran</p>
+                      {p.linkedPelangganId && (
+                        <div className="rounded-lg border bg-blue-50/60 p-3 space-y-2 text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <p className="font-semibold">Opsi potong hutang</p>
+                              <p className="text-xs text-muted-foreground">
+                                {p.linkedPelangganDetail
+                                  ? `Terkait pelanggan: ${p.linkedPelangganDetail.nama}`
+                                  : "Memuat data pelanggan..."}
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant={
+                                p.potongHutangSingleEnabled
+                                  ? "default"
+                                  : "outline"
+                              }
+                              size="sm"
+                              disabled={!p.hutangTertuaTerkait}
+                              onClick={() => {
+                                const next = !p.potongHutangSingleEnabled;
+                                p.setPotongHutangSingleEnabled(next);
+                                p.setPotongHutangSingleAmount(
+                                  next
+                                    ? String(
+                                        Math.min(
+                                          p.jumlahBayarSingle,
+                                          p.hutangTertuaTerkait?.sisa_hutang ?? 0,
+                                        ),
+                                      )
+                                    : "",
+                                );
+                              }}
+                            >
+                              {p.potongHutangSingleEnabled
+                                ? "Dipakai"
+                                : "Sekalian bayar hutang"}
+                            </Button>
                           </div>
-                          <Button
-                            type="button"
-                            variant={
-                              p.potongHutangSingleEnabled
-                                ? "default"
-                                : "outline"
-                            }
-                            size="sm"
-                            disabled={!p.hutangTertuaTerkait}
-                            onClick={() => {
-                              const next = !p.potongHutangSingleEnabled;
-                              p.setPotongHutangSingleEnabled(next);
-                              p.setPotongHutangSingleAmount(
-                                next
-                                  ? String(
-                                      Math.min(
-                                        p.jumlahBayarSingle,
-                                        p.hutangTertuaTerkait?.sisa_hutang ?? 0,
-                                      ),
-                                    )
-                                  : "",
-                              );
-                            }}
-                          >
-                            {p.potongHutangSingleEnabled
-                              ? "Dipakai"
-                              : "Sekalian bayar hutang"}
-                          </Button>
-                        </div>
-                        {p.potongHutangSingleEnabled && (
-                          <div className="grid grid-cols-2 gap-3">
+                          {p.potongHutangSingleEnabled && (
                             <div className="space-y-1">
                               <label className="text-xs font-medium">
                                 Potong Hutang
@@ -187,93 +187,69 @@ export function BayarUpahDialog(p: Props) {
                                 placeholder="0"
                               />
                             </div>
-                            <div className="space-y-1 rounded-md border bg-white p-2">
-                              <div className="flex justify-between text-xs">
-                                <span>Gaji</span>
-                                <span>{formatRupiah(p.jumlahBayarSingle)}</span>
-                              </div>
-                              <div className="flex justify-between text-xs">
-                                <span>Potong</span>
-                                <span>
-                                  {formatRupiah(p.potongHutangSingleNum)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between text-xs font-semibold border-t pt-1 mt-1">
-                                <span>Diterima</span>
-                                <span>
-                                  {formatRupiah(
-                                    Math.max(
-                                      0,
-                                      p.jumlahBayarSingle -
-                                        p.potongHutangSingleNum,
-                                    ),
-                                  )}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          control={p.bayarForm.control}
+                          name="jumlah"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Jumlah Upah Diselesaikan{" "}
+                                <span className="text-destructive">*</span>
+                              </FormLabel>
+                              <FormControl>
+                                <CurrencyInput
+                                  minValue={1}
+                                  maxValue={detail.sisa_upah}
+                                  value={field.value}
+                                  onValueChange={field.onChange}
+                                  placeholder="0"
+                                />
+                              </FormControl>
+                              <p className="text-xs text-muted-foreground">
+                                Total upah yang dilunasi (bukan uang tunai keluar)
+                              </p>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={p.bayarForm.control}
+                          name="tanggal_bayar"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Tanggal Bayar{" "}
+                                <span className="text-destructive">*</span>
+                              </FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-3">
                       <FormField
                         control={p.bayarForm.control}
-                        name="jumlah"
+                        name="catatan"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>
-                              Jumlah Upah Diselesaikan{" "}
-                              <span className="text-destructive">*</span>
-                            </FormLabel>
+                            <FormLabel>Catatan</FormLabel>
                             <FormControl>
-                              <CurrencyInput
-                                minValue={1}
-                                maxValue={detail.sisa_upah}
-                                value={field.value}
-                                onValueChange={field.onChange}
-                                placeholder="0"
-                              />
-                            </FormControl>
-                            <p className="text-xs text-muted-foreground">
-                              Total upah yang dilunasi (bukan uang tunai keluar)
-                            </p>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={p.bayarForm.control}
-                        name="tanggal_bayar"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Tanggal Bayar{" "}
-                              <span className="text-destructive">*</span>
-                            </FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
+                              <Input placeholder="Opsional..." {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
-                    <FormField
-                      control={p.bayarForm.control}
-                      name="catatan"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Catatan</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Opsional..." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex justify-end gap-2">
+                    <div className="sticky bottom-0 z-10 -mx-6 px-6 pb-1 pt-3 border-t shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 space-y-3">
                       {p.potongHutangSingleEnabled && (
-                        <div className="w-full rounded-lg border-2 border-blue-200 bg-blue-50/80 p-3 space-y-1.5 mb-2">
+                        <div className="rounded-lg border-2 border-blue-200 bg-blue-50/80 p-3 space-y-1.5">
                           <p className="text-xs font-semibold text-blue-800 uppercase tracking-wide">
                             Rincian Pembayaran
                           </p>
@@ -303,19 +279,21 @@ export function BayarUpahDialog(p: Props) {
                           </div>
                         </div>
                       )}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => p.setIsBayarDialogOpen(false)}
-                      >
-                        Tutup
-                      </Button>
-                      <Button type="submit" disabled={p.bayarUpahPending}>
-                        {p.bayarUpahPending && (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        )}
-                        Bayar
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => p.setIsBayarDialogOpen(false)}
+                        >
+                          Tutup
+                        </Button>
+                        <Button type="submit" disabled={p.bayarUpahPending}>
+                          {p.bayarUpahPending && (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          )}
+                          Bayar
+                        </Button>
+                      </div>
                     </div>
                   </form>
                 </Form>
