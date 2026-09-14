@@ -9,25 +9,27 @@ import { resolveSecret } from "../lib/security-secrets";
 
 // Reset code HMAC dipisahkan dari LICENSE_SECRET supaya rotasi salah satu
 // tidak menginvalidkan license key yang sudah aktif di banyak instalasi.
-// Untuk transisi, jika RESET_SECRET tidak diset, fallback ke LICENSE_SECRET
-// agar reset code yang sudah dibuat dengan tooling lama tetap diverifikasi
-// sampai admin merotasi.
 const RESET_SECRET_PRIMARY = resolveSecret({
   key: "RESET_SECRET",
   value: process.env.RESET_SECRET,
-  fallback: "BUKUHUTANG_RESET_SECRET_V1_2026",
+  fallback: "",
   reason: "dipakai untuk HMAC kode reset password",
 });
 
 const RESET_SECRET_LEGACY = resolveSecret({
   key: "LICENSE_SECRET",
   value: process.env.LICENSE_SECRET,
-  fallback: "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE",
+  fallback: "",
   reason: "fallback verifikasi reset code lama",
 });
 
+const LEGACY_RESET_SECRETS = [
+  "BUKUHUTANG_RESET_SECRET_V1_2026",
+  "BUKUHUTANG_LICENSE_SECRET_V1_2024_OFFLINE",
+];
+
 function verifyResetSignature(payload: string, expected: Buffer): boolean {
-  const candidates = [RESET_SECRET_PRIMARY, RESET_SECRET_LEGACY];
+  const candidates = [RESET_SECRET_PRIMARY, RESET_SECRET_LEGACY, ...LEGACY_RESET_SECRETS];
   for (const secret of candidates) {
     const sig = createHmac("sha256", secret).update(payload).digest().subarray(0, 4);
     if (sig.length === expected.length && timingSafeEqual(sig, expected)) {

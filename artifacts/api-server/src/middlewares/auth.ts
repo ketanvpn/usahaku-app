@@ -1,6 +1,7 @@
 import { type Request, type Response, type NextFunction } from "express";
 import { db, usahaTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { logger } from "../lib/logger";
 
 declare module "express-session" {
   interface SessionData {
@@ -48,9 +49,16 @@ export async function enforcePasswordChange(req: Request, res: Response, next: N
       });
       return;
     }
-  } catch {
-    // Jika DB tidak bisa diakses, jangan blokir — biarkan request lanjut dan
-    // gagal di handler masing-masing dengan error yang lebih informatif.
+  } catch (err) {
+    // SECURITY FIX: Jika DB error saat cek password-change, TOLAK request.
+    // Sebelumnya catch kosong membiarkan request lolos tanpa pengecekan —
+    // artinya saat DB down, semua request (termasuk yang perlu auth) bisa
+    // lewat tanpa login.
+    logger.error({ err, userId: req.session.userId }, "enforcePasswordChange: gagal query DB");
+    res.status(500).json({
+      error: "Terjadi kesalahan internal saat memeriksa status akun. Coba lagi nanti.",
+    });
+    return;
   }
 
   next();

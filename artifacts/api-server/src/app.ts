@@ -76,7 +76,7 @@ app.use(cookieParser());
 const sessionSecret = resolveSecret({
   key: "SESSION_SECRET",
   value: process.env.SESSION_SECRET,
-  fallback: "hutang-app-secret-key-change-in-production",
+  fallback: "",
   reason: "dipakai untuk menandatangani session cookie",
 });
 
