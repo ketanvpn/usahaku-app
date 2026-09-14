@@ -204,7 +204,7 @@ export function BatchPaymentDialog(p: Props) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Jumlah Bayar{" "}
+                          Jumlah Upah Diselesaikan{" "}
                           <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
@@ -216,6 +216,9 @@ export function BatchPaymentDialog(p: Props) {
                             placeholder="0"
                           />
                         </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Total upah yang dilunasi (bukan uang tunai keluar)
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -251,20 +254,52 @@ export function BatchPaymentDialog(p: Props) {
                   )}
                 />
               </div>
-              <div className="sticky bottom-0 z-10 -mx-6 px-6 pb-1 pt-3 border-t shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => p.setIsBatchDialogOpen(false)}
-                >
-                  Batal
-                </Button>
-                <Button type="submit" disabled={p.bayarBatchPending}>
-                  {p.bayarBatchPending && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  )}
-                  Bayar Sekarang
-                </Button>
+              <div className="sticky bottom-0 z-10 -mx-6 px-6 pb-1 pt-3 border-t shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 space-y-3">
+                {p.potongHutangBatchEnabled && (
+                  <div className="rounded-lg border-2 border-blue-200 bg-blue-50/80 p-3 space-y-1.5">
+                    <p className="text-xs font-semibold text-blue-800 uppercase tracking-wide">
+                      Rincian Pembayaran
+                    </p>
+                    <div className="flex justify-between text-sm">
+                      <span>Total Upah Dilunasi</span>
+                      <span className="font-medium">
+                        {formatRupiah(p.jumlahBayarBatch)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm text-red-700">
+                      <span>Potong Hutang</span>
+                      <span className="font-medium">
+                        − {formatRupiah(p.potongHutangBatchNum)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm font-bold border-t border-blue-200 pt-1.5 mt-1">
+                      <span>💰 Uang Diterima Pekerja</span>
+                      <span className="text-green-700">
+                        {formatRupiah(
+                          Math.max(
+                            0,
+                            p.jumlahBayarBatch - p.potongHutangBatchNum,
+                          ),
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => p.setIsBatchDialogOpen(false)}
+                  >
+                    Batal
+                  </Button>
+                  <Button type="submit" disabled={p.bayarBatchPending}>
+                    {p.bayarBatchPending && (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    )}
+                    Bayar Sekarang
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>

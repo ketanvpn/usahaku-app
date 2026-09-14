@@ -465,6 +465,24 @@ export function useGajiData() {
     selectedBatchHutangTotal,
     potongHutangBatchNum,
   ]);
+  useEffect(() => {
+    if (!potongHutangSingleEnabled) return;
+    const batasMaksimum = Math.min(
+      jumlahBayarSingle,
+      hutangTertuaTerkait?.sisa_hutang ?? 0,
+    );
+    if (batasMaksimum <= 0) {
+      setPotongHutangSingleAmount("");
+      return;
+    }
+    if (potongHutangSingleNum > batasMaksimum)
+      setPotongHutangSingleAmount(String(batasMaksimum));
+  }, [
+    potongHutangSingleEnabled,
+    jumlahBayarSingle,
+    hutangTertuaTerkait,
+    potongHutangSingleNum,
+  ]);
   const openTambahUpah = () => {
     setEditingUpah(null);
     upahForm.reset({

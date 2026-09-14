@@ -222,7 +222,7 @@ export function BayarUpahDialog(p: Props) {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              Jumlah Bayar{" "}
+                              Jumlah Upah Diselesaikan{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
@@ -234,6 +234,9 @@ export function BayarUpahDialog(p: Props) {
                                 placeholder="0"
                               />
                             </FormControl>
+                            <p className="text-xs text-muted-foreground">
+                              Total upah yang dilunasi (bukan uang tunai keluar)
+                            </p>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -269,6 +272,37 @@ export function BayarUpahDialog(p: Props) {
                       )}
                     />
                     <div className="flex justify-end gap-2">
+                      {p.potongHutangSingleEnabled && (
+                        <div className="w-full rounded-lg border-2 border-blue-200 bg-blue-50/80 p-3 space-y-1.5 mb-2">
+                          <p className="text-xs font-semibold text-blue-800 uppercase tracking-wide">
+                            Rincian Pembayaran
+                          </p>
+                          <div className="flex justify-between text-sm">
+                            <span>Total Upah Dilunasi</span>
+                            <span className="font-medium">
+                              {formatRupiah(p.jumlahBayarSingle)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm text-red-700">
+                            <span>Potong Hutang</span>
+                            <span className="font-medium">
+                              − {formatRupiah(p.potongHutangSingleNum)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm font-bold border-t border-blue-200 pt-1.5 mt-1">
+                            <span>💰 Uang Diterima Pekerja</span>
+                            <span className="text-green-700">
+                              {formatRupiah(
+                                Math.max(
+                                  0,
+                                  p.jumlahBayarSingle -
+                                    p.potongHutangSingleNum,
+                                ),
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                       <Button
                         type="button"
                         variant="outline"
