@@ -22,6 +22,7 @@ export const transaksiKasirItemTable = sqliteTable("transaksi_kasir_item", {
   satuan: text("satuan").notNull(),
   jumlah: text("jumlah").notNull(),
   hargaSatuan: text("harga_satuan").notNull(),
+  hargaBeli: text("harga_beli"),
   subtotal: text("subtotal").notNull(),
 });
 

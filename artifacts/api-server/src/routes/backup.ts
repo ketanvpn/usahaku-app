@@ -119,6 +119,7 @@ const BackupTransaksiKasirItemSchema = z.object({
   satuan: z.string(),
   jumlah: money,
   harga_satuan: money,
+  harga_beli: money.nullable().optional(),
   subtotal: money,
 });
 
@@ -350,6 +351,7 @@ router.get("/backup/export", requireAuth, async (req, res): Promise<void> => {
       satuan: i.satuan,
       jumlah: parseFloat(i.jumlah),
       harga_satuan: parseFloat(i.hargaSatuan),
+      harga_beli: i.hargaBeli ? parseFloat(i.hargaBeli) : null,
       subtotal: parseFloat(i.subtotal),
     })),
     pekerja: pekerjaList.map((p) => ({
@@ -616,7 +618,7 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
       currentTable = "transaksi_kasir_item";
       if (Array.isArray(validatedBackup.transaksi_kasir_item)) {
         const stmtKasirItem = sqliteRaw.prepare(
-          "INSERT INTO transaksi_kasir_item (transaksi_kasir_id, barang_id, nama_barang, satuan, jumlah, harga_satuan, subtotal) VALUES (?, ?, ?, ?, ?, ?, ?)"
+          "INSERT INTO transaksi_kasir_item (transaksi_kasir_id, barang_id, nama_barang, satuan, jumlah, harga_satuan, harga_beli, subtotal) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         );
         for (const i of validatedBackup.transaksi_kasir_item) {
           const newKasirId  = kasirIdMap.get(i.transaksi_kasir_id) ?? i.transaksi_kasir_id;
@@ -624,7 +626,9 @@ router.post("/backup/restore", restoreBodyParser, requireAuth, async (req, res):
           stmtKasirItem.run(
             newKasirId, newBarangId,
             i.nama_barang, i.satuan,
-            String(i.jumlah), String(i.harga_satuan), String(i.subtotal)
+            String(i.jumlah), String(i.harga_satuan),
+            i.harga_beli != null ? String(i.harga_beli) : null,
+            String(i.subtotal)
           );
         }
       }

@@ -3,6 +3,7 @@ import { db, hutangTable, pelangganTable, transaksiKasirTable, transaksiKasirIte
 import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
 import { GetLaporanQueryParams } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
+import { toNum } from "../utils/money";
 
 const router: IRouter = Router();
 
@@ -172,6 +173,77 @@ router.get("/laporan/kasir/top-produk", requireAuth, async (req, res): Promise<v
     total_qty: parseFloat(r.total_qty ?? "0"),
     total_omset: parseFloat(r.total_omset ?? "0"),
   })));
+});
+
+// ── Laporan Kasir: Keuntungan Penjualan ────────────────────────────────────
+router.get("/laporan/kasir/keuntungan", requireAuth, async (req, res): Promise<void> => {
+  const usahaId = req.session.usahaId;
+  if (!usahaId) { res.status(403).json({ error: "Akses ditolak." }); return; }
+
+  const bulan = parseInt((req.query.bulan as string) || String(new Date().getMonth() + 1));
+  const tahun = parseInt((req.query.tahun as string) || String(new Date().getFullYear()));
+  const bulanStr = String(bulan).padStart(2, "0");
+  const prefix = `${tahun}-${bulanStr}`;
+
+  const items = await db
+    .select({
+      namaBarang: transaksiKasirItemTable.namaBarang,
+      satuan: transaksiKasirItemTable.satuan,
+      jumlah: transaksiKasirItemTable.jumlah,
+      hargaSatuan: transaksiKasirItemTable.hargaSatuan,
+      hargaBeliSnapshot: transaksiKasirItemTable.hargaBeli,
+      subtotal: transaksiKasirItemTable.subtotal,
+      hargaBeliBarang: barangTable.hargaBeli,
+      barangId: transaksiKasirItemTable.barangId,
+    })
+    .from(transaksiKasirItemTable)
+    .innerJoin(transaksiKasirTable, eq(transaksiKasirItemTable.transaksiKasirId, transaksiKasirTable.id))
+    .leftJoin(barangTable, eq(transaksiKasirItemTable.barangId, barangTable.id))
+    .where(and(
+      eq(transaksiKasirTable.usahaId, usahaId),
+      gte(transaksiKasirTable.tanggal, `${prefix}-01`),
+      lte(transaksiKasirTable.tanggal, `${prefix}-31`)
+    ));
+
+  let totalOmset = 0;
+  let totalModal = 0;
+  const perProduk = new Map<string, { nama: string; satuan: string; qty: number; omset: number; modal: number }>();
+
+  for (const item of items) {
+    const qty = toNum(item.jumlah);
+    const omset = toNum(item.subtotal);
+    const hargaBeli = item.hargaBeliSnapshot
+      ? toNum(item.hargaBeliSnapshot)
+      : (item.hargaBeliBarang ? toNum(item.hargaBeliBarang) : 0);
+    const modal = qty * hargaBeli;
+
+    totalOmset += omset;
+    totalModal += modal;
+
+    const key = `${item.barangId}-${item.namaBarang}`;
+    const existing = perProduk.get(key);
+    if (existing) {
+      existing.qty += qty;
+      existing.omset += omset;
+      existing.modal += modal;
+    } else {
+      perProduk.set(key, { nama: item.namaBarang, satuan: item.satuan, qty, omset, modal });
+    }
+  }
+
+  const produkList = Array.from(perProduk.values())
+    .map(p => ({ ...p, keuntungan: p.omset - p.modal, margin: p.omset > 0 ? Math.round(((p.omset - p.modal) / p.omset) * 100) : 0 }))
+    .sort((a, b) => b.keuntungan - a.keuntungan);
+
+  res.json({
+    bulan,
+    tahun,
+    total_omset: totalOmset,
+    total_modal: totalModal,
+    total_keuntungan: totalOmset - totalModal,
+    margin_persen: totalOmset > 0 ? Math.round(((totalOmset - totalModal) / totalOmset) * 100) : 0,
+    per_produk: produkList,
+  });
 });
 
 // ── Laporan Pembelian per Supplier (v1.1.1) ─────────────────────────────────

@@ -32,6 +32,13 @@ export interface RekapBulananKeuangan {
   keluar: number;
 }
 
+export interface KeuntunganKasir {
+  total_omset: number;
+  total_modal: number;
+  total_keuntungan: number;
+  margin_persen: number;
+}
+
 export interface KeuanganInputBody {
   tanggal: string;
   tipe: "masuk" | "keluar";
@@ -85,6 +92,14 @@ export async function fetchRekapKategoriKeuangan(params: { bulan?: string; tahun
 
 export async function fetchRekapBulananKeuangan(tahun: string): Promise<RekapBulananKeuangan[]> {
   return customFetch<RekapBulananKeuangan[]>(`/api/keuangan/rekap-bulanan?tahun=${encodeURIComponent(tahun)}`);
+}
+
+export async function fetchKeuntunganKasir(params?: { bulan?: string; tahun?: string }): Promise<KeuntunganKasir> {
+  const q = new URLSearchParams();
+  if (params?.bulan) q.set("bulan", params.bulan);
+  if (params?.tahun) q.set("tahun", params.tahun);
+  const query = q.toString();
+  return customFetch<KeuntunganKasir>(`/api/laporan/kasir/keuntungan${query ? `?${query}` : ""}`);
 }
 
 export async function createKeuangan(body: KeuanganInputBody): Promise<KeuanganItem> {

@@ -8,6 +8,7 @@ import {
   fetchRekapKeuangan,
   fetchRekapKategoriKeuangan,
   fetchRekapBulananKeuangan,
+  fetchKeuntunganKasir,
   createKeuangan,
   updateKeuangan,
   deleteKeuangan,
@@ -15,6 +16,7 @@ import {
   type RekapKeuangan,
   type RekapKategoriKeuangan,
   type RekapBulananKeuangan,
+  type KeuntunganKasir,
 } from "@/lib/api-keuangan";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,6 +170,11 @@ export default function KeuanganPage() {
     queryFn: () => fetchRekapKeuangan(),
   });
 
+  const { data: keuntungan } = useQuery<KeuntunganKasir>({
+    queryKey: ["keuangan-keuntungan-kasir", rekapParams],
+    queryFn: () => fetchKeuntunganKasir(rekapParams),
+  });
+
   const { data: rekapKategori = [] } = useQuery({
     queryKey: ["keuangan-rekap-kategori", rekapParams],
     queryFn: () => fetchRekapKategoriKeuangan(rekapParams),
@@ -255,7 +262,7 @@ export default function KeuanganPage() {
       />
 
       {/* Kartu Rekap */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Masuk"
           value={formatRupiah(rekapTotal?.total_masuk ?? 0)}
@@ -276,6 +283,13 @@ export default function KeuanganPage() {
           subtitle={`${rekapTotal?.jumlah_transaksi ?? 0} transaksi`}
           variant={(rekapTotal?.saldo ?? 0) >= 0 ? "info" : "warning"}
           icon={<Wallet className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Keuntungan Penjualan"
+          value={formatRupiah(keuntungan?.total_keuntungan ?? 0)}
+          subtitle={`Margin ${keuntungan?.margin_persen ?? 0}%`}
+          variant={(keuntungan?.total_keuntungan ?? 0) >= 0 ? "success" : "danger"}
+          icon={<TrendingUp className="h-5 w-5" />}
         />
       </div>
 

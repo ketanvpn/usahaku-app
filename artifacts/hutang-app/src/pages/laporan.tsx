@@ -219,6 +219,13 @@ interface KasirRingkasan { total_penjualan: number; jumlah_transaksi: number; ra
 interface KasirHarian { tanggal: string; total: number; jumlah: number; }
 interface KasirBulanan { bulan: number; total: number; jumlah: number; }
 interface KasirTopProduk { nama_barang: string; satuan: string; total_qty: number; total_omset: number; }
+interface KasirKeuntungan {
+  total_omset: number;
+  total_modal: number;
+  total_keuntungan: number;
+  margin_persen: number;
+  per_produk: { nama: string; satuan: string; qty: number; omset: number; modal: number; keuntungan: number; margin: number }[];
+}
 
 function buildPrintKasir(opts: {
   namaUsaha: string; tanggalCetak: string; bulanNama: string; tahun: number;
@@ -342,6 +349,13 @@ export default function LaporanPage() {
     queryFn: async () => {
       const r = await fetch(`${BASE}/api/laporan/kasir/top-produk?bulan=${kasirBulan}&tahun=${kasirTahun}`, { credentials: "include" });
       return r.ok ? r.json() : [];
+    },
+  });
+  const { data: kasirKeuntungan, isLoading: kasirKeuntunganLoading } = useQuery<KasirKeuntungan>({
+    queryKey: ["laporan-kasir-keuntungan", kasirBulan, kasirTahun],
+    queryFn: async () => {
+      const r = await fetch(`${BASE}/api/laporan/kasir/keuntungan?bulan=${kasirBulan}&tahun=${kasirTahun}`, { credentials: "include" });
+      return r.ok ? r.json() : { total_omset: 0, total_modal: 0, total_keuntungan: 0, margin_persen: 0, per_produk: [] };
     },
   });
 
@@ -773,7 +787,7 @@ export default function LaporanPage() {
           </Card>
 
           {/* Summary cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="data-card border-l-4 border-l-emerald-500 shadow-sm">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Penjualan</CardTitle>
@@ -814,6 +828,20 @@ export default function LaporanPage() {
                   ? <div className="h-8 bg-muted animate-pulse rounded" />
                   : <p className="text-2xl font-bold text-primary">{formatRupiah(kasirRingkasan?.rata_rata ?? 0)}</p>}
                 <p className="text-xs text-muted-foreground mt-1">per transaksi</p>
+              </CardContent>
+            </Card>
+            <Card className="data-card border-l-4 border-l-amber-500 shadow-sm">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Keuntungan</CardTitle>
+                <div className="h-9 w-9 rounded-full bg-amber-100 flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-amber-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {kasirKeuntunganLoading
+                  ? <div className="h-8 bg-muted animate-pulse rounded" />
+                  : <p className={`text-2xl font-bold ${(kasirKeuntungan?.total_keuntungan ?? 0) >= 0 ? "text-amber-600" : "text-red-600"}`}>{formatRupiah(kasirKeuntungan?.total_keuntungan ?? 0)}</p>}
+                <p className="text-xs text-muted-foreground mt-1">margin {kasirKeuntungan?.margin_persen ?? 0}%</p>
               </CardContent>
             </Card>
           </div>
@@ -914,6 +942,48 @@ export default function LaporanPage() {
                       </TableBody>
                     </Table>
                   </div>}
+            </CardContent>
+          </Card>
+
+          <Card className="data-card shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-amber-600" />
+                Keuntungan per Produk
+              </CardTitle>
+              <CardDescription>Analisis keuntungan per item — {NAMA_BULAN[kasirBulan]} {kasirTahun}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {kasirKeuntunganLoading ? (
+                <div className="flex justify-center items-center h-24"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : !kasirKeuntungan?.per_produk.length ? (
+                <p className="text-center text-muted-foreground py-6">Belum ada data penjualan.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produk</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Omset</TableHead>
+                      <TableHead className="text-right">Modal</TableHead>
+                      <TableHead className="text-right">Keuntungan</TableHead>
+                      <TableHead className="text-right">Margin</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {kasirKeuntungan.per_produk.map((p, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="font-medium">{p.nama} <span className="text-muted-foreground text-xs">({p.satuan})</span></TableCell>
+                        <TableCell className="text-right">{p.qty}</TableCell>
+                        <TableCell className="text-right">{formatRupiah(p.omset)}</TableCell>
+                        <TableCell className="text-right">{formatRupiah(p.modal)}</TableCell>
+                        <TableCell className={`text-right font-semibold ${p.keuntungan >= 0 ? "text-emerald-600" : "text-red-600"}`}>{formatRupiah(p.keuntungan)}</TableCell>
+                        <TableCell className="text-right">{p.margin}%</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

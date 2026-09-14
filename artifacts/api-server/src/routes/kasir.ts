@@ -126,6 +126,7 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
         satuan: barang.satuan,
         jumlah: String(jml),
         hargaSatuan: String(harga),
+        hargaBeli: barang.hargaBeli ?? null,
         subtotal: String(subtotal),
       }).returning().all();
       kasirItems.push(ki);
@@ -151,6 +152,7 @@ router.post("/kasir/transaksi", requireAuth, requireLicense, async (req, res): P
       satuan: ki.satuan,
       jumlah: toNum(ki.jumlah),
       harga_satuan: toNum(ki.hargaSatuan),
+      harga_beli: ki.hargaBeli ? toNum(ki.hargaBeli) : null,
       subtotal: toNum(ki.subtotal),
     })),
   });
@@ -185,6 +187,7 @@ router.get("/kasir/transaksi", requireAuth, async (req, res): Promise<void> => {
         satuan: i.satuan,
         jumlah: toNum(i.jumlah),
         harga_satuan: toNum(i.hargaSatuan),
+        harga_beli: i.hargaBeli ? toNum(i.hargaBeli) : null,
         subtotal: toNum(i.subtotal),
       })),
     };
