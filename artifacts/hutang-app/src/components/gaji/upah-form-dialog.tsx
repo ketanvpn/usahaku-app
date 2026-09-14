@@ -26,6 +26,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
+import { formatRupiah } from "@/lib/format";
 import { capitalizeFirst } from "./types";
 import type { GajiData } from "./use-gaji-data";
 
@@ -148,9 +149,9 @@ export function UpahFormDialog(props: Props) {
             />
             <div className="rounded-xl border bg-slate-50/50 p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <FormLabel className="text-sm font-semibold text-slate-800">
+                <Label className="text-sm font-semibold text-slate-800">
                   Mode Borongan (Hitung Otomatis)
-                </FormLabel>
+                </Label>
                 <Switch
                   checked={isBoronganMode}
                   onCheckedChange={(checked) => {
@@ -206,8 +207,7 @@ export function UpahFormDialog(props: Props) {
                       Total Upah Otomatis:
                     </span>
                     <span className="font-bold text-primary">
-                      Rp{" "}
-                      {upahForm.watch("jumlah_total")?.toLocaleString("id-ID")}
+                      {formatRupiah(upahForm.watch("jumlah_total") || 0)}
                     </span>
                   </div>
                 </div>
