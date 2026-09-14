@@ -337,10 +337,7 @@ export default function KeuanganPage() {
               <XAxis dataKey="nama" tick={{ fontSize: 11 }} />
               <YAxis tickFormatter={(v) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}jt` : v >= 1000 ? `${(v/1000).toFixed(0)}rb` : String(v)} tick={{ fontSize: 10 }} />
               <Tooltip
-                formatter={(value: number, name: string) => {
-                  const label = name === "omset" ? "Omset" : name === "modal" ? "Modal" : "Keuntungan";
-                  return [formatRupiah(value), label];
-                }}
+                formatter={(value: number, name: string) => [formatRupiah(value), name]}
                 labelFormatter={(label: string) => {
                   const item = keuntunganBulanan.find(k => k.nama === label);
                   return item ? `${label} (margin: ${item.margin_persen}%)` : label;
