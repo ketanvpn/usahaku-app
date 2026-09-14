@@ -15,10 +15,6 @@ export function resolveSecret(opts: {
     return opts.value;
   }
 
-  // Env var tidak diset — generate random secret daripada pakai fallback
-  // hardcoded yang sama di semua instalasi.
-  const generated = randomBytes(32).toString("hex");
-
   if (shouldFailOnInsecureSecret()) {
     throw new Error(
       `[security] ${opts.key} tidak diset (${opts.reason}). ` +
@@ -26,6 +22,8 @@ export function resolveSecret(opts: {
         `Set env ${opts.key} untuk melanjutkan.`
     );
   }
+
+  const generated = randomBytes(32).toString("hex");
 
   logger.warn(
     { key: opts.key, reason: opts.reason },

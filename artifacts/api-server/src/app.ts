@@ -37,17 +37,33 @@ app.use(
 
 // Whitelist origin: default ke localhost/127.0.0.1 (Electron + dev Vite).
 // Tambah origin lain via env CORS_ORIGINS (comma-separated) bila perlu.
-const defaultAllowedOrigins = [
-  "http://localhost",
-  "http://127.0.0.1",
-];
+//
+// Matching menggunakan exact host comparison setelah URL parsing —
+// bukan prefix string yang bisa di-bypass (e.g. localhost.evil.com).
+const ALLOWED_HOSTS = new Set(["localhost", "127.0.0.1"]);
 
-const extraAllowedOrigins = (process.env.CORS_ORIGINS ?? "")
+const extraOrigins = (process.env.CORS_ORIGINS ?? "")
   .split(",")
   .map((o) => o.trim())
   .filter((o) => o.length > 0);
 
-const allowedOriginPrefixes = [...defaultAllowedOrigins, ...extraAllowedOrigins];
+for (const extra of extraOrigins) {
+  try {
+    ALLOWED_HOSTS.add(new URL(extra).hostname);
+  } catch {
+    // Jika bukan URL valid, pakai string apa adanya sebagai hostname.
+    ALLOWED_HOSTS.add(extra);
+  }
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  try {
+    const parsed = new URL(origin);
+    return ALLOWED_HOSTS.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
 
 const corsOptions: CorsOptions = {
   credentials: true,
@@ -57,8 +73,7 @@ const corsOptions: CorsOptions = {
       callback(null, true);
       return;
     }
-    const ok = allowedOriginPrefixes.some((prefix) => origin === prefix || origin.startsWith(prefix + ":") || origin.startsWith(prefix + "/"));
-    if (ok) {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error(`Origin tidak diizinkan oleh kebijakan CORS: ${origin}`));
@@ -82,6 +97,7 @@ const sessionSecret = resolveSecret({
 
 app.use(
   session({
+    name: "usahaku.sid",
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,

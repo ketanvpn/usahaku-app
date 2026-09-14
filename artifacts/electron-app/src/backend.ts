@@ -174,7 +174,7 @@ export function startBackend(): void {
       ...(process.env.SUPER_ADMIN_PASSWORD
         ? { SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD }
         : {}),
-      STRICT_SECRET_POLICY: isDev ? "warn" : "warn",
+      STRICT_SECRET_POLICY: isDev ? "warn" : "fail",
       BETTER_SQLITE3_PATH: betterSqlite3Path,
     },
     stdio: "pipe",
