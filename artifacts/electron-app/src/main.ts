@@ -297,13 +297,14 @@ function createLoadingWindow(): void {
       e.preventDefault();
       setIsQuitting(true);
       (async () => {
-        await walCheckpoint();
+        // Correct sequence: checkpoint → backup → kill backend → destroy window
+        const walOk = await walCheckpoint();
+        performAutoBackup(walOk);
         if (backendProcess) {
           backendProcess.kill();
           setBackendProcess(null);
         }
         await new Promise<void>((r) => setTimeout(r, 200));
-        performAutoBackup();
         win.destroy();
       })().catch((err) => {
         writeLog(`[auto-backup close] error: ${err}`);
@@ -412,7 +413,9 @@ app.on("will-quit", () => {
   if (gdriveTimer) clearInterval(gdriveTimer);
   try {
     writeLog("App quitting, running snapshot auto-backup...");
-    performAutoBackup();
+    // will-quit is synchronous — backend may already be dead from close handler.
+    // Pass false so WAL/SHM files are copied alongside the .db as a safety net.
+    performAutoBackup(false);
   } catch (err: unknown) {
     writeLog(`Auto-backup on quit error: ${err}`);
   }

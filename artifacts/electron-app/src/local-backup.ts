@@ -44,19 +44,44 @@ export function getAutoBackupDir(): string {
 
 // ── WAL checkpoint ────────────────────────────────────────────────────────────
 
-export async function walCheckpoint(): Promise<void> {
+const WAL_CHECKPOINT_TIMEOUT_MS = 5_000;
+
+/**
+ * Flush WAL to main .db file via the backend's internal endpoint.
+ * Returns `true` if the checkpoint succeeded, `false` on error/timeout.
+ * Callers should use the result to decide whether WAL files need to be
+ * copied alongside the .db during backup.
+ */
+export async function walCheckpoint(): Promise<boolean> {
   try {
-    await new Promise<void>((resolve) => {
+    const ok = await new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => {
+        writeLog("[backup] WAL checkpoint timeout setelah 5 detik");
+        req.destroy();
+        resolve(false);
+      }, WAL_CHECKPOINT_TIMEOUT_MS);
+
       const req = http.request(
         { hostname: "127.0.0.1", port: BACKEND_PORT, path: "/api/internal/wal-checkpoint", method: "POST" },
-        (res) => { res.resume(); res.on("end", resolve); }
+        (res) => {
+          res.resume();
+          res.on("end", () => {
+            clearTimeout(timer);
+            resolve(res.statusCode === 200);
+          });
+        },
       );
-      req.on("error", () => resolve());
+      req.on("error", () => {
+        clearTimeout(timer);
+        resolve(false);
+      });
       req.end();
     });
-    writeLog("[backup] WAL checkpoint selesai");
+    writeLog(`[backup] WAL checkpoint ${ok ? "berhasil" : "gagal (status non-200)"}`);
+    return ok;
   } catch {
-    writeLog("[backup] WAL checkpoint gagal — backup tetap dilanjutkan");
+    writeLog("[backup] WAL checkpoint gagal — exception");
+    return false;
   }
 }
 
@@ -134,7 +159,9 @@ async function copyFileWithRetry(src: string, dest: string, maxAttempts = 3): Pr
 
 // ── Auto-backup (called on close and will-quit) ──────────────────────────────
 
-export function performAutoBackup(): void {
+const MAX_BACKUP_FILES = 7;
+
+export function performAutoBackup(walCheckpointSucceeded = true): void {
   const dbPath = getDbPath();
   if (!fs.existsSync(dbPath)) {
     writeLog("Auto-backup: DB tidak ditemukan, dilewati");
@@ -151,33 +178,78 @@ export function performAutoBackup(): void {
     const backupFile = path.join(backupDir, `usahaku_${datePart}_${timePart}.db`);
     fs.copyFileSync(dbPath, backupFile);
 
+    // When WAL checkpoint failed, copy WAL/SHM alongside .db so the backup
+    // can be opened correctly by SQLite (it will replay the WAL on open).
+    if (!walCheckpointSucceeded) {
+      const walPath = dbPath + "-wal";
+      const shmPath = dbPath + "-shm";
+      if (fs.existsSync(walPath)) {
+        fs.copyFileSync(walPath, backupFile + "-wal");
+        writeLog("[backup] WAL file disalin ke backup (checkpoint gagal)");
+      }
+      if (fs.existsSync(shmPath)) {
+        fs.copyFileSync(shmPath, backupFile + "-shm");
+      }
+    }
+
     const check = validateBackupDbFile(backupFile);
     if (!check.valid) {
       writeLog(`Auto-backup GAGAL validasi: ${check.reason} — file dihapus`);
       try { fs.unlinkSync(backupFile); } catch {}
+      try { fs.unlinkSync(backupFile + "-wal"); } catch {}
+      try { fs.unlinkSync(backupFile + "-shm"); } catch {}
       return;
     }
-    writeLog(`Auto-backup tersimpan dan valid: ${backupFile}`);
 
-    // Hapus backup lama, simpan maksimal 7 file terbaru
-    const allFiles = fs.readdirSync(backupDir)
-      .filter((f) => f.startsWith("usahaku_") && f.endsWith(".db"))
-      .sort()
-      .map((f) => path.join(backupDir, f));
-    if (allFiles.length > 7) {
-      allFiles.slice(0, allFiles.length - 7).forEach((f) => {
-        try { fs.unlinkSync(f); } catch {}
-      });
+    const sourceSize = fs.statSync(dbPath).size;
+    const backupSize = fs.statSync(backupFile).size;
+    if (backupSize !== sourceSize) {
+      writeLog(`Auto-backup PERINGATAN: ukuran berbeda (source=${sourceSize}, backup=${backupSize})`);
     }
+
+    writeLog(`Auto-backup tersimpan dan valid: ${backupFile} (${backupSize} bytes)`);
+    pruneOldBackups(backupDir);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     writeLog(`Auto-backup gagal: ${msg}`);
   }
 }
 
+function pruneOldBackups(backupDir: string): void {
+  try {
+    const allFiles = fs.readdirSync(backupDir)
+      .filter((f) => f.startsWith("usahaku_") && f.endsWith(".db") && !f.endsWith("-wal") && !f.endsWith("-shm"))
+      .sort()
+      .map((f) => path.join(backupDir, f));
+    if (allFiles.length > MAX_BACKUP_FILES) {
+      for (const f of allFiles.slice(0, allFiles.length - MAX_BACKUP_FILES)) {
+        try { fs.unlinkSync(f); } catch {}
+        try { fs.unlinkSync(f + "-wal"); } catch {}
+        try { fs.unlinkSync(f + "-shm"); } catch {}
+      }
+    }
+  } catch (err: unknown) {
+    writeLog(`[backup] Gagal membersihkan backup lama: ${err}`);
+  }
+}
+
 // ── Full restore flow ─────────────────────────────────────────────────────────
 
-export async function performRestoreFromFile(sourcePath: string): Promise<{ success: boolean; canceled?: boolean; message?: string }> {
+type RestoreResult = { success: boolean; canceled?: boolean; message?: string };
+
+function rollbackDb(rollbackPath: string, dbPath: string): void {
+  try { fs.copyFileSync(rollbackPath, dbPath); } catch {}
+  try { fs.unlinkSync(rollbackPath); } catch {}
+}
+
+function killBackendProcess(): void {
+  if (backendProcess) {
+    backendProcess.kill();
+    setBackendProcess(null);
+  }
+}
+
+export async function performRestoreFromFile(sourcePath: string): Promise<RestoreResult> {
   const dbPath = getDbPath();
   const rollbackPath = dbPath + ".rollback";
 
@@ -195,13 +267,9 @@ export async function performRestoreFromFile(sourcePath: string): Promise<{ succ
   }
 
   setIsRestoring(true);
-  if (backendProcess) {
-    backendProcess.kill();
-    setBackendProcess(null);
-  }
+  killBackendProcess();
   await new Promise<void>((r) => setTimeout(r, 1500));
 
-  // Hapus file WAL dan SHM agar data lama tidak menimpa DB yang akan di-restore
   try { fs.unlinkSync(dbPath + "-wal"); } catch {}
   try { fs.unlinkSync(dbPath + "-shm"); } catch {}
 
@@ -210,8 +278,7 @@ export async function performRestoreFromFile(sourcePath: string): Promise<{ succ
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     writeLog(`[restore] Semua percobaan copy gagal: ${msg}`);
-    try { fs.copyFileSync(rollbackPath, dbPath); } catch {}
-    try { fs.unlinkSync(rollbackPath); } catch {}
+    rollbackDb(rollbackPath, dbPath);
     startBackend();
     setIsRestoring(false);
     return { success: false, message: `Gagal menyalin file database: ${msg}` };
@@ -219,17 +286,14 @@ export async function performRestoreFromFile(sourcePath: string): Promise<{ succ
 
   try {
     startBackend();
-    await waitForBackend(BACKEND_PORT, 20000);
+    await waitForBackend(BACKEND_PORT, 20_000);
 
     const healthy = await dbIntegrityCheck();
     if (!healthy) {
       writeLog("[restore] Integrity check gagal — rollback ke data sebelumnya");
-      const stuck = backendProcess as Electron.UtilityProcess | null;
-      stuck?.kill();
-      setBackendProcess(null);
+      killBackendProcess();
       await new Promise<void>((r) => setTimeout(r, 500));
-      try { fs.copyFileSync(rollbackPath, dbPath); } catch {}
-      try { fs.unlinkSync(rollbackPath); } catch {}
+      rollbackDb(rollbackPath, dbPath);
       startBackend();
       setIsRestoring(false);
       return { success: false, message: "File backup rusak atau tidak kompatibel (integrity check gagal). Data Anda sudah dikembalikan." };
@@ -242,14 +306,9 @@ export async function performRestoreFromFile(sourcePath: string): Promise<{ succ
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     writeLog(`[restore] Backend gagal start, rollback: ${msg}`);
-    const stuck = backendProcess as Electron.UtilityProcess | null;
-    stuck?.kill();
-    setBackendProcess(null);
+    killBackendProcess();
     await new Promise<void>((r) => setTimeout(r, 400));
-    try {
-      fs.copyFileSync(rollbackPath, dbPath);
-      fs.unlinkSync(rollbackPath);
-    } catch {}
+    rollbackDb(rollbackPath, dbPath);
     startBackend();
     setIsRestoring(false);
     return { success: false, message: "File backup tidak valid atau tidak kompatibel. Data Anda sudah dikembalikan." };
