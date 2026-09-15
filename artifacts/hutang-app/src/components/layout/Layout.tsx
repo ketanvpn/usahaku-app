@@ -184,8 +184,6 @@ export function Layout({ children }: { children: ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col md:pl-64 min-w-0">
-        <UpdateBanner />
-
         <LicenseBanner
           licenseStatus={licenseStatus}
           isSuperAdmin={isSuperAdmin}
@@ -200,8 +198,9 @@ export function Layout({ children }: { children: ReactNode }) {
         <MobileHeader>{NavContent}</MobileHeader>
 
         {/* Page Content */}
-        <div ref={contentRef} className="flex-1 overflow-auto p-4 md:p-7">
-          <div className="mx-auto w-full max-w-[1500px] animate-soft-in">
+        <div ref={contentRef} className="flex-1 overflow-auto">
+          <UpdateBanner />
+          <div className="mx-auto w-full max-w-[1500px] animate-soft-in p-4 md:p-7">
             <LicenseContext.Provider value={licenseContextValue}>
               {children}
             </LicenseContext.Provider>

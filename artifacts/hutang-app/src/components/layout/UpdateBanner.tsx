@@ -39,7 +39,7 @@ export function UpdateBanner() {
 
   if (status.status === "available") {
     return (
-      <div className="bg-emerald-700 text-white px-4 py-2 flex items-center justify-between gap-3 text-sm no-print">
+      <div className="sticky top-0 z-20 bg-emerald-700 text-white px-4 py-2 flex items-center justify-between gap-3 text-sm no-print shadow-md">
         <div className="flex items-center gap-2">
           <Download className="h-4 w-4 shrink-0" />
           <span>
@@ -68,7 +68,7 @@ export function UpdateBanner() {
 
   if (status.status === "downloading") {
     return (
-      <div className="bg-emerald-800 text-white px-4 py-2 flex items-center gap-3 text-sm no-print">
+      <div className="sticky top-0 z-20 bg-emerald-800 text-white px-4 py-2 flex items-center gap-3 text-sm no-print shadow-md">
         <RefreshCw className="h-4 w-4 shrink-0 animate-spin" />
         <span>Mengunduh pembaruan... {status.percent}%</span>
         <div className="flex-1 bg-white/20 rounded-full h-1.5 max-w-[200px]">
@@ -83,7 +83,7 @@ export function UpdateBanner() {
 
   if (status.status === "downloaded") {
     return (
-      <div className="bg-emerald-700 text-white px-4 py-2 flex items-center justify-between gap-3 text-sm no-print">
+      <div className="sticky top-0 z-20 bg-emerald-700 text-white px-4 py-2 flex items-center justify-between gap-3 text-sm no-print shadow-md">
         <div className="flex items-center gap-2">
           <RefreshCw className="h-4 w-4 shrink-0" />
           <span>
@@ -104,7 +104,7 @@ export function UpdateBanner() {
 
   if (status.status === "error") {
     return (
-      <div className="bg-amber-600 text-white px-4 py-2 flex items-center justify-between gap-3 text-sm no-print">
+      <div className="sticky top-0 z-20 bg-amber-600 text-white px-4 py-2 flex items-center justify-between gap-3 text-sm no-print shadow-md">
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <span>Gagal cek pembaruan: <span className="opacity-80">{status.message}</span></span>
