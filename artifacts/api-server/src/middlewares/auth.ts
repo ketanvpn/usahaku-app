@@ -125,10 +125,20 @@ export async function requireLicense(req: Request, res: Response, next: NextFunc
     return;
   }
 
-  const [usaha] = await db
-    .select({ licenseExpiresAt: usahaTable.licenseExpiresAt, lastSeenDate: usahaTable.lastSeenDate })
-    .from(usahaTable)
-    .where(eq(usahaTable.id, usahaId));
+  let usaha: { licenseExpiresAt: string | null; lastSeenDate: string | null } | undefined;
+  try {
+    [usaha] = db
+      .select({ licenseExpiresAt: usahaTable.licenseExpiresAt, lastSeenDate: usahaTable.lastSeenDate })
+      .from(usahaTable)
+      .where(eq(usahaTable.id, usahaId))
+      .all();
+  } catch (err) {
+    logger.error({ err, usahaId }, "requireLicense: gagal query DB untuk cek lisensi");
+    res.status(500).json({
+      error: "Terjadi kesalahan internal saat memeriksa lisensi. Coba lagi nanti.",
+    });
+    return;
+  }
 
   if (!usaha?.licenseExpiresAt) {
     res.status(403).json({ error: "LISENSI_TIDAK_AKTIF", message: "Lisensi tidak aktif. Silakan aktivasi lisensi terlebih dahulu." });
