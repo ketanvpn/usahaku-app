@@ -73,25 +73,14 @@ export function StatCard({
       {...props}
     >
       <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1 space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate" title={title}>
-              {title}
-            </p>
-            <div
-              className={cn(
-                "font-bold tracking-tight text-foreground tabular-nums break-words leading-tight",
-                fontSizeClass
-              )}
-              title={rawText || undefined}
-            >
-              {value}
-            </div>
-          </div>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate" title={title}>
+            {title}
+          </p>
           {icon && (
             <div
               className={cn(
-                "flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl transition-transform",
+                "flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl transition-transform [&>svg]:h-4 [&>svg]:w-4 sm:[&>svg]:h-4.5 sm:[&>svg]:w-4.5",
                 iconBgVariants[variant]
               )}
               aria-hidden="true"
@@ -99,6 +88,15 @@ export function StatCard({
               {icon}
             </div>
           )}
+        </div>
+        <div
+          className={cn(
+            "font-bold tracking-tight text-foreground tabular-nums whitespace-nowrap overflow-hidden text-ellipsis leading-tight",
+            fontSizeClass
+          )}
+          title={rawText || undefined}
+        >
+          {value}
         </div>
         {(subtitle || trend) && (
           <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground min-w-0">
