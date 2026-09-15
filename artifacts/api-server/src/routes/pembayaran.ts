@@ -105,15 +105,14 @@ router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promis
   const [pelanggan] = await db.select().from(pelangganTable).where(eq(pelangganTable.id, hutang.pelangganId));
   const [usaha] = await db.select().from(usahaTable).where(eq(usahaTable.id, usahaId));
 
-  const nomorKwitansi = generateKwitansiNumber(usahaId);
-
-  const sisaSetelah = Math.max(0, toNum(hutang.nominalHutang) - (toNum(hutang.totalDibayar) + parsed.data.nominal_bayar));
   const newTotalDibayar = toNum(hutang.totalDibayar) + parsed.data.nominal_bayar;
   const newSisaHutang = toNum(hutang.nominalHutang) - newTotalDibayar;
+  const sisaSetelah = Math.max(0, newSisaHutang);
   const newStatus = newSisaHutang <= 0 ? "lunas" : "aktif";
 
-  // Semua operasi tulis dalam satu transaction agar atomik
-  const { pembayaran } = db.transaction((tx) => {
+  const { pembayaran, nomorKwitansi } = db.transaction((tx) => {
+    const nomorKwitansi = generateKwitansiNumber(usahaId, undefined, tx);
+
     const [keuangan] = tx.insert(keuanganTable).values({
       usahaId,
       tanggal: parsed.data.tanggal_bayar,
@@ -131,18 +130,18 @@ router.post("/pembayaran", requireAuth, requireLicense, async (req, res): Promis
       nominalBayar: toStr(parsed.data.nominal_bayar),
       catatan: parsed.data.catatan ?? null,
       nomorKwitansi,
-        sisaHutangSetelah: toStr(sisaSetelah),
+      sisaHutangSetelah: toStr(sisaSetelah),
       keuanganId: keuangan.id,
     }).returning().all();
 
     tx.update(hutangTable).set({
       totalDibayar: toStr(newTotalDibayar),
-      sisaHutang: toStr(Math.max(0, newSisaHutang)),
+      sisaHutang: toStr(sisaSetelah),
       status: newStatus,
       updatedAt: new Date(),
     }).where(eq(hutangTable.id, parsed.data.hutang_id)).run();
 
-    return { pembayaran };
+    return { pembayaran, nomorKwitansi };
   });
 
   res.status(201).json({
@@ -236,11 +235,7 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
   const [usaha] = await db.select().from(usahaTable).where(eq(usahaTable.id, usahaId));
 
   const tahun = new Date().getFullYear();
-  const firstKwitansi = generateKwitansiNumber(usahaId, tahun);
-  const firstUrutMatch = firstKwitansi.split("-");
-  const baseUrut = parseInt(firstUrutMatch[firstUrutMatch.length - 1] || "1") - 1;
 
-  // Distribusi FIFO
   let remaining = nominal_total;
   const distributions: Array<{ hutang: typeof hutangs[0]; bayar: number }> = [];
   for (const hutang of hutangs) {
@@ -253,12 +248,11 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
     }
   }
 
-  // Semua operasi dalam 1 transaksi
   const pembayaranList = db.transaction((tx) => {
     const results = [];
     for (let i = 0; i < distributions.length; i++) {
       const { hutang, bayar } = distributions[i]!;
-      const nomorKwitansi = `KWT-${tahun}-${String(baseUrut + i + 1).padStart(4, "0")}`;
+      const nomorKwitansi = generateKwitansiNumber(usahaId, tahun, tx);
       const sisaSetelah = Math.max(0, toNum(hutang.sisaHutang) - bayar);
       const newTotalDibayar = toNum(hutang.totalDibayar) + bayar;
       const newSisaHutang = toNum(hutang.nominalHutang) - newTotalDibayar;
@@ -286,7 +280,7 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
         nominalBayar: toStr(bayar),
         catatan: catatan ?? null,
         nomorKwitansi,
-      sisaHutangSetelah: toStr(sisaSetelah),
+        sisaHutangSetelah: toStr(sisaSetelah),
         keuanganId: keuangan!.id,
       }).returning().all();
 
@@ -310,15 +304,14 @@ router.post("/pembayaran/batch", requireAuth, requireLicense, async (req, res): 
       });
     }
 
-    // Eksekusi penambahan stok jika menggunakan sistem barter
     if (barter) {
-      const [barang] = tx.select().from(barangTable)
-        .where(and(eq(barangTable.id, barter.barang_id), eq(barangTable.usahaId, usahaId)));
-      
+      const rows = tx.select().from(barangTable)
+        .where(and(eq(barangTable.id, barter.barang_id), eq(barangTable.usahaId, usahaId))).all();
+      const barang = rows[0];
+
       if (barang) {
-        const stokLama = toNum(barang.stok);
-        const stokBaru = stokLama + barter.kuantitas;
-        
+        const stokBaru = toNum(barang.stok) + barter.kuantitas;
+
         tx.update(barangTable).set({
           stok: toStr(stokBaru),
         }).where(eq(barangTable.id, barter.barang_id)).run();
@@ -373,7 +366,6 @@ router.delete("/pembayaran/:id", requireAuth, requireLicense, async (req, res): 
   const [hutang] = await db.select().from(hutangTable)
     .where(and(eq(hutangTable.id, pembayaran.hutangId), eq(hutangTable.usahaId, usahaId)));
 
-  // Cari keuangan ID yang harus dihapus (fallback jika keuanganId tidak tersimpan di record lama)
   let keuanganIdToDelete: number | null = null;
 
   if (pembayaran.keuanganId) {
@@ -383,6 +375,8 @@ router.delete("/pembayaran/:id", requireAuth, requireLicense, async (req, res): 
   }
 
   if (!keuanganIdToDelete) {
+    // Legacy fallback: records created before keuanganId FK was added.
+    // Only delete if EXACTLY one match found — ambiguous matches are skipped to prevent data loss.
     const matched = await db.select({ id: keuanganTable.id })
       .from(keuanganTable)
       .where(and(
@@ -394,17 +388,24 @@ router.delete("/pembayaran/:id", requireAuth, requireLicense, async (req, res): 
       ));
     if (matched.length === 1) {
       keuanganIdToDelete = matched[0]!.id;
+      console.warn(
+        `[pembayaran] DELETE id=${params.data.id}: using legacy keuangan fallback match (keuangan_id=${keuanganIdToDelete}). ` +
+        `This record was created before keuanganId FK was stored.`,
+      );
+    } else if (matched.length > 1) {
+      console.warn(
+        `[pembayaran] DELETE id=${params.data.id}: ${matched.length} ambiguous keuangan matches found, skipping keuangan deletion to prevent data loss.`,
+      );
     }
   }
 
-  // Semua operasi tulis dalam satu transaction agar atomik
   db.transaction((tx) => {
     if (hutang) {
       const newTotalDibayar = Math.max(0, toNum(hutang.totalDibayar) - toNum(pembayaran.nominalBayar));
       const newSisaHutang = toNum(hutang.nominalHutang) - newTotalDibayar;
       tx.update(hutangTable).set({
         totalDibayar: toStr(newTotalDibayar),
-        sisaHutang: toStr(newSisaHutang),
+        sisaHutang: toStr(Math.max(0, newSisaHutang)),
         status: newSisaHutang > 0 ? "aktif" : "lunas",
         updatedAt: new Date(),
       }).where(eq(hutangTable.id, hutang.id)).run();

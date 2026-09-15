@@ -35,38 +35,54 @@ export function toStr(value: number): string {
 
 // ── Kwitansi Number Generation ───────────────────────────────────────────────
 
-import { eq, and, like, desc } from "drizzle-orm";
+import { eq, and, like, sql } from "drizzle-orm";
 import { pembayaranTable, db } from "@workspace/db";
+
+/** Minimal interface satisfied by both `db` and `tx` from `db.transaction()`. */
+interface QueryRunner {
+  select: typeof db.select;
+}
 
 /**
  * Generate the next kwitansi number for a given usaha and year.
- * Uses a sorted query with LIMIT 1 instead of scanning ALL records.
  *
- * Format: KWT-{year}-{0001}
+ * Format: KWT-{year}-{NNNN}  (zero-padded to 4 digits, grows beyond 4 if needed)
  *
- * @returns The next kwitansi number string
+ * **Bug fixes (v1.2.29):**
+ * - Uses integer extraction (`CAST … AS INTEGER`) instead of lexicographic
+ *   string sort, so numbering stays correct past 9999.
+ * - Accepts an optional `queryRunner` (tx) so callers can generate the number
+ *   INSIDE a transaction, eliminating race-condition duplicates.
+ *
+ * @param usahaId  - The business ID
+ * @param tahun    - Override year (defaults to current year)
+ * @param queryRunner - Pass `tx` from `db.transaction(tx => …)` to make generation atomic
+ * @returns The next kwitansi number string, e.g. "KWT-2026-0042"
  */
-export function generateKwitansiNumber(usahaId: number, tahun?: number): string {
+export function generateKwitansiNumber(
+  usahaId: number,
+  tahun?: number,
+  queryRunner?: QueryRunner,
+): string {
+  const runner = queryRunner ?? db;
   const year = tahun ?? new Date().getFullYear();
   const prefix = `KWT-${year}-`;
 
-  // Get the highest kwitansi number by sorting descending and taking first
-  const rows = db.select({ nomor: pembayaranTable.nomorKwitansi })
+  const rows = runner
+    .select({
+      maxUrut: sql<number>`MAX(CAST(SUBSTR(${pembayaranTable.nomorKwitansi}, ${prefix.length + 1}) AS INTEGER))`,
+    })
     .from(pembayaranTable)
-    .where(and(
-      eq(pembayaranTable.usahaId, usahaId),
-      like(pembayaranTable.nomorKwitansi, `${prefix}%`),
-    ))
-    .orderBy(desc(pembayaranTable.nomorKwitansi))
-    .limit(1)
+    .where(
+      and(
+        eq(pembayaranTable.usahaId, usahaId),
+        like(pembayaranTable.nomorKwitansi, `${prefix}%`),
+      ),
+    )
     .all();
 
-  let maxUrut = 0;
-  if (rows.length > 0 && rows[0].nomor) {
-    const parts = rows[0].nomor.split("-");
-    const urut = parseInt(parts[parts.length - 1] || "0");
-    if (!isNaN(urut)) maxUrut = urut;
-  }
+  const maxUrut = rows[0]?.maxUrut ?? 0;
+  const next = (maxUrut ?? 0) + 1;
 
-  return `${prefix}${String(maxUrut + 1).padStart(4, "0")}`;
+  return `${prefix}${String(next).padStart(4, "0")}`;
 }
