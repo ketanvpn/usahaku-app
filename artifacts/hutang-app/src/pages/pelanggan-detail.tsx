@@ -116,17 +116,17 @@ export default function PelangganDetail() {
               <CardTitle>Ringkasan Hutang</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex justify-between items-center p-3 bg-blue-50/50 rounded-lg border border-blue-100">
-                <div className="text-sm font-medium text-blue-800">Total Hutang</div>
-              <div className="font-bold text-blue-700">{formatRupiah(data.total_hutang)}</div>
+            <div className="flex justify-between items-center p-3 bg-blue-50/50 rounded-lg border border-blue-100 gap-2">
+                <div className="text-sm font-medium text-blue-800 truncate">Total Hutang</div>
+              <div className="font-bold text-blue-700 tabular-nums shrink-0 whitespace-nowrap" title={formatRupiah(data.total_hutang)}>{formatRupiah(data.total_hutang)}</div>
             </div>
-            <div className="flex justify-between items-center p-3 bg-emerald-50/50 rounded-lg border border-emerald-100">
-                <div className="text-sm font-medium text-emerald-800">Total Sudah Dibayar</div>
-              <div className="font-bold text-emerald-700">{formatRupiah(data.total_dibayar)}</div>
+            <div className="flex justify-between items-center p-3 bg-emerald-50/50 rounded-lg border border-emerald-100 gap-2">
+                <div className="text-sm font-medium text-emerald-800 truncate">Total Sudah Dibayar</div>
+              <div className="font-bold text-emerald-700 tabular-nums shrink-0 whitespace-nowrap" title={formatRupiah(data.total_dibayar)}>{formatRupiah(data.total_dibayar)}</div>
             </div>
-            <div className="flex justify-between items-center p-4 bg-orange-50/50 rounded-lg border border-orange-100">
-                <div className="text-sm font-medium text-orange-800">Total Sisa Hutang</div>
-              <div className="text-xl font-bold text-orange-700">{formatRupiah(sisaAktif)}</div>
+            <div className="flex justify-between items-center p-4 bg-orange-50/50 rounded-lg border border-orange-100 gap-2">
+                <div className="text-sm font-medium text-orange-800 truncate">Total Sisa Hutang</div>
+              <div className="text-xl font-bold text-orange-700 tabular-nums shrink-0 whitespace-nowrap" title={formatRupiah(sisaAktif)}>{formatRupiah(sisaAktif)}</div>
             </div>
             <div className="grid grid-cols-2 gap-2 pt-1">
               <div className="text-center p-2 bg-amber-50 rounded border border-amber-100">

@@ -1,6 +1,7 @@
 import { useGetUpahList, useGetPekerjaList } from "@workspace/api-client-react";
 import { formatRupiah } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,27 +39,24 @@ export default function LaporanGajiTab() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-primary">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium">Total Gaji Dicatat</CardTitle>
-            <Wallet className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent><p className="text-2xl font-bold">{formatRupiah(totalUpahDicatat)}</p></CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-emerald-500">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium">Total Sudah Dibayar</CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent><p className="text-2xl font-bold text-emerald-600">{formatRupiah(totalUpahDibayar)}</p></CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium">Sisa Gaji</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent><p className="text-2xl font-bold text-red-700">{formatRupiah(totalUpahBelumDibayar)}</p></CardContent>
-        </Card>
+        <StatCard
+          title="Total Gaji Dicatat"
+          value={upahLoading ? "..." : formatRupiah(totalUpahDicatat)}
+          variant="default"
+          icon={<Wallet className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Total Sudah Dibayar"
+          value={upahLoading ? "..." : formatRupiah(totalUpahDibayar)}
+          variant="success"
+          icon={<TrendingUp className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Sisa Gaji"
+          value={upahLoading ? "..." : formatRupiah(totalUpahBelumDibayar)}
+          variant="danger"
+          icon={<TrendingDown className="h-5 w-5" />}
+        />
       </div>
 
       {upahPerPekerja.length > 0 && (

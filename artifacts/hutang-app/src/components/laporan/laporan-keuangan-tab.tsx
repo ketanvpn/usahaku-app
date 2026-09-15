@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { formatRupiah, formatDate } from "@/lib/format";
 import { openPrintWindow } from "@/lib/print";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -182,27 +183,24 @@ export default function LaporanKeuanganTab({ namaUsaha, tanggalCetak }: Props) {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="data-card border-l-4 border-l-emerald-500">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium">Total Masuk</CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent><p className="text-2xl font-bold text-emerald-600">{formatRupiah(totalMasuk)}</p></CardContent>
-        </Card>
-        <Card className="data-card border-l-4 border-l-red-500">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium">Total Keluar</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent><p className="text-2xl font-bold text-red-600">{formatRupiah(totalKeluar)}</p></CardContent>
-        </Card>
-        <Card className={`data-card border-l-4 ${saldo >= 0 ? "border-l-blue-500" : "border-l-orange-500"}`}>
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium">Saldo Bersih</CardTitle>
-            <Wallet className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent><p className={`text-2xl font-bold ${saldo >= 0 ? "text-blue-600" : "text-orange-600"}`}>{formatRupiah(saldo)}</p></CardContent>
-        </Card>
+        <StatCard
+          title="Total Masuk"
+          value={keuLoading ? "..." : formatRupiah(totalMasuk)}
+          variant="success"
+          icon={<TrendingUp className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Total Keluar"
+          value={keuLoading ? "..." : formatRupiah(totalKeluar)}
+          variant="danger"
+          icon={<TrendingDown className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Saldo Bersih"
+          value={keuLoading ? "..." : formatRupiah(saldo)}
+          variant={saldo >= 0 ? "info" : "warning"}
+          icon={<Wallet className="h-5 w-5" />}
+        />
       </div>
 
       <Card className="data-card">

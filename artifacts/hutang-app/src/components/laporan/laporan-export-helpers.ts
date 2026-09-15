@@ -156,7 +156,7 @@ interface UpahLaporanItem {
   total_dibayar: number;
   sisa_upah: number;
   status: string;
-  catatan: string | null;
+  catatan?: string | null;
 }
 
 export function exportUpahCsv(allUpahLaporan: UpahLaporanItem[]) {

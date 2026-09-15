@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { formatRupiah } from "@/lib/format";
 import { openPrintWindow } from "@/lib/print";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -126,62 +127,34 @@ export default function LaporanKasirTab({ namaUsaha, tanggalCetak }: Props) {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="data-card border-l-4 border-l-emerald-500 shadow-sm">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Penjualan</CardTitle>
-            <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center">
-              <ShoppingBag className="h-4 w-4 text-emerald-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {kasirRingkasanLoading
-              ? <div className="h-8 bg-muted animate-pulse rounded" />
-              : <p className="text-2xl font-bold text-emerald-600">{formatRupiah(kasirRingkasan?.total_penjualan ?? 0)}</p>}
-            <p className="text-xs text-muted-foreground mt-1">{NAMA_BULAN[kasirBulan]} {kasirTahun}</p>
-          </CardContent>
-        </Card>
-        <Card className="data-card border-l-4 border-l-blue-500 shadow-sm">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Jumlah Transaksi</CardTitle>
-            <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center">
-              <Receipt className="h-4 w-4 text-blue-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {kasirRingkasanLoading
-              ? <div className="h-8 bg-muted animate-pulse rounded" />
-              : <p className="text-2xl font-bold text-blue-600">{kasirRingkasan?.jumlah_transaksi ?? 0}</p>}
-            <p className="text-xs text-muted-foreground mt-1">transaksi tercatat</p>
-          </CardContent>
-        </Card>
-        <Card className="data-card border-l-4 border-l-primary shadow-sm">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Rata-rata/Transaksi</CardTitle>
-            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {kasirRingkasanLoading
-              ? <div className="h-8 bg-muted animate-pulse rounded" />
-              : <p className="text-2xl font-bold text-primary">{formatRupiah(kasirRingkasan?.rata_rata ?? 0)}</p>}
-            <p className="text-xs text-muted-foreground mt-1">per transaksi</p>
-          </CardContent>
-        </Card>
-        <Card className="data-card border-l-4 border-l-amber-500 shadow-sm">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Keuntungan</CardTitle>
-            <div className="h-9 w-9 rounded-full bg-amber-100 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-amber-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {kasirKeuntunganLoading
-              ? <div className="h-8 bg-muted animate-pulse rounded" />
-              : <p className={`text-2xl font-bold ${(kasirKeuntungan?.total_keuntungan ?? 0) >= 0 ? "text-amber-600" : "text-red-600"}`}>{formatRupiah(kasirKeuntungan?.total_keuntungan ?? 0)}</p>}
-            <p className="text-xs text-muted-foreground mt-1">margin {kasirKeuntungan?.margin_persen ?? 0}%</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Penjualan"
+          value={kasirRingkasanLoading ? "..." : formatRupiah(kasirRingkasan?.total_penjualan ?? 0)}
+          subtitle={`${NAMA_BULAN[kasirBulan]} ${kasirTahun}`}
+          variant="success"
+          icon={<ShoppingBag className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Jumlah Transaksi"
+          value={kasirRingkasanLoading ? "..." : (kasirRingkasan?.jumlah_transaksi ?? 0)}
+          subtitle="transaksi tercatat"
+          variant="info"
+          icon={<Receipt className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Rata-rata/Transaksi"
+          value={kasirRingkasanLoading ? "..." : formatRupiah(kasirRingkasan?.rata_rata ?? 0)}
+          subtitle="per transaksi"
+          variant="default"
+          icon={<TrendingUp className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Keuntungan"
+          value={kasirKeuntunganLoading ? "..." : formatRupiah(kasirKeuntungan?.total_keuntungan ?? 0)}
+          subtitle={`margin ${kasirKeuntungan?.margin_persen ?? 0}%`}
+          variant={(kasirKeuntungan?.total_keuntungan ?? 0) >= 0 ? "warning" : "danger"}
+          icon={<TrendingUp className="h-5 w-5" />}
+        />
       </div>
 
       {/* Chart */}

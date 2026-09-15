@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { formatRupiah } from "@/lib/format";
 import { openPrintWindow } from "@/lib/print";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Download, Printer, Package, FileSpreadsheet } from "lucide-react";
+import { Loader2, Download, Printer, Package, FileSpreadsheet, CheckCircle2, AlertTriangle } from "lucide-react";
 import { buildPrintStok, type BarangItem } from "./laporan-print-helpers";
 import { exportStokCsv, exportStokXlsx } from "./laporan-export-helpers";
 
@@ -48,21 +49,24 @@ export default function LaporanStokTab({ namaUsaha, tanggalCetak }: Props) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-primary">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium">Total Jenis Barang</CardTitle>
-            <Package className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent><p className="text-2xl font-bold">{barangData.length}</p></CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-emerald-500">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Stok Aman</CardTitle></CardHeader>
-          <CardContent><p className="text-2xl font-bold text-emerald-600">{barangData.filter(b => b.stok > b.stok_minimum).length}</p></CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-orange-500">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Hampir Habis</CardTitle></CardHeader>
-          <CardContent><p className="text-2xl font-bold text-orange-600">{barangData.filter(b => b.stok <= b.stok_minimum).length}</p></CardContent>
-        </Card>
+        <StatCard
+          title="Total Jenis Barang"
+          value={barangLoading ? "..." : barangData.length}
+          variant="default"
+          icon={<Package className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Stok Aman"
+          value={barangLoading ? "..." : barangData.filter(b => b.stok > b.stok_minimum).length}
+          variant="success"
+          icon={<CheckCircle2 className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Hampir Habis"
+          value={barangLoading ? "..." : barangData.filter(b => b.stok <= b.stok_minimum).length}
+          variant="warning"
+          icon={<AlertTriangle className="h-5 w-5" />}
+        />
       </div>
 
       <Card className="data-card">
