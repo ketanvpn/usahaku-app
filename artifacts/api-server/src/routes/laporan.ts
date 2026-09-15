@@ -180,10 +180,19 @@ router.get("/laporan/kasir/keuntungan", requireAuth, async (req, res): Promise<v
   const usahaId = req.session.usahaId;
   if (!usahaId) { res.status(403).json({ error: "Akses ditolak." }); return; }
 
-  const bulan = parseInt((req.query.bulan as string) || String(new Date().getMonth() + 1));
-  const tahun = parseInt((req.query.tahun as string) || String(new Date().getFullYear()));
-  const bulanStr = String(bulan).padStart(2, "0");
-  const prefix = `${tahun}-${bulanStr}`;
+  const bulanRaw = req.query.bulan as string | undefined;
+  const tahunRaw = req.query.tahun as string | undefined;
+  const hasPeriod = !!bulanRaw && !!tahunRaw;
+  const bulan = hasPeriod ? parseInt(bulanRaw) : undefined;
+  const tahun = hasPeriod ? parseInt(tahunRaw) : undefined;
+
+  const conditions = [eq(transaksiKasirTable.usahaId, usahaId)];
+  if (hasPeriod) {
+    const bulanStr = String(bulan).padStart(2, "0");
+    const prefix = `${tahun}-${bulanStr}`;
+    conditions.push(gte(transaksiKasirTable.tanggal, `${prefix}-01`));
+    conditions.push(lte(transaksiKasirTable.tanggal, `${prefix}-31`));
+  }
 
   const items = await db
     .select({
@@ -199,11 +208,7 @@ router.get("/laporan/kasir/keuntungan", requireAuth, async (req, res): Promise<v
     .from(transaksiKasirItemTable)
     .innerJoin(transaksiKasirTable, eq(transaksiKasirItemTable.transaksiKasirId, transaksiKasirTable.id))
     .leftJoin(barangTable, eq(transaksiKasirItemTable.barangId, barangTable.id))
-    .where(and(
-      eq(transaksiKasirTable.usahaId, usahaId),
-      gte(transaksiKasirTable.tanggal, `${prefix}-01`),
-      lte(transaksiKasirTable.tanggal, `${prefix}-31`)
-    ));
+    .where(and(...conditions));
 
   let totalOmset = 0;
   let totalModal = 0;
@@ -236,8 +241,7 @@ router.get("/laporan/kasir/keuntungan", requireAuth, async (req, res): Promise<v
     .sort((a, b) => b.keuntungan - a.keuntungan);
 
   res.json({
-    bulan,
-    tahun,
+    ...(hasPeriod ? { bulan, tahun } : {}),
     total_omset: totalOmset,
     total_modal: totalModal,
     total_keuntungan: totalOmset - totalModal,

@@ -173,8 +173,8 @@ export default function KeuanganPage() {
   });
 
   const { data: keuntungan } = useQuery<KeuntunganKasir>({
-    queryKey: ["keuangan-keuntungan-kasir", rekapParams],
-    queryFn: () => fetchKeuntunganKasir(rekapParams),
+    queryKey: ["keuangan-keuntungan-kasir-total"],
+    queryFn: () => fetchKeuntunganKasir(),
   });
 
   const { data: rekapKategori = [] } = useQuery({
@@ -199,6 +199,7 @@ export default function KeuanganPage() {
     qc.invalidateQueries({ queryKey: ["keuangan-rekap-kategori"] });
     qc.invalidateQueries({ queryKey: ["keuangan-rekap-bulanan"] });
     qc.invalidateQueries({ queryKey: ["keuangan-keuntungan-bulanan"] });
+    qc.invalidateQueries({ queryKey: ["keuangan-keuntungan-kasir-total"] });
   };
 
   const form = useForm<KeuanganFormValues>({
@@ -295,7 +296,7 @@ export default function KeuanganPage() {
         <StatCard
           title="Keuntungan Penjualan"
           value={formatRupiah(keuntungan?.total_keuntungan ?? 0)}
-          subtitle={`Margin ${keuntungan?.margin_persen ?? 0}%`}
+          subtitle={`Semua waktu · Margin ${keuntungan?.margin_persen ?? 0}%`}
           variant={(keuntungan?.total_keuntungan ?? 0) >= 0 ? "success" : "danger"}
           icon={<TrendingUp className="h-5 w-5" />}
         />
