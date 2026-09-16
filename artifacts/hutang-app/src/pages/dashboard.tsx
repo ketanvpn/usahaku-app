@@ -288,11 +288,11 @@ export default function OwnerDashboard() {
         </CardHeader>
         <CardContent>
           {trenLoading ? (
-            <div className="flex justify-center items-center h-48">
+            <div className="flex justify-center items-center h-64 sm:h-72 md:h-80">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : chartData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground gap-2">
+            <div className="flex flex-col items-center justify-center h-64 sm:h-72 md:h-80 text-muted-foreground gap-2">
               <BarChart2 className="h-10 w-10 opacity-30" />
               <p className="text-sm">Belum ada data keuangan dalam {trenHari} hari terakhir.</p>
               <Link href="/keuangan">
@@ -300,32 +300,34 @@ export default function OwnerDashboard() {
               </Link>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(38 18% 87%)" />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 11, fill: "hsl(215 15% 48%)" }}
-                  tickLine={false}
-                  axisLine={{ stroke: "hsl(38 18% 87%)" }}
-                  interval={trenHari === 30 ? 4 : 0}
-                />
-                <YAxis
-                  tickFormatter={formatRupiahShort}
-                  tick={{ fontSize: 11, fill: "hsl(215 15% 48%)" }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={48}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  formatter={(value) => value === "masuk" ? "Pemasukan" : "Pengeluaran"}
-                  wrapperStyle={{ fontSize: 12 }}
-                />
-                <Bar dataKey="masuk" fill="hsl(158 55% 38%)" radius={[4, 4, 0, 0]} name="masuk" maxBarSize={56} />
-                <Bar dataKey="keluar" fill="hsl(0 65% 58%)" radius={[4, 4, 0, 0]} name="keluar" maxBarSize={56} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="h-64 sm:h-72 md:h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 4, right: 12, left: 4, bottom: 0 }} barCategoryGap="25%">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(38 18% 87%)" />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 12, fill: "hsl(215 15% 48%)" }}
+                    tickLine={false}
+                    axisLine={{ stroke: "hsl(38 18% 87%)" }}
+                    interval={trenHari === 30 ? 4 : 0}
+                  />
+                  <YAxis
+                    tickFormatter={formatRupiahShort}
+                    tick={{ fontSize: 12, fill: "hsl(215 15% 48%)" }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={58}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend
+                    formatter={(value) => value === "masuk" ? "Pemasukan" : "Pengeluaran"}
+                    wrapperStyle={{ fontSize: 13 }}
+                  />
+                  <Bar dataKey="masuk" fill="hsl(158 55% 38%)" radius={[4, 4, 0, 0]} name="masuk" maxBarSize={64} />
+                  <Bar dataKey="keluar" fill="hsl(0 65% 58%)" radius={[4, 4, 0, 0]} name="keluar" maxBarSize={64} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </CardContent>
       </Card>
