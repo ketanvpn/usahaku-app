@@ -29,7 +29,7 @@ export default function LaporanPage() {
       </div>
 
       <Tabs defaultValue="kasir">
-        <TabsList className="w-full md:w-auto">
+        <TabsList className="w-full justify-start md:w-auto">
           <TabsTrigger value="kasir" className="gap-1.5"><ShoppingBag className="h-3.5 w-3.5" />Penjualan Kasir</TabsTrigger>
           <TabsTrigger value="hutang">Hutang & Pembayaran</TabsTrigger>
           <TabsTrigger value="keuangan">Keuangan</TabsTrigger>
