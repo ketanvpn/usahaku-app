@@ -287,6 +287,7 @@ ${catatan?`<div style="font-size:9pt;color:#555;font-style:italic;margin:6px 4px
 export default function PembayaranPage() {
   const [filterPelanggan, setFilterPelanggan] = useState<number | undefined>(undefined);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPembayaran, setSelectedPembayaran] = useState<Pembayaran | null>(null);
   const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
@@ -323,6 +324,38 @@ export default function PembayaranPage() {
   const { lisensiAktif } = useLicense();
   const { user } = useAuth();
   const printCtx = usePrintContext();
+
+  const hasFormData = formPelangganId !== null || selectedHutangIds.size > 0 || parseFloat(nominalTotal) > 0 || catatan.trim() !== "";
+
+  const resetFormState = () => {
+    setFormPelangganId(null);
+    setSelectedHutangIds(new Set());
+    setNominalTotal("");
+    setTanggalBayar(new Date().toISOString().split("T")[0]!);
+    setCatatan("");
+    setPaymentMethod("tunai");
+    setBarterBarangId(null);
+    setBarterHargaSatuan("");
+    setBarterKuantitas("");
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    if (open) {
+      setIsDialogOpen(true);
+      return;
+    }
+    if (hasFormData) {
+      setIsCloseConfirmOpen(true);
+    } else {
+      setIsDialogOpen(false);
+    }
+  };
+
+  const handleConfirmClose = () => {
+    setIsCloseConfirmOpen(false);
+    setIsDialogOpen(false);
+    resetFormState();
+  };
 
   const handleCetakBatch = async (batch: BatchResult) => {
     const logoBase64 = await loadLogoForPrint(printCtx, user?.usaha_id ?? null);
@@ -395,6 +428,7 @@ export default function PembayaranPage() {
       queryClient.invalidateQueries({ queryKey: ["keuangan"] });
       queryClient.invalidateQueries({ queryKey: ["keuangan-rekap"] });
       queryClient.invalidateQueries({ queryKey: ["barang"] });
+      resetFormState();
       setIsDialogOpen(false);
       setBatchResult(data);
     },
@@ -404,15 +438,7 @@ export default function PembayaranPage() {
   });
 
   const handleOpenDialog = () => {
-    setFormPelangganId(null);
-    setSelectedHutangIds(new Set());
-    setNominalTotal("");
-    setTanggalBayar(new Date().toISOString().split("T")[0]!);
-    setCatatan("");
-    setPaymentMethod("tunai");
-    setBarterBarangId(null);
-    setBarterHargaSatuan("");
-    setBarterKuantitas("");
+    resetFormState();
     setIsDialogOpen(true);
   };
 
@@ -543,8 +569,13 @@ export default function PembayaranPage() {
       </div>
 
       {/* Dialog Terima Pembayaran */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent aria-describedby={undefined} className="max-w-lg w-full max-h-[90vh] !overflow-hidden !flex !flex-col rounded-2xl border bg-card/95 shadow-2xl">
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+        <DialogContent
+          aria-describedby={undefined}
+          className="max-w-lg w-full max-h-[90vh] !overflow-hidden !flex !flex-col rounded-2xl border bg-card/95 shadow-2xl"
+          onInteractOutside={(e) => { if (hasFormData) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (hasFormData) { e.preventDefault(); setIsCloseConfirmOpen(true); } }}
+        >
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-xl font-extrabold tracking-tight">Terima Pembayaran</DialogTitle>
           </DialogHeader>
@@ -881,6 +912,23 @@ export default function PembayaranPage() {
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               {deleteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
               Batalkan Pembayaran
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isCloseConfirmOpen} onOpenChange={setIsCloseConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Keluar dari Pembayaran?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Data yang sudah Anda isi belum disimpan dan akan hilang jika keluar sekarang.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Lanjut Isi</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmClose} className="bg-destructive text-destructive-foreground">
+              Keluar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
