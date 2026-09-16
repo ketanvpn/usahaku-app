@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { Link } from "wouter";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Link, useSearch, useLocation } from "wouter";
 import {
   useGetPembayaranList, useDeletePembayaran, useGetPelangganList, useGetHutangList,
   getGetPembayaranListQueryKey, getGetHutangListQueryKey, Pembayaran, Hutang,
@@ -302,6 +302,11 @@ export default function PembayaranPage() {
   const [barterHargaSatuan, setBarterHargaSatuan] = useState<string>("");
   const [barterKuantitas, setBarterKuantitas] = useState<string>("");
 
+  const searchString = useSearch();
+  const [, navigate] = useLocation();
+  const deepLinkConsumed = useRef(false);
+  const pendingHutangIdRef = useRef<number | null>(null);
+
   const { data: pembayaranList, isLoading } = useGetPembayaranList({ pelanggan_id: filterPelanggan });
   const { data: pelangganList } = useGetPelangganList();
   const BASE = import.meta.env.VITE_API_BASE ?? "";
@@ -317,6 +322,43 @@ export default function PembayaranPage() {
     { pelanggan_id: formPelangganId || undefined, status: "aktif" },
     { query: { enabled: !!formPelangganId, queryKey: getGetHutangListQueryKey({ pelanggan_id: formPelangganId || undefined, status: "aktif" }) } }
   );
+
+  useEffect(() => {
+    if (deepLinkConsumed.current) return;
+    const params = new URLSearchParams(searchString);
+    const pelangganParam = params.get("pelanggan");
+    const hutangParam = params.get("hutang");
+    if (!pelangganParam) return;
+
+    const pelangganId = parseInt(pelangganParam, 10);
+    if (isNaN(pelangganId) || pelangganId <= 0) return;
+
+    deepLinkConsumed.current = true;
+    setFormPelangganId(pelangganId);
+    setIsDialogOpen(true);
+
+    if (hutangParam) {
+      const hutangId = parseInt(hutangParam, 10);
+      if (!isNaN(hutangId) && hutangId > 0) {
+        pendingHutangIdRef.current = hutangId;
+      }
+    }
+
+    navigate("/pembayaran", { replace: true });
+  }, [searchString, navigate]);
+
+  useEffect(() => {
+    if (pendingHutangIdRef.current === null) return;
+    if (!hutangAktifList || hutangAktifList.length === 0) return;
+
+    const targetId = pendingHutangIdRef.current;
+    const found = hutangAktifList.find(h => h.id === targetId);
+    if (found) {
+      setSelectedHutangIds(new Set([targetId]));
+      setNominalTotal(found.sisa_hutang.toString());
+    }
+    pendingHutangIdRef.current = null;
+  }, [hutangAktifList]);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();

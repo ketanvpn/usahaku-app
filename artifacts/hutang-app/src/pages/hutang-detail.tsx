@@ -138,7 +138,7 @@ export default function HutangDetail() {
             </div>
             {data.status === "aktif" && (
               <div className="flex flex-col gap-2 pt-4 sm:flex-row">
-                <Link href="/pembayaran" className="flex-1">
+                <Link href={`/pembayaran?pelanggan=${data.pelanggan_id}&hutang=${id}`} className="flex-1">
                   <Button className="w-full">Catat Pembayaran</Button>
                 </Link>
                 <a
