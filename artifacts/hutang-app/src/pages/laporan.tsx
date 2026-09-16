@@ -1,7 +1,7 @@
 import { useGetUsaha, getGetUsahaQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, HandCoins, Wallet, Package, Truck, Users } from "lucide-react";
 import LaporanKasirTab from "@/components/laporan/laporan-kasir-tab";
 import LaporanHutangTab from "@/components/laporan/laporan-hutang-tab";
 import LaporanKeuanganTab from "@/components/laporan/laporan-keuangan-tab";
@@ -29,13 +29,13 @@ export default function LaporanPage() {
       </div>
 
       <Tabs defaultValue="kasir">
-        <TabsList className="w-full justify-start md:w-auto">
-          <TabsTrigger value="kasir" className="gap-1.5"><ShoppingBag className="h-3.5 w-3.5" />Penjualan Kasir</TabsTrigger>
-          <TabsTrigger value="hutang">Hutang & Pembayaran</TabsTrigger>
-          <TabsTrigger value="keuangan">Keuangan</TabsTrigger>
-          <TabsTrigger value="stok">Stok Barang</TabsTrigger>
-          <TabsTrigger value="supplier">Pembelian Supplier</TabsTrigger>
-          <TabsTrigger value="gaji">Gaji & Tenaga</TabsTrigger>
+        <TabsList className="flex h-auto flex-wrap gap-1 bg-muted p-1 md:inline-flex md:flex-nowrap md:overflow-x-auto md:scrollbar-hide">
+          <TabsTrigger value="kasir" className="gap-1.5 text-xs sm:text-sm"><ShoppingBag className="h-3.5 w-3.5 shrink-0" />Penjualan Kasir</TabsTrigger>
+          <TabsTrigger value="hutang" className="gap-1.5 text-xs sm:text-sm"><HandCoins className="h-3.5 w-3.5 shrink-0" />Hutang</TabsTrigger>
+          <TabsTrigger value="keuangan" className="gap-1.5 text-xs sm:text-sm"><Wallet className="h-3.5 w-3.5 shrink-0" />Keuangan</TabsTrigger>
+          <TabsTrigger value="stok" className="gap-1.5 text-xs sm:text-sm"><Package className="h-3.5 w-3.5 shrink-0" />Stok</TabsTrigger>
+          <TabsTrigger value="supplier" className="gap-1.5 text-xs sm:text-sm"><Truck className="h-3.5 w-3.5 shrink-0" />Supplier</TabsTrigger>
+          <TabsTrigger value="gaji" className="gap-1.5 text-xs sm:text-sm"><Users className="h-3.5 w-3.5 shrink-0" />Gaji</TabsTrigger>
         </TabsList>
 
         <TabsContent value="kasir" className="space-y-4 mt-4">
