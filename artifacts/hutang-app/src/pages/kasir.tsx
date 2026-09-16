@@ -383,7 +383,7 @@ export default function KasirPage() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [filtered, canSubmit, showHasil, showRiwayat, hapusId, isClearCartOpen]);
+  }, [filtered, canSubmit, showHasil, showRiwayat, hapusId, isClearCartOpen, cart.length]);
 
   return (
     <div className="space-y-4">
