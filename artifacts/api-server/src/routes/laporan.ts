@@ -182,16 +182,24 @@ router.get("/laporan/kasir/keuntungan", requireAuth, async (req, res): Promise<v
 
   const bulanRaw = req.query.bulan as string | undefined;
   const tahunRaw = req.query.tahun as string | undefined;
-  const hasPeriod = !!bulanRaw && !!tahunRaw;
-  const bulan = hasPeriod ? parseInt(bulanRaw) : undefined;
-  const tahun = hasPeriod ? parseInt(tahunRaw) : undefined;
+
+  if (tahunRaw && !/^\d{4}$/.test(tahunRaw)) { res.status(400).json({ error: "Format tahun tidak valid" }); return; }
+  if (bulanRaw && !/^\d{1,2}$/.test(bulanRaw)) { res.status(400).json({ error: "Format bulan tidak valid" }); return; }
+
+  const bulan = bulanRaw ? parseInt(bulanRaw) : undefined;
+  const tahun = tahunRaw ? parseInt(tahunRaw) : undefined;
+
+  if (bulan !== undefined && (bulan < 1 || bulan > 12)) { res.status(400).json({ error: "Bulan harus 1-12" }); return; }
 
   const conditions = [eq(transaksiKasirTable.usahaId, usahaId)];
-  if (hasPeriod) {
+  if (bulan && tahun) {
     const bulanStr = String(bulan).padStart(2, "0");
     const prefix = `${tahun}-${bulanStr}`;
     conditions.push(gte(transaksiKasirTable.tanggal, `${prefix}-01`));
     conditions.push(lte(transaksiKasirTable.tanggal, `${prefix}-31`));
+  } else if (tahun) {
+    conditions.push(gte(transaksiKasirTable.tanggal, `${tahun}-01-01`));
+    conditions.push(lte(transaksiKasirTable.tanggal, `${tahun}-12-31`));
   }
 
   const items = await db
@@ -241,7 +249,8 @@ router.get("/laporan/kasir/keuntungan", requireAuth, async (req, res): Promise<v
     .sort((a, b) => b.keuntungan - a.keuntungan);
 
   res.json({
-    ...(hasPeriod ? { bulan, tahun } : {}),
+    ...(bulan !== undefined ? { bulan } : {}),
+    ...(tahun !== undefined ? { tahun } : {}),
     total_omset: totalOmset,
     total_modal: totalModal,
     total_keuntungan: totalOmset - totalModal,
