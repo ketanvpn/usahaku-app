@@ -144,8 +144,8 @@ export default function KeuanganPage() {
   const qc = useQueryClient();
   const now = new Date();
 
-  const [filterBulan, setFilterBulan] = useState("");
-  const [filterTahun, setFilterTahun] = useState("");
+  const [filterBulan, setFilterBulan] = useState("all");
+  const [filterTahun, setFilterTahun] = useState("all");
   const [filterTipe, setFilterTipe] = useState("semua");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editData, setEditData] = useState<KeuanganItem | null>(null);
@@ -157,8 +157,8 @@ export default function KeuanganPage() {
   const namaUsaha = usahaData?.nama_usaha ?? "Usahaku";
   const { lisensiAktif } = useLicense();
 
-  const filterParams = { bulan: filterBulan, tahun: filterTahun, tipe: filterTipe };
-  const rekapParams = { bulan: filterBulan, tahun: filterTahun };
+  const filterParams = { bulan: filterBulan === "all" ? undefined : filterBulan, tahun: filterTahun === "all" ? undefined : filterTahun, tipe: filterTipe };
+  const rekapParams = { bulan: filterBulan === "all" ? undefined : filterBulan, tahun: filterTahun === "all" ? undefined : filterTahun };
 
   const { data: items = [], isLoading, isError: isListError, error: listError, refetch: refetchList } = useQuery({
     queryKey: ["keuangan", filterParams],
@@ -187,12 +187,12 @@ export default function KeuanganPage() {
 
   const { data: rekapBulanan = [] } = useQuery({
     queryKey: ["keuangan-rekap-bulanan", filterTahun],
-    queryFn: () => fetchRekapBulananKeuangan(filterTahun || undefined),
+    queryFn: () => fetchRekapBulananKeuangan(filterTahun === "all" ? undefined : filterTahun),
   });
 
   const { data: keuntunganBulanan = [] } = useQuery<KeuntunganBulananItem[]>({
     queryKey: ["keuangan-keuntungan-bulanan", filterTahun],
-    queryFn: () => fetchKeuntunganBulanan(filterTahun || undefined),
+    queryFn: () => fetchKeuntunganBulanan(filterTahun === "all" ? undefined : filterTahun),
   });
 
   const invalidate = () => {
@@ -252,11 +252,11 @@ export default function KeuanganPage() {
   const tooltipFormatter = (value: number) => formatRupiah(value);
 
   // Dynamic period label for StatCards
-  const periodLabel = filterBulan && filterTahun
+  const periodLabel = filterBulan !== "all" && filterTahun !== "all"
     ? `${BULAN_NAMES[parseInt(filterBulan) - 1]} ${filterTahun}`
-    : filterBulan
+    : filterBulan !== "all"
       ? `${BULAN_NAMES[parseInt(filterBulan) - 1]}`
-      : filterTahun
+      : filterTahun !== "all"
         ? `Tahun ${filterTahun}`
         : "Semua waktu";
 
@@ -293,7 +293,7 @@ export default function KeuanganPage() {
             <SelectValue placeholder="Semua Bulan" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Semua Bulan</SelectItem>
+            <SelectItem value="all">Semua Bulan</SelectItem>
             {BULAN_NAMES.map((nama, i) => (
               <SelectItem key={i + 1} value={String(i + 1)}>{nama}</SelectItem>
             ))}
@@ -305,7 +305,7 @@ export default function KeuanganPage() {
             <SelectValue placeholder="Semua Tahun" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Semua Tahun</SelectItem>
+            <SelectItem value="all">Semua Tahun</SelectItem>
             {tahunOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
           </SelectContent>
         </Select>
@@ -358,7 +358,7 @@ export default function KeuanganPage() {
       <Card className="data-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" /> Grafik Keuangan {filterTahun || "Semua Tahun"}
+            <BarChart3 className="h-4 w-4" /> Grafik Keuangan {filterTahun === "all" ? "Semua Tahun" : filterTahun}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -380,7 +380,7 @@ export default function KeuanganPage() {
       <Card className="data-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" /> Grafik Keuntungan Penjualan {filterTahun || "Semua Tahun"}
+            <TrendingUp className="h-4 w-4" /> Grafik Keuntungan Penjualan {filterTahun === "all" ? "Semua Tahun" : filterTahun}
           </CardTitle>
         </CardHeader>
         <CardContent>
