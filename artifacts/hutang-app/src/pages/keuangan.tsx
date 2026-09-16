@@ -31,7 +31,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Edit, Trash2, TrendingUp, TrendingDown, Wallet, Download, Printer, BarChart3 } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, TrendingUp, TrendingDown, Wallet, Download, Printer, BarChart3, Filter } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useLicense } from "@/context/license-context";
 import { useForm } from "react-hook-form";
@@ -271,6 +271,44 @@ export default function KeuanganPage() {
         }
       />
 
+      {/* Filter Periode */}
+      <div className="toolbar-card flex flex-wrap gap-3 items-center">
+        <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+          <Filter className="h-4 w-4" /> Filter
+        </div>
+
+        <Select value={filterBulan} onValueChange={setFilterBulan}>
+          <SelectTrigger className="h-11 w-36 rounded-xl bg-white/80">
+            <SelectValue placeholder="Bulan" />
+          </SelectTrigger>
+          <SelectContent>
+            {BULAN_NAMES.map((nama, i) => (
+              <SelectItem key={i + 1} value={String(i + 1)}>{nama}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={filterTahun} onValueChange={setFilterTahun}>
+          <SelectTrigger className="h-11 w-28 rounded-xl bg-white/80">
+            <SelectValue placeholder="Tahun" />
+          </SelectTrigger>
+          <SelectContent>
+            {tahunOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        <Select value={filterTipe} onValueChange={setFilterTipe}>
+          <SelectTrigger className="h-11 w-36 rounded-xl bg-white/80">
+            <SelectValue placeholder="Semua Tipe" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="semua">Semua Tipe</SelectItem>
+            <SelectItem value="masuk">Uang Masuk</SelectItem>
+            <SelectItem value="keluar">Uang Keluar</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Kartu Rekap */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
@@ -400,38 +438,6 @@ export default function KeuanganPage() {
           )}
         </div>
       )}
-
-      {/* Filter */}
-      <Card className="data-card">
-        <CardContent className="pt-4">
-          <div className="flex flex-wrap gap-3">
-            <Select value={filterBulan} onValueChange={setFilterBulan}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="Bulan" /></SelectTrigger>
-              <SelectContent>
-                {BULAN_NAMES.map((nama, i) => (
-                  <SelectItem key={i + 1} value={String(i + 1)}>{nama}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filterTahun} onValueChange={setFilterTahun}>
-              <SelectTrigger className="w-28"><SelectValue placeholder="Tahun" /></SelectTrigger>
-              <SelectContent>
-                {tahunOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
-
-            <Select value={filterTipe} onValueChange={setFilterTipe}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="Semua Tipe" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="semua">Semua Tipe</SelectItem>
-                <SelectItem value="masuk">Uang Masuk</SelectItem>
-                <SelectItem value="keluar">Uang Keluar</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Tabel */}
       <Card className="data-card">
