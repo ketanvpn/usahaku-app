@@ -23,7 +23,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { formatRupiah, formatDate, getErrorMessage } from "@/lib/format";
+import { formatRupiah, formatDate, getErrorMessage, terbilang } from "@/lib/format";
 import { buildWhatsAppReminderUrl } from "@/lib/whatsapp";
 import { Badge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
@@ -86,6 +86,8 @@ export default function HutangPage() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState<{ type: "create"; values: z.infer<typeof hutangSchema> } | { type: "update"; values: z.infer<typeof updateHutangSchema> } | null>(null);
   const [editingHutang, setEditingHutang] = useState<Hutang | null>(null);
   const [selectedHutang, setSelectedHutang] = useState<Hutang | null>(null);
 
@@ -130,6 +132,13 @@ export default function HutangPage() {
   };
 
   const onCreateSubmit = (values: z.infer<typeof hutangSchema>) => {
+    setPendingSubmit({ type: "create", values });
+    setIsConfirmOpen(true);
+  };
+
+  const onConfirmCreate = () => {
+    if (pendingSubmit?.type !== "create") return;
+    const values = pendingSubmit.values;
     createMutation.mutate(
       { data: { ...values, tanggal_jatuh_tempo: values.tanggal_jatuh_tempo || null } },
       {
@@ -137,6 +146,8 @@ export default function HutangPage() {
           toast({ title: "Hutang berhasil dicatat" });
           queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
           setIsDialogOpen(false);
+          setIsConfirmOpen(false);
+          setPendingSubmit(null);
         },
         onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
       }
@@ -144,7 +155,13 @@ export default function HutangPage() {
   };
 
   const onUpdateSubmit = (values: z.infer<typeof updateHutangSchema>) => {
-    if (!editingHutang) return;
+    setPendingSubmit({ type: "update", values });
+    setIsConfirmOpen(true);
+  };
+
+  const onConfirmUpdate = () => {
+    if (!editingHutang || pendingSubmit?.type !== "update") return;
+    const values = pendingSubmit.values;
     updateMutation.mutate(
       { id: editingHutang.id, data: { ...values, tanggal_jatuh_tempo: values.tanggal_jatuh_tempo || null } },
       {
@@ -152,8 +169,10 @@ export default function HutangPage() {
           toast({ title: "Hutang berhasil diperbarui" });
           queryClient.invalidateQueries({ queryKey: getGetHutangListQueryKey() });
           setIsDialogOpen(false);
+          setIsConfirmOpen(false);
+          setPendingSubmit(null);
         },
-        onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) })
+        onError: (err: unknown) => toast({ variant: "destructive", title: "Gagal", description: getErrorMessage(err) }),
       }
     );
   };
@@ -307,6 +326,8 @@ export default function HutangPage() {
                     <FormControl>
                       <CurrencyInput
                         minValue={1}
+                        maxValue={999_999_999}
+                        warningThreshold={50_000_000}
                         value={field.value}
                         onValueChange={field.onChange}
                         placeholder="0"
@@ -418,6 +439,8 @@ export default function HutangPage() {
                     <FormControl>
                       <CurrencyInput
                         minValue={1}
+                        maxValue={999_999_999}
+                        warningThreshold={50_000_000}
                         value={field.value}
                         onValueChange={field.onChange}
                         placeholder="0"
@@ -457,6 +480,33 @@ export default function HutangPage() {
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               {deleteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
               Hapus Catatan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isConfirmOpen} onOpenChange={(open) => { if (!open) { setIsConfirmOpen(false); setPendingSubmit(null); } }}>
+        <AlertDialogContent className="rounded-3xl border-border/60 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi {pendingSubmit?.type === "update" ? "Perubahan" : "Pencatatan"} Hutang</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Pastikan nominal sudah benar sebelum menyimpan:</p>
+                <div className="rounded-xl border bg-muted/50 p-3 space-y-1">
+                  <div className="text-lg font-bold text-foreground">{formatRupiah(Number(pendingSubmit?.values.nominal_hutang ?? 0))}</div>
+                  <div className="text-xs italic text-muted-foreground">{terbilang(Number(pendingSubmit?.values.nominal_hutang ?? 0))}</div>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Periksa Lagi</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => pendingSubmit?.type === "update" ? onConfirmUpdate() : onConfirmCreate()}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Ya, Simpan
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

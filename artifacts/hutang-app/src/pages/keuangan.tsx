@@ -38,7 +38,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import * as z from "zod";
-import { formatRupiah, formatDate, escapeHtml } from "@/lib/format";
+import { formatRupiah, formatDate, escapeHtml, terbilang } from "@/lib/format";
 import { openPrintWindow } from "@/lib/print";
 import { QueryErrorState } from "@/components/error-boundary";
 import { PageHero } from "@/components/ui/page-hero";
@@ -150,6 +150,8 @@ export default function KeuanganPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editData, setEditData] = useState<KeuanganItem | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [pendingValues, setPendingValues] = useState<KeuanganFormValues | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 15;
   const { user } = useAuth();
@@ -231,7 +233,7 @@ export default function KeuanganPage() {
       }
       return createKeuangan(values);
     },
-    onSuccess: () => { toast({ title: editData ? "Transaksi diperbarui" : "Transaksi ditambahkan" }); setDialogOpen(false); invalidate(); },
+    onSuccess: () => { toast({ title: editData ? "Transaksi diperbarui" : "Transaksi ditambahkan" }); setDialogOpen(false); setIsConfirmOpen(false); setPendingValues(null); invalidate(); },
     onError: (e: Error) => toast({ title: "Gagal", description: e.message, variant: "destructive" }),
   });
 
@@ -573,7 +575,7 @@ export default function KeuanganPage() {
             <DialogTitle>{editData ? "Edit Transaksi" : "Tambah Transaksi"}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-4">
+            <form onSubmit={form.handleSubmit((v) => { setPendingValues(v); setIsConfirmOpen(true); })} className="space-y-4">
               <FormField control={form.control} name="tanggal" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tanggal</FormLabel>
@@ -621,6 +623,8 @@ export default function KeuanganPage() {
                   <FormControl>
                     <CurrencyInput
                       minValue={1}
+                      maxValue={999_999_999}
+                      warningThreshold={50_000_000}
                       value={field.value}
                       onValueChange={field.onChange}
                       placeholder="50.000"
@@ -641,6 +645,36 @@ export default function KeuanganPage() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isConfirmOpen} onOpenChange={(open) => { if (!open) { setIsConfirmOpen(false); setPendingValues(null); } }}>
+        <AlertDialogContent className="rounded-3xl border-border/60 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi {editData ? "Perubahan" : "Pencatatan"} Transaksi</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Pastikan data sudah benar sebelum menyimpan:</p>
+                <div className="rounded-xl border bg-muted/50 p-3 space-y-1">
+                  <div className="text-sm text-foreground">
+                    <span className="font-medium">Tipe:</span> {pendingValues?.tipe === "masuk" ? "Uang Masuk" : "Uang Keluar"}
+                  </div>
+                  <div className="text-lg font-bold text-foreground">{formatRupiah(Number(pendingValues?.jumlah ?? 0))}</div>
+                  <div className="text-xs italic text-muted-foreground">{terbilang(Number(pendingValues?.jumlah ?? 0))}</div>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Periksa Lagi</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => pendingValues && saveMutation.mutate(pendingValues)}
+              disabled={saveMutation.isPending}
+            >
+              {saveMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Ya, Simpan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Konfirmasi Hapus */}
       <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>

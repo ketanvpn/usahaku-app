@@ -89,3 +89,24 @@ export function getErrorMessage(err: unknown, fallback = "Terjadi kesalahan"): s
   }
   return fallback;
 }
+
+const SATUAN = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
+
+function terbilangRaw(n: number): string {
+  if (n < 0) return `Minus ${terbilangRaw(-n)}`;
+  if (n < 12) return SATUAN[n];
+  if (n < 20) return `${SATUAN[n - 10]} Belas`;
+  if (n < 100) return `${SATUAN[Math.floor(n / 10)]} Puluh${n % 10 ? ` ${SATUAN[n % 10]}` : ""}`;
+  if (n < 200) return `Seratus${n % 100 ? ` ${terbilangRaw(n % 100)}` : ""}`;
+  if (n < 1_000) return `${SATUAN[Math.floor(n / 100)]} Ratus${n % 100 ? ` ${terbilangRaw(n % 100)}` : ""}`;
+  if (n < 2_000) return `Seribu${n % 1_000 ? ` ${terbilangRaw(n % 1_000)}` : ""}`;
+  if (n < 1_000_000) return `${terbilangRaw(Math.floor(n / 1_000))} Ribu${n % 1_000 ? ` ${terbilangRaw(n % 1_000)}` : ""}`;
+  if (n < 1_000_000_000) return `${terbilangRaw(Math.floor(n / 1_000_000))} Juta${n % 1_000_000 ? ` ${terbilangRaw(n % 1_000_000)}` : ""}`;
+  if (n < 1_000_000_000_000) return `${terbilangRaw(Math.floor(n / 1_000_000_000))} Miliar${n % 1_000_000_000 ? ` ${terbilangRaw(n % 1_000_000_000)}` : ""}`;
+  return String(n);
+}
+
+export function terbilang(n: number): string {
+  if (n === 0) return "Nol Rupiah";
+  return `${terbilangRaw(Math.abs(Math.trunc(n)))} Rupiah`;
+}

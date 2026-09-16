@@ -1,5 +1,7 @@
 import * as React from "react";
 import { Input } from "@/components/ui/input";
+import { AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 function toDigits(value: string) {
   return value.replace(/\D/g, "");
@@ -17,6 +19,10 @@ type CurrencyInputProps = Omit<React.ComponentProps<typeof Input>, "type" | "val
   maxValue?: number;
   prefix?: string;
   selectOnFocus?: boolean;
+  /** Show yellow warning when value >= this threshold */
+  warningThreshold?: number;
+  /** Custom warning message (default: "Nominal cukup besar, pastikan sudah benar") */
+  warningMessage?: string;
 };
 
 export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(function CurrencyInput({
@@ -26,14 +32,25 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputPro
   maxValue,
   prefix = "Rp",
   selectOnFocus = true,
+  warningThreshold,
+  warningMessage,
   ...props
 }, ref) {
   const raw = typeof value === "number" ? String(value) : (value ?? "");
-  const display = formatDigits(toDigits(raw));
+  const digits = toDigits(raw);
+  const display = formatDigits(digits);
+  const numericValue = digits ? Number(digits) : 0;
+
+  // Warning state: yellow at threshold, red at 5x threshold
+  const isWarning = typeof warningThreshold === "number" && numericValue >= warningThreshold;
+  const isDanger = typeof warningThreshold === "number" && numericValue >= warningThreshold * 5;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const digits = toDigits(e.target.value);
-    onValueChange(digits);
+    let newDigits = toDigits(e.target.value);
+    if (typeof maxValue === "number" && newDigits && Number(newDigits) > maxValue) {
+      newDigits = String(maxValue);
+    }
+    onValueChange(newDigits);
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -44,12 +61,12 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputPro
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const digits = toDigits(raw);
-    if (!digits) {
+    const blurDigits = toDigits(raw);
+    if (!blurDigits) {
       props.onBlur?.(e);
       return;
     }
-    let numberValue = Number(digits);
+    let numberValue = Number(blurDigits);
     if (Number.isNaN(numberValue)) {
       props.onBlur?.(e);
       return;
@@ -76,8 +93,28 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputPro
         onChange={handleChange}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        className={prefix ? `pl-11 font-semibold tabular-nums ${props.className ?? ""}`.trim() : `font-semibold tabular-nums ${props.className ?? ""}`.trim()}
+        className={cn(
+          "font-semibold tabular-nums",
+          prefix && "pl-11",
+          isWarning && !isDanger && "border-yellow-400 ring-1 ring-yellow-400/30 focus-visible:ring-yellow-400/50",
+          isDanger && "border-red-400 ring-1 ring-red-400/30 focus-visible:ring-red-400/50",
+          props.className,
+        )}
       />
+      {isWarning && (
+        <div className={cn(
+          "mt-1.5 flex items-start gap-1.5 text-xs",
+          isDanger ? "text-red-600" : "text-yellow-600",
+        )}>
+          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+          <span>
+            {warningMessage ?? (isDanger
+              ? "Nominal sangat besar! Periksa kembali sebelum menyimpan."
+              : "Nominal cukup besar, pastikan sudah benar."
+            )}
+          </span>
+        </div>
+      )}
     </div>
   );
 });
