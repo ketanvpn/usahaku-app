@@ -40,6 +40,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import * as z from "zod";
 import { formatRupiah, formatDate, escapeHtml } from "@/lib/format";
 import { openPrintWindow } from "@/lib/print";
+import { QueryErrorState } from "@/components/error-boundary";
 import { PageHero } from "@/components/ui/page-hero";
 import { StatCard } from "@/components/ui/stat-card";
 import {
@@ -157,7 +158,7 @@ export default function KeuanganPage() {
   const filterParams = { bulan: filterBulan, tahun: filterTahun, tipe: filterTipe };
   const rekapParams = { bulan: filterBulan, tahun: filterTahun };
 
-  const { data: items = [], isLoading } = useQuery({
+  const { data: items = [], isLoading, isError: isListError, error: listError, refetch: refetchList } = useQuery({
     queryKey: ["keuangan", filterParams],
     queryFn: () => fetchKeuanganList(filterParams),
   });
@@ -449,6 +450,13 @@ export default function KeuanganPage() {
               </TableHeader>
               <TableSkeleton cols={6} />
             </Table>
+          ) : isListError ? (
+            <QueryErrorState
+              error={listError}
+              onRetry={() => refetchList()}
+              title="Gagal Memuat Data Keuangan"
+              description="Data transaksi keuangan tidak dapat dimuat. Silakan coba lagi."
+            />
           ) : items.length === 0 ? (
             <div className="empty-state">
               <Wallet className="h-10 w-10 mx-auto mb-3 opacity-30" />

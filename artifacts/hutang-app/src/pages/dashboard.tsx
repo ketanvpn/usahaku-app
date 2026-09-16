@@ -10,6 +10,7 @@ import {
   type TrenKeuanganItem,
   type KasirRingkasan,
 } from "@/lib/api-dashboard";
+import { QueryErrorState } from "@/components/error-boundary";
 import { PageHero } from "@/components/ui/page-hero";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -41,7 +42,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>)
 export default function OwnerDashboard() {
   const [trenHari, setTrenHari] = useState<7 | 30>(30);
   const [backupInfo, setBackupInfo] = useState<string>("Belum ada backup manual");
-  const { data, isLoading } = useGetOwnerDashboard();
+  const { data, isLoading, isError, error, refetch } = useGetOwnerDashboard();
 
   useEffect(() => {
     const refreshBackupInfo = () => setBackupInfo(getBackupInfoText());
@@ -111,7 +112,16 @@ export default function OwnerDashboard() {
     );
   }
 
-  if (!data) return null;
+  if (isError || !data) {
+    return (
+      <QueryErrorState
+        error={error instanceof Error ? error : undefined}
+        onRetry={() => refetch()}
+        title="Gagal Memuat Dashboard"
+        description="Data dashboard tidak dapat dimuat. Pastikan server berjalan dan coba lagi."
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

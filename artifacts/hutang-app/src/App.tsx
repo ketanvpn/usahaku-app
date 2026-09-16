@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, ProtectedRoute } from "@/hooks/use-auth";
 import { Layout } from "@/components/layout/Layout";
 import { Spinner } from "@/components/ui/spinner";
+import { ErrorBoundary, QueryErrorBoundary } from "@/components/error-boundary";
 import type { UserRole } from "@/hooks/use-auth";
 
 // Eagerly loaded public & fallback pages
@@ -94,25 +95,27 @@ function ProtectedRoutes() {
   return (
     <ProtectedRoute>
       <Layout>
-        <Suspense fallback={<PageLoadingFallback />}>
-          <Switch>
-            {PROTECTED_ROUTES.map(({ path, component: Component, allowedRoles }) => (
-              <Route key={path} path={path}>
-                <ProtectedRoute allowedRoles={allowedRoles}>
-                  <Component />
-                </ProtectedRoute>
+        <QueryErrorBoundary showHomeButton>
+          <Suspense fallback={<PageLoadingFallback />}>
+            <Switch>
+              {PROTECTED_ROUTES.map(({ path, component: Component, allowedRoles }) => (
+                <Route key={path} path={path}>
+                  <ProtectedRoute allowedRoles={allowedRoles}>
+                    <Component />
+                  </ProtectedRoute>
+                </Route>
+              ))}
+
+              {/* Root route: Role-based redirect via ProtectedRoute */}
+              <Route path="/">
+                <div />
               </Route>
-            ))}
 
-            {/* Root route: Role-based redirect via ProtectedRoute */}
-            <Route path="/">
-              <div />
-            </Route>
-
-            {/* 404 inside layout */}
-            <Route component={NotFound} />
-          </Switch>
-        </Suspense>
+              {/* 404 inside layout */}
+              <Route component={NotFound} />
+            </Switch>
+          </Suspense>
+        </QueryErrorBoundary>
       </Layout>
     </ProtectedRoute>
   );
@@ -135,15 +138,17 @@ function Router() {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-        <AuthProvider>
-          <TooltipProvider>
-            <Router />
-            <Toaster />
-          </TooltipProvider>
-        </AuthProvider>
-      </WouterRouter>
-    </QueryClientProvider>
+    <ErrorBoundary showHomeButton>
+      <QueryClientProvider client={queryClient}>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <AuthProvider>
+            <TooltipProvider>
+              <Router />
+              <Toaster />
+            </TooltipProvider>
+          </AuthProvider>
+        </WouterRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
