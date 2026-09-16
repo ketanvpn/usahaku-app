@@ -154,6 +154,7 @@ export default function KasirPage() {
   const [showHasil, setShowHasil] = useState(false);
   const [showRiwayat, setShowRiwayat] = useState(false);
   const [hapusId, setHapusId] = useState<number | null>(null);
+  const [isClearCartOpen, setIsClearCartOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const bayarInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -357,13 +358,12 @@ export default function KasirPage() {
       }
 
       if (e.key === "Escape") {
+        if (isClearCartOpen) return;
         if (hapusId !== null) setHapusId(null);
         else if (showHasil) setShowHasil(false);
         else if (showRiwayat) setShowRiwayat(false);
         else if (cart.length > 0) {
-          if (confirm("Kosongkan keranjang belanja?")) {
-            resetKasir();
-          }
+          setIsClearCartOpen(true);
         }
         return;
       }
@@ -383,7 +383,7 @@ export default function KasirPage() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [filtered, canSubmit, showHasil, showRiwayat, hapusId]);
+  }, [filtered, canSubmit, showHasil, showRiwayat, hapusId, isClearCartOpen]);
 
   return (
     <div className="space-y-4">
@@ -707,7 +707,7 @@ export default function KasirPage() {
 
           {cart.length > 0 && (
             <button
-              onClick={resetKasir}
+              onClick={() => setIsClearCartOpen(true)}
               className="w-full text-xs text-muted-foreground hover:text-destructive transition-colors py-1"
             >
               Bersihkan keranjang
@@ -807,6 +807,27 @@ export default function KasirPage() {
               onClick={() => { if (hapusId !== null) { hapusMutation.mutate(hapusId); setHapusId(null); } }}
             >
               Ya, Batalkan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Konfirmasi Kosongkan Keranjang ──────────────────────── */}
+      <AlertDialog open={isClearCartOpen} onOpenChange={setIsClearCartOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Kosongkan Keranjang?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {cart.length} item di keranjang akan dihapus. Tindakan ini tidak bisa dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { resetKasir(); setIsClearCartOpen(false); }}
+            >
+              Kosongkan
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
