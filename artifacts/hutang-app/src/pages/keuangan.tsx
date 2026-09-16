@@ -31,7 +31,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Edit, Trash2, TrendingUp, TrendingDown, Wallet, Download, Printer, BarChart3, Filter } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, TrendingUp, TrendingDown, Wallet, Download, Printer, BarChart3, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useLicense } from "@/context/license-context";
 import { useForm } from "react-hook-form";
@@ -144,12 +144,14 @@ export default function KeuanganPage() {
   const qc = useQueryClient();
   const now = new Date();
 
-  const [filterBulan, setFilterBulan] = useState(String(now.getMonth() + 1));
-  const [filterTahun, setFilterTahun] = useState(String(now.getFullYear()));
+  const [filterBulan, setFilterBulan] = useState("");
+  const [filterTahun, setFilterTahun] = useState("");
   const [filterTipe, setFilterTipe] = useState("semua");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editData, setEditData] = useState<KeuanganItem | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 15;
   const { user } = useAuth();
   const { data: usahaData } = useGetUsaha(user?.usaha_id ?? 0, { query: { enabled: !!user?.usaha_id, queryKey: getGetUsahaQueryKey(user?.usaha_id ?? 0) } });
   const namaUsaha = usahaData?.nama_usaha ?? "Usahaku";
@@ -169,13 +171,13 @@ export default function KeuanganPage() {
   });
 
   const { data: rekapTotal } = useQuery({
-    queryKey: ["keuangan-rekap-total"],
-    queryFn: () => fetchRekapKeuangan(),
+    queryKey: ["keuangan-rekap-total", rekapParams],
+    queryFn: () => fetchRekapKeuangan(rekapParams),
   });
 
   const { data: keuntungan } = useQuery<KeuntunganKasir>({
-    queryKey: ["keuangan-keuntungan-kasir-total"],
-    queryFn: () => fetchKeuntunganKasir(),
+    queryKey: ["keuangan-keuntungan-kasir-total", rekapParams],
+    queryFn: () => fetchKeuntunganKasir(rekapParams),
   });
 
   const { data: rekapKategori = [] } = useQuery({
@@ -185,12 +187,12 @@ export default function KeuanganPage() {
 
   const { data: rekapBulanan = [] } = useQuery({
     queryKey: ["keuangan-rekap-bulanan", filterTahun],
-    queryFn: () => fetchRekapBulananKeuangan(filterTahun),
+    queryFn: () => fetchRekapBulananKeuangan(filterTahun || undefined),
   });
 
   const { data: keuntunganBulanan = [] } = useQuery<KeuntunganBulananItem[]>({
     queryKey: ["keuangan-keuntungan-bulanan", filterTahun],
-    queryFn: () => fetchKeuntunganBulanan(filterTahun),
+    queryFn: () => fetchKeuntunganBulanan(filterTahun || undefined),
   });
 
   const invalidate = () => {
@@ -249,6 +251,15 @@ export default function KeuanganPage() {
 
   const tooltipFormatter = (value: number) => formatRupiah(value);
 
+  // Dynamic period label for StatCards
+  const periodLabel = filterBulan && filterTahun
+    ? `${BULAN_NAMES[parseInt(filterBulan) - 1]} ${filterTahun}`
+    : filterBulan
+      ? `${BULAN_NAMES[parseInt(filterBulan) - 1]}`
+      : filterTahun
+        ? `Tahun ${filterTahun}`
+        : "Semua waktu";
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -277,27 +288,29 @@ export default function KeuanganPage() {
           <Filter className="h-4 w-4" /> Filter
         </div>
 
-        <Select value={filterBulan} onValueChange={setFilterBulan}>
+        <Select value={filterBulan} onValueChange={(v) => { setFilterBulan(v); setCurrentPage(1); }}>
           <SelectTrigger className="h-11 w-36 rounded-xl bg-white/80">
-            <SelectValue placeholder="Bulan" />
+            <SelectValue placeholder="Semua Bulan" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="">Semua Bulan</SelectItem>
             {BULAN_NAMES.map((nama, i) => (
               <SelectItem key={i + 1} value={String(i + 1)}>{nama}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <Select value={filterTahun} onValueChange={setFilterTahun}>
+        <Select value={filterTahun} onValueChange={(v) => { setFilterTahun(v); setCurrentPage(1); }}>
           <SelectTrigger className="h-11 w-28 rounded-xl bg-white/80">
-            <SelectValue placeholder="Tahun" />
+            <SelectValue placeholder="Semua Tahun" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="">Semua Tahun</SelectItem>
             {tahunOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
           </SelectContent>
         </Select>
 
-        <Select value={filterTipe} onValueChange={setFilterTipe}>
+        <Select value={filterTipe} onValueChange={(v) => { setFilterTipe(v); setCurrentPage(1); }}>
           <SelectTrigger className="h-11 w-36 rounded-xl bg-white/80">
             <SelectValue placeholder="Semua Tipe" />
           </SelectTrigger>
@@ -314,28 +327,28 @@ export default function KeuanganPage() {
         <StatCard
           title="Total Masuk"
           value={formatRupiah(rekapTotal?.total_masuk ?? 0)}
-          subtitle="Semua waktu"
+          subtitle={periodLabel}
           variant="success"
           icon={<TrendingUp className="h-5 w-5" />}
         />
         <StatCard
           title="Total Keluar"
           value={formatRupiah(rekapTotal?.total_keluar ?? 0)}
-          subtitle="Semua waktu"
+          subtitle={periodLabel}
           variant="danger"
           icon={<TrendingDown className="h-5 w-5" />}
         />
         <StatCard
           title="Saldo"
           value={formatRupiah(rekapTotal?.saldo ?? 0)}
-          subtitle={`${rekapTotal?.jumlah_transaksi ?? 0} transaksi`}
+          subtitle={`${rekapTotal?.jumlah_transaksi ?? 0} transaksi · ${periodLabel}`}
           variant={(rekapTotal?.saldo ?? 0) >= 0 ? "info" : "warning"}
           icon={<Wallet className="h-5 w-5" />}
         />
         <StatCard
           title="Keuntungan Penjualan"
           value={formatRupiah(keuntungan?.total_keuntungan ?? 0)}
-          subtitle={`Semua waktu · Margin ${keuntungan?.margin_persen ?? 0}%`}
+          subtitle={`${periodLabel} · Margin ${keuntungan?.margin_persen ?? 0}%`}
           variant={(keuntungan?.total_keuntungan ?? 0) >= 0 ? "success" : "danger"}
           icon={<TrendingUp className="h-5 w-5" />}
         />
@@ -345,7 +358,7 @@ export default function KeuanganPage() {
       <Card className="data-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" /> Grafik Keuangan {filterTahun}
+            <BarChart3 className="h-4 w-4" /> Grafik Keuangan {filterTahun || "Semua Tahun"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -367,7 +380,7 @@ export default function KeuanganPage() {
       <Card className="data-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" /> Grafik Keuntungan Penjualan {filterTahun}
+            <TrendingUp className="h-4 w-4" /> Grafik Keuntungan Penjualan {filterTahun || "Semua Tahun"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -469,49 +482,87 @@ export default function KeuanganPage() {
               <p>Belum ada transaksi untuk periode ini</p>
               <Button variant="outline" size="sm" className="mt-3 rounded-xl" onClick={openCreate} disabled={!lisensiAktif}>Tambah Transaksi</Button>
             </div>
-          ) : (
-            <Table className="table-premium">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Tipe</TableHead>
-                  <TableHead>Kategori</TableHead>
-                  <TableHead>Keterangan</TableHead>
-                  <TableHead className="text-right">Jumlah</TableHead>
-                  <TableHead className="text-center w-24">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="text-sm">{formatDate(item.tanggal)}</TableCell>
-                    <TableCell>
-                      <Badge className={item.tipe === "masuk"
-                        ? "rounded-full bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900 dark:text-green-200"
-                        : "rounded-full bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900 dark:text-red-200"}>
-                        {item.tipe === "masuk" ? "Masuk" : "Keluar"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{item.kategori ?? "-"}</TableCell>
-                    <TableCell className="text-sm">{item.keterangan}</TableCell>
-                    <TableCell className={`text-right font-medium ${item.tipe === "masuk" ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
-                      {item.tipe === "keluar" ? "-" : "+"}{formatRupiah(item.jumlah)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-center gap-1">
-                        <Button variant="ghost" size="icon" className="action-icon-btn" onClick={() => openEdit(item)} disabled={!lisensiAktif}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="action-icon-btn text-destructive hover:text-destructive" onClick={() => setDeleteId(item.id)} disabled={!lisensiAktif}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          ) : (() => {
+            const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
+            const safePage = Math.min(currentPage, totalPages);
+            const startIdx = (safePage - 1) * ITEMS_PER_PAGE;
+            const paginatedItems = items.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+            return (
+              <>
+                <Table className="table-premium">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead>Tipe</TableHead>
+                      <TableHead>Kategori</TableHead>
+                      <TableHead>Keterangan</TableHead>
+                      <TableHead className="text-right">Jumlah</TableHead>
+                      <TableHead className="text-center w-24">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="text-sm">{formatDate(item.tanggal)}</TableCell>
+                        <TableCell>
+                          <Badge className={item.tipe === "masuk"
+                            ? "rounded-full bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900 dark:text-green-200"
+                            : "rounded-full bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900 dark:text-red-200"}>
+                            {item.tipe === "masuk" ? "Masuk" : "Keluar"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{item.kategori ?? "-"}</TableCell>
+                        <TableCell className="text-sm">{item.keterangan}</TableCell>
+                        <TableCell className={`text-right font-medium ${item.tipe === "masuk" ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
+                          {item.tipe === "keluar" ? "-" : "+"}{formatRupiah(item.jumlah)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-center gap-1">
+                            <Button variant="ghost" size="icon" className="action-icon-btn" onClick={() => openEdit(item)} disabled={!lisensiAktif}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="action-icon-btn text-destructive hover:text-destructive" onClick={() => setDeleteId(item.id)} disabled={!lisensiAktif}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t">
+                    <span className="text-sm text-muted-foreground">
+                      {startIdx + 1}–{Math.min(startIdx + ITEMS_PER_PAGE, items.length)} dari {items.length} transaksi
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={safePage <= 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm font-medium px-2">
+                        {safePage} / {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg"
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={safePage >= totalPages}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </CardContent>
       </Card>
 

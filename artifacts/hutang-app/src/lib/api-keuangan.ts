@@ -99,8 +99,11 @@ export async function fetchRekapKategoriKeuangan(params: { bulan?: string; tahun
   return customFetch<RekapKategoriKeuangan[]>(`/api/keuangan/rekap-kategori${query ? `?${query}` : ""}`);
 }
 
-export async function fetchRekapBulananKeuangan(tahun: string): Promise<RekapBulananKeuangan[]> {
-  return customFetch<RekapBulananKeuangan[]>(`/api/keuangan/rekap-bulanan?tahun=${encodeURIComponent(tahun)}`);
+export async function fetchRekapBulananKeuangan(tahun?: string): Promise<RekapBulananKeuangan[]> {
+  const q = new URLSearchParams();
+  if (tahun) q.set("tahun", tahun);
+  const query = q.toString();
+  return customFetch<RekapBulananKeuangan[]>(`/api/keuangan/rekap-bulanan${query ? `?${query}` : ""}`);
 }
 
 export async function fetchKeuntunganKasir(params?: { bulan?: string; tahun?: string }): Promise<KeuntunganKasir> {
@@ -111,8 +114,11 @@ export async function fetchKeuntunganKasir(params?: { bulan?: string; tahun?: st
   return customFetch<KeuntunganKasir>(`/api/laporan/kasir/keuntungan${query ? `?${query}` : ""}`);
 }
 
-export async function fetchKeuntunganBulanan(tahun: string): Promise<KeuntunganBulananItem[]> {
-  return customFetch<KeuntunganBulananItem[]>(`/api/laporan/kasir/keuntungan-bulanan?tahun=${encodeURIComponent(tahun)}`);
+export async function fetchKeuntunganBulanan(tahun?: string): Promise<KeuntunganBulananItem[]> {
+  const q = new URLSearchParams();
+  if (tahun) q.set("tahun", tahun);
+  const query = q.toString();
+  return customFetch<KeuntunganBulananItem[]>(`/api/laporan/kasir/keuntungan-bulanan${query ? `?${query}` : ""}`);
 }
 
 export async function createKeuangan(body: KeuanganInputBody): Promise<KeuanganItem> {
