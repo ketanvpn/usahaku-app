@@ -27,7 +27,7 @@ import { formatRupiah, formatDate, getErrorMessage, terbilang } from "@/lib/form
 import { buildWhatsAppReminderUrl } from "@/lib/whatsapp";
 import { Badge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { Loader2, Plus, Edit, Trash2, Eye, Filter, Search, FileText, CalendarClock, MessageCircle } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Eye, Filter, Search, FileText, CalendarClock, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useLicense } from "@/context/license-context";
 import { PageHero } from "@/components/ui/page-hero";
 
@@ -67,11 +67,14 @@ function getJatuhTempoBadge(tanggalJatuhTempo: string | null | undefined, status
   return null;
 }
 
+const ITEMS_PER_PAGE = 15;
+
 export default function HutangPage() {
   const { user } = useAuth();
   const [filterStatus, setFilterStatus] = useState<GetHutangListStatus | undefined>(undefined);
   const [filterPelanggan, setFilterPelanggan] = useState<number | undefined>(undefined);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data: hutangList, isLoading } = useGetHutangList({
     status: filterStatus,
@@ -216,7 +219,7 @@ export default function HutangPage() {
             type="text"
             placeholder="Cari nama pelanggan atau keterangan..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
             className="h-11 w-full rounded-xl bg-white/80 pl-9"
           />
         </div>
@@ -226,7 +229,7 @@ export default function HutangPage() {
           </div>
           <Select
             value={filterStatus || "semua"}
-            onValueChange={(v) => setFilterStatus(v === "semua" ? undefined : v as GetHutangListStatus)}
+            onValueChange={(v) => { setFilterStatus(v === "semua" ? undefined : v as GetHutangListStatus); setCurrentPage(1); }}
           >
             <SelectTrigger className="h-11 w-[180px] rounded-xl bg-white/80">
               <SelectValue placeholder="Status" />
@@ -240,7 +243,7 @@ export default function HutangPage() {
 
           <Select
             value={filterPelanggan?.toString() || "semua"}
-            onValueChange={(v) => setFilterPelanggan(v === "semua" ? undefined : parseInt(v))}
+            onValueChange={(v) => { setFilterPelanggan(v === "semua" ? undefined : parseInt(v)); setCurrentPage(1); }}
           >
             <SelectTrigger className="h-11 w-[210px] rounded-xl bg-white/80">
               <SelectValue placeholder="Semua Pelanggan" />
@@ -534,27 +537,34 @@ export default function HutangPage() {
                 h.pelanggan_nama.toLowerCase().includes(search.toLowerCase()) ||
                 (h.keterangan ?? "").toLowerCase().includes(search.toLowerCase())
               );
-              return filtered.length === 0 ? (
+              if (filtered.length === 0) {
+                return (
+                  <TableBody>
+                    <TableRow>
+                      <TableCell colSpan={8}>
+                        <div className="empty-state">
+                          <FileText className="h-10 w-10 opacity-25" />
+                          <p className="text-sm font-semibold">
+                            {search ? `Tidak ditemukan hasil untuk "${search}"` : "Belum ada data hutang."}
+                          </p>
+                          {!search && (
+                            <Button variant="outline" size="sm" className="mt-1 rounded-xl" onClick={() => handleOpenDialog()} disabled={!lisensiAktif}>
+                              <Plus className="h-3 w-3 mr-1" /> Catat Hutang Pertama
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                );
+              }
+              const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+              const safePage = Math.min(currentPage, totalPages);
+              const startIdx = (safePage - 1) * ITEMS_PER_PAGE;
+              const paginatedItems = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+              return (
                 <TableBody>
-                  <TableRow>
-                    <TableCell colSpan={8}>
-                      <div className="empty-state">
-                        <FileText className="h-10 w-10 opacity-25" />
-                        <p className="text-sm font-semibold">
-                          {search ? `Tidak ditemukan hasil untuk "${search}"` : "Belum ada data hutang."}
-                        </p>
-                        {!search && (
-                          <Button variant="outline" size="sm" className="mt-1 rounded-xl" onClick={() => handleOpenDialog()} disabled={!lisensiAktif}>
-                            <Plus className="h-3 w-3 mr-1" /> Catat Hutang Pertama
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              ) : (
-                <TableBody>
-                  {filtered.map((h) => {
+                  {paginatedItems.map((h) => {
                     const jatuhTempoBadge = getJatuhTempoBadge(h.tanggal_jatuh_tempo, h.status);
                     return (
                       <TableRow key={h.id}>
@@ -630,6 +640,48 @@ export default function HutangPage() {
               );
             })()}
           </Table>
+          {(() => {
+            const filtered = (hutangList ?? []).filter(h =>
+              h.pelanggan_nama.toLowerCase().includes(search.toLowerCase()) ||
+              (h.keterangan ?? "").toLowerCase().includes(search.toLowerCase())
+            );
+            const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+            const safePage = Math.min(currentPage, totalPages);
+            const startIdx = (safePage - 1) * ITEMS_PER_PAGE;
+            if (totalPages > 1) {
+              return (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <span className="text-sm text-muted-foreground">
+                    {startIdx + 1}–{Math.min(startIdx + ITEMS_PER_PAGE, filtered.length)} dari {filtered.length} hutang
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 rounded-lg"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={safePage <= 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium px-2">
+                      {safePage} / {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 rounded-lg"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={safePage >= totalPages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
         </CardContent>
       </Card>
     </div>
